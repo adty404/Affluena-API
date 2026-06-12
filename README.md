@@ -1,6 +1,6 @@
 # Affluena Backend API
 
-Affluena is an API-first personal finance backend. This first vertical slice implements native auth, wallets, categories, transactions, and quick entry templates.
+Affluena is an API-first personal finance backend. It implements native auth, wallets, categories, transactions, quick entry templates, budgeting, trackers, recurring transactions, and debt/loan tracking.
 
 ## Stack
 
@@ -64,6 +64,12 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/category-budgets/:id`
 - `PUT /api/v1/category-budgets/:id`
 - `DELETE /api/v1/category-budgets/:id`
+- `POST /api/v1/debts`
+- `GET /api/v1/debts`
+- `GET /api/v1/debts/:id`
+- `PUT /api/v1/debts/:id`
+- `DELETE /api/v1/debts/:id`
+- `POST /api/v1/debts/:id/pay`
 - `POST /api/v1/installments`
 - `GET /api/v1/installments`
 - `GET /api/v1/installments/:id`
@@ -144,6 +150,34 @@ curl -s 'http://localhost:8080/api/v1/category-budgets?month=2026-06' \
   -H "authorization: Bearer $ACCESS_TOKEN"
 ```
 
+Create and receive payment for a receivable:
+
+```bash
+curl -s http://localhost:8080/api/v1/debts \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"type":"receivable","counterparty_name":"Friend","wallet_id":"<wallet_id>","disbursement_category_id":"<expense_category_id>","payment_category_id":"<income_category_id>","principal_amount_minor":500000,"due_date":"2026-07-01","note":"Short loan"}'
+
+curl -s http://localhost:8080/api/v1/debts/<debt_id>/pay \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"amount_minor":200000,"note":"First repayment"}'
+```
+
+Create and pay down a payable:
+
+```bash
+curl -s http://localhost:8080/api/v1/debts \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"type":"payable","counterparty_name":"Family","wallet_id":"<wallet_id>","disbursement_category_id":"<income_category_id>","payment_category_id":"<expense_category_id>","principal_amount_minor":1000000,"due_date":"2026-08-01"}'
+
+curl -s http://localhost:8080/api/v1/debts/<debt_id>/pay \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"amount_minor":250000}'
+```
+
 Create and pay an installment:
 
 ```bash
@@ -195,6 +229,15 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 - `adjustment`: applies signed `amount_minor` directly to `wallet_id`
 
 Create, update, delete, and quick entry execution use database transactions so wallet balances and transaction rows change atomically.
+
+Debt creation and debt payment endpoints also run atomically:
+
+- `receivable` creation creates an expense transaction and decreases the wallet.
+- `receivable` payment creates an income transaction and increases the wallet.
+- `payable` creation creates an income transaction and increases the wallet.
+- `payable` payment creates an expense transaction and decreases the wallet.
+
+Debt statuses are `open`, `partial`, `paid_off`, and `cancelled`. Payment over the remaining amount is rejected. `DELETE /api/v1/debts/:id` soft-cancels tracking and keeps transaction history intact.
 
 Installment and subscription payment endpoints also run atomically: the API creates an expense transaction, updates wallet balance, and advances tracker state in one PostgreSQL transaction.
 
