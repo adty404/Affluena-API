@@ -7,6 +7,7 @@ import (
 	"affluena/internal/budget"
 	"affluena/internal/category"
 	"affluena/internal/config"
+	"affluena/internal/debt"
 	"affluena/internal/quickentry"
 	"affluena/internal/recurring"
 	"affluena/internal/tracker"
@@ -36,6 +37,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	transactionHandler := transaction.NewHandler(transactionRepo)
 	quickEntryHandler := quickentry.NewHandler(quickentry.NewRepository(pool), transactionRepo)
 	budgetHandler := budget.NewHandler(budget.NewRepository(pool))
+	debtHandler := debt.NewHandler(debt.NewRepository(pool, transactionRepo))
 	recurringHandler := recurring.NewHandler(recurring.NewRepository(pool, transactionRepo))
 	trackerHandler := tracker.NewHandler(
 		tracker.NewInstallmentRepository(pool, transactionRepo),
@@ -85,6 +87,13 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/category-budgets/:id", budgetHandler.Get)
 	protected.PUT("/category-budgets/:id", budgetHandler.Update)
 	protected.DELETE("/category-budgets/:id", budgetHandler.Delete)
+
+	protected.POST("/debts", debtHandler.Create)
+	protected.GET("/debts", debtHandler.List)
+	protected.GET("/debts/:id", debtHandler.Get)
+	protected.PUT("/debts/:id", debtHandler.Update)
+	protected.DELETE("/debts/:id", debtHandler.Delete)
+	protected.POST("/debts/:id/pay", debtHandler.Pay)
 
 	protected.POST("/installments", trackerHandler.CreateInstallment)
 	protected.GET("/installments", trackerHandler.ListInstallments)
