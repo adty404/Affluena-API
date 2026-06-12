@@ -3,6 +3,8 @@ package recurring
 import (
 	"errors"
 	"time"
+
+	"affluena/internal/caldate"
 )
 
 type Frequency string
@@ -36,7 +38,7 @@ func AdvanceNextRunAt(current time.Time, frequency Frequency, intervalCount int)
 	case FrequencyWeekly:
 		return current.AddDate(0, 0, 7*intervalCount), nil
 	case FrequencyMonthly:
-		return current.AddDate(0, intervalCount, 0), nil
+		return caldate.AddMonthsClamped(current, intervalCount), nil
 	default:
 		return time.Time{}, errors.New("invalid frequency")
 	}

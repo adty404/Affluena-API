@@ -120,6 +120,14 @@ curl -s http://localhost:8080/api/v1/transactions \
   -d '{"type":"expense","wallet_id":"<wallet_id>","category_id":"<category_id>","amount_minor":50000,"note":"Lunch"}'
 ```
 
+Execute a quick entry template:
+
+```bash
+curl -s http://localhost:8080/api/v1/quick-entry-templates/<template_id>/execute \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -X POST
+```
+
 Create category budget:
 
 ```bash
@@ -145,9 +153,8 @@ curl -s http://localhost:8080/api/v1/installments \
   -d '{"name":"Gym Membership","wallet_id":"<wallet_id>","category_id":"<expense_category_id>","total_amount_minor":900000,"monthly_amount_minor":300000,"tenor_months":3,"start_date":"2026-06-01","due_day":5}'
 
 curl -s http://localhost:8080/api/v1/installments/<installment_id>/pay \
-  -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
-  -d '{}'
+  -X POST
 ```
 
 Create and pay a subscription:
@@ -159,9 +166,8 @@ curl -s http://localhost:8080/api/v1/subscriptions \
   -d '{"name":"Meal Plan","wallet_id":"<wallet_id>","category_id":"<expense_category_id>","amount_minor":250000,"billing_cycle":"weekly","next_due_date":"2026-06-12"}'
 
 curl -s http://localhost:8080/api/v1/subscriptions/<subscription_id>/pay \
-  -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
-  -d '{}'
+  -X POST
 ```
 
 Create and manually run a recurring transaction:
@@ -173,9 +179,8 @@ curl -s http://localhost:8080/api/v1/recurring-transactions \
   -d '{"name":"Monthly internet","type":"expense","wallet_id":"<wallet_id>","category_id":"<expense_category_id>","amount_minor":350000,"frequency":"monthly","interval_count":1,"next_run_at":"2026-06-01T00:00:00Z"}'
 
 curl -s http://localhost:8080/api/v1/recurring-transactions/<recurring_id>/run \
-  -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
-  -d '{}'
+  -X POST
 ```
 
 ## Money Representation
@@ -192,6 +197,10 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 Create, update, delete, and quick entry execution use database transactions so wallet balances and transaction rows change atomically.
 
 Installment and subscription payment endpoints also run atomically: the API creates an expense transaction, updates wallet balance, and advances tracker state in one PostgreSQL transaction.
+
+Quick entry execution, installment payment, subscription payment, and manual recurring run endpoints accept an empty request body for one-click daily actions. Optional JSON bodies can still override fields such as payment date, note, wallet, category, or scheduled run time where the endpoint supports it.
+
+Monthly subscription and recurring schedules clamp month-end dates to the target month's last day. For example, January 31 advances to February 28 or 29 instead of rolling into March.
 
 Recurring transactions are executed atomically too. Each occurrence stores a unique `(rule_id, scheduled_for)` run record before creating the transaction, so scheduler races cannot double-charge the same scheduled occurrence. The native scheduler is controlled by:
 

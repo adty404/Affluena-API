@@ -3,6 +3,8 @@ package tracker
 import (
 	"errors"
 	"time"
+
+	"affluena/internal/caldate"
 )
 
 type InstallmentStatus string
@@ -53,10 +55,37 @@ func AdvanceSubscriptionDueDate(due time.Time, cycle BillingCycle) (time.Time, e
 	case BillingCycleWeekly:
 		return due.AddDate(0, 0, 7), nil
 	case BillingCycleMonthly:
-		return due.AddDate(0, 1, 0), nil
+		return caldate.AddMonthsClamped(due, 1), nil
 	default:
 		return time.Time{}, errors.New("invalid billing cycle")
 	}
+}
+
+func ResolveInstallmentRemainingAndStatus(tenorMonths int, remainingMonths *int, status InstallmentStatus) (int, InstallmentStatus, error) {
+	if tenorMonths <= 0 {
+		return 0, "", errors.New("tenor_months must be positive")
+	}
+	if status == "" {
+		status = InstallmentStatusActive
+	}
+	if !IsValidInstallmentStatus(status) {
+		return 0, "", errors.New("invalid installment status")
+	}
+
+	remaining := tenorMonths
+	if remainingMonths != nil {
+		remaining = *remainingMonths
+	}
+	if remaining < 0 || remaining > tenorMonths {
+		return 0, "", errors.New("remaining_months must be between 0 and tenor_months")
+	}
+	if status == InstallmentStatusActive && remaining == 0 {
+		return 0, "", errors.New("active installment must have remaining months")
+	}
+	if status == InstallmentStatusPaidOff && remaining != 0 {
+		return 0, "", errors.New("paid off installment cannot have remaining months")
+	}
+	return remaining, status, nil
 }
 
 func IsValidInstallmentStatus(status InstallmentStatus) bool {

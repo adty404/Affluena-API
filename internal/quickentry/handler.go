@@ -124,8 +124,7 @@ func (h *Handler) Execute(c *gin.Context) {
 	}
 
 	var req executeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+	if !httpx.BindOptionalJSON(c, &req, "invalid request body") {
 		return
 	}
 

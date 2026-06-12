@@ -20,8 +20,8 @@ func TestAdvanceNextRunAtWeeklyAndMonthly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AdvanceNextRunAt monthly returned error: %v", err)
 	}
-	if !nextMonthly.Equal(time.Date(2026, 3, 3, 10, 0, 0, 0, time.UTC)) {
-		t.Fatalf("expected Go AddDate monthly rollover to 2026-03-03, got %s", nextMonthly)
+	if !nextMonthly.Equal(time.Date(2026, 2, 28, 10, 0, 0, 0, time.UTC)) {
+		t.Fatalf("expected monthly next run to clamp to 2026-02-28, got %s", nextMonthly)
 	}
 }
 

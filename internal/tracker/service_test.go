@@ -39,8 +39,8 @@ func TestAdvanceSubscriptionDueDate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AdvanceSubscriptionDueDate monthly returned error: %v", err)
 	}
-	if !monthly.Equal(time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)) {
-		t.Fatalf("expected Go AddDate monthly rollover to 2026-03-03, got %s", monthly)
+	if !monthly.Equal(time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("expected monthly due date to clamp to 2026-02-28, got %s", monthly)
 	}
 
 	weekly, err := AdvanceSubscriptionDueDate(due, BillingCycleWeekly)
@@ -49,5 +49,36 @@ func TestAdvanceSubscriptionDueDate(t *testing.T) {
 	}
 	if !weekly.Equal(time.Date(2026, 2, 7, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("expected weekly due date 2026-02-07, got %s", weekly)
+	}
+}
+
+func TestResolveInstallmentRemainingAndStatus(t *testing.T) {
+	remaining, status, err := ResolveInstallmentRemainingAndStatus(3, nil, "")
+	if err != nil {
+		t.Fatalf("ResolveInstallmentRemainingAndStatus returned error: %v", err)
+	}
+	if remaining != 3 || status != InstallmentStatusActive {
+		t.Fatalf("expected active installment with 3 remaining months, got %d/%s", remaining, status)
+	}
+
+	zero := 0
+	remaining, status, err = ResolveInstallmentRemainingAndStatus(3, &zero, InstallmentStatusPaidOff)
+	if err != nil {
+		t.Fatalf("ResolveInstallmentRemainingAndStatus paid off returned error: %v", err)
+	}
+	if remaining != 0 || status != InstallmentStatusPaidOff {
+		t.Fatalf("expected paid off installment with 0 remaining months, got %d/%s", remaining, status)
+	}
+}
+
+func TestResolveInstallmentRemainingAndStatusRejectsInconsistentState(t *testing.T) {
+	zero := 0
+	if _, _, err := ResolveInstallmentRemainingAndStatus(3, &zero, InstallmentStatusActive); err == nil {
+		t.Fatal("expected active installment with zero remaining months to fail")
+	}
+
+	one := 1
+	if _, _, err := ResolveInstallmentRemainingAndStatus(3, &one, InstallmentStatusPaidOff); err == nil {
+		t.Fatal("expected paid off installment with remaining months to fail")
 	}
 }

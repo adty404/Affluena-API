@@ -182,13 +182,9 @@ func bindRule(c *gin.Context) (RuleInput, bool) {
 
 func bindRunNow(c *gin.Context) (time.Time, bool) {
 	now := time.Now().UTC()
-	if c.Request.ContentLength == 0 {
-		return now, true
-	}
 
 	var req runRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+	if !httpx.BindOptionalJSON(c, &req, "invalid request body") {
 		return time.Time{}, false
 	}
 	if req.Now == "" {
