@@ -47,11 +47,11 @@ func (r *InstallmentRepository) Create(ctx context.Context, userID string, insta
 	if err := ensureExpensePaymentRefs(ctx, r.pool, userID, installment.WalletID, installment.CategoryID); err != nil {
 		return Installment{}, err
 	}
-	if installment.RemainingMonths == 0 {
-		installment.RemainingMonths = installment.TenorMonths
-	}
 	if installment.Status == "" {
 		installment.Status = InstallmentStatusActive
+	}
+	if _, _, err := ResolveInstallmentRemainingAndStatus(installment.TenorMonths, &installment.RemainingMonths, installment.Status); err != nil {
+		return Installment{}, err
 	}
 
 	return scanInstallment(r.pool.QueryRow(ctx, `
@@ -99,6 +99,9 @@ func (r *InstallmentRepository) Get(ctx context.Context, userID string, id strin
 
 func (r *InstallmentRepository) Update(ctx context.Context, userID string, id string, installment Installment) (Installment, error) {
 	if err := ensureExpensePaymentRefs(ctx, r.pool, userID, installment.WalletID, installment.CategoryID); err != nil {
+		return Installment{}, err
+	}
+	if _, _, err := ResolveInstallmentRemainingAndStatus(installment.TenorMonths, &installment.RemainingMonths, installment.Status); err != nil {
 		return Installment{}, err
 	}
 

@@ -26,7 +26,7 @@ type installmentRequest struct {
 	TotalAmountMinor   int64             `json:"total_amount_minor" binding:"required"`
 	MonthlyAmountMinor int64             `json:"monthly_amount_minor" binding:"required"`
 	TenorMonths        int               `json:"tenor_months" binding:"required"`
-	RemainingMonths    int               `json:"remaining_months"`
+	RemainingMonths    *int              `json:"remaining_months"`
 	StartDate          string            `json:"start_date" binding:"required"`
 	DueDay             int               `json:"due_day" binding:"required"`
 	Status             InstallmentStatus `json:"status"`
@@ -238,19 +238,13 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 		httpx.Error(c, http.StatusBadRequest, "amounts and tenor_months must be positive")
 		return Installment{}, false
 	}
-	if req.RemainingMonths < 0 || req.RemainingMonths > req.TenorMonths {
-		httpx.Error(c, http.StatusBadRequest, "remaining_months must be between 0 and tenor_months")
-		return Installment{}, false
-	}
 	if req.DueDay < 1 || req.DueDay > 31 {
 		httpx.Error(c, http.StatusBadRequest, "due_day must be between 1 and 31")
 		return Installment{}, false
 	}
-	if req.Status == "" {
-		req.Status = InstallmentStatusActive
-	}
-	if !IsValidInstallmentStatus(req.Status) {
-		httpx.Error(c, http.StatusBadRequest, "invalid installment status")
+	remainingMonths, status, err := ResolveInstallmentRemainingAndStatus(req.TenorMonths, req.RemainingMonths, req.Status)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return Installment{}, false
 	}
 	startDate, err := parseDate(req.StartDate)
@@ -266,10 +260,10 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 		TotalAmountMinor:   req.TotalAmountMinor,
 		MonthlyAmountMinor: req.MonthlyAmountMinor,
 		TenorMonths:        req.TenorMonths,
-		RemainingMonths:    req.RemainingMonths,
+		RemainingMonths:    remainingMonths,
 		StartDate:          startDate,
 		DueDay:             req.DueDay,
-		Status:             req.Status,
+		Status:             status,
 		Note:               req.Note,
 	}, true
 }
@@ -315,8 +309,7 @@ func bindSubscription(c *gin.Context) (Subscription, bool) {
 
 func bindPay(c *gin.Context) (time.Time, string, bool) {
 	var req payRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+	if !httpx.BindOptionalJSON(c, &req, "invalid request body") {
 		return time.Time{}, "", false
 	}
 	paidAt := time.Now().UTC()
