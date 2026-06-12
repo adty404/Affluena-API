@@ -1,0 +1,163 @@
+package budget
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Budget struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	CategoryID string    `json:"category_id"`
+	Month      time.Time `json:"month"`
+	LimitMinor int64     `json:"limit_minor"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type BudgetSummary struct {
+	Budget
+	SpentMinor     int64   `json:"spent_minor"`
+	RemainingMinor int64   `json:"remaining_minor"`
+	UsagePercent   float64 `json:"usage_percent"`
+}
+
+type Repository struct {
+	pool *pgxpool.Pool
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
+}
+
+func (r *Repository) Create(ctx context.Context, userID string, categoryID string, month time.Time, limitMinor int64) (Budget, error) {
+	if err := r.ensureExpenseCategory(ctx, userID, categoryID); err != nil {
+		return Budget{}, err
+	}
+
+	return scanBudget(r.pool.QueryRow(ctx, `
+		INSERT INTO category_budgets (user_id, category_id, month, limit_minor)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
+	`, userID, categoryID, month, limitMinor))
+}
+
+func (r *Repository) List(ctx context.Context, userID string, month time.Time) ([]BudgetSummary, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor,
+			b.created_at, b.updated_at,
+			COALESCE(SUM(t.amount_minor) FILTER (
+				WHERE t.type = 'expense'
+					AND t.transaction_at >= b.month
+					AND t.transaction_at < b.month + interval '1 month'
+			), 0) AS spent_minor
+		FROM category_budgets b
+		LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = b.category_id
+		WHERE b.user_id = $1 AND b.month = $2
+		GROUP BY b.id
+		ORDER BY b.created_at DESC
+	`, userID, month)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []BudgetSummary
+	for rows.Next() {
+		summary, err := scanBudgetSummary(rows)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, rows.Err()
+}
+
+func (r *Repository) Get(ctx context.Context, userID string, id string) (Budget, error) {
+	return scanBudget(r.pool.QueryRow(ctx, `
+		SELECT id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
+		FROM category_budgets
+		WHERE user_id = $1 AND id = $2
+	`, userID, id))
+}
+
+func (r *Repository) Update(ctx context.Context, userID string, id string, categoryID string, month time.Time, limitMinor int64) (Budget, error) {
+	if err := r.ensureExpenseCategory(ctx, userID, categoryID); err != nil {
+		return Budget{}, err
+	}
+
+	return scanBudget(r.pool.QueryRow(ctx, `
+		UPDATE category_budgets
+		SET category_id = $3, month = $4, limit_minor = $5, updated_at = now()
+		WHERE user_id = $1 AND id = $2
+		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
+	`, userID, id, categoryID, month, limitMinor))
+}
+
+func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM category_budgets WHERE user_id = $1 AND id = $2`, userID, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+func (r *Repository) ensureExpenseCategory(ctx context.Context, userID string, categoryID string) error {
+	var exists bool
+	if err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM categories
+			WHERE user_id = $1 AND id = $2 AND type = 'expense'
+		)
+	`, userID, categoryID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanBudget(row rowScanner) (Budget, error) {
+	var budget Budget
+	err := row.Scan(&budget.ID, &budget.UserID, &budget.CategoryID, &budget.Month, &budget.LimitMinor, &budget.CreatedAt, &budget.UpdatedAt)
+	return budget, err
+}
+
+func scanBudgetSummary(row rowScanner) (BudgetSummary, error) {
+	var summary BudgetSummary
+	var spentMinor int64
+	err := row.Scan(
+		&summary.ID,
+		&summary.UserID,
+		&summary.CategoryID,
+		&summary.Month,
+		&summary.LimitMinor,
+		&summary.CreatedAt,
+		&summary.UpdatedAt,
+		&spentMinor,
+	)
+	if err != nil {
+		return BudgetSummary{}, err
+	}
+	usage := NewUsageSummary(summary.LimitMinor, spentMinor)
+	summary.SpentMinor = usage.SpentMinor
+	summary.RemainingMinor = usage.RemainingMinor
+	summary.UsagePercent = usage.UsagePercent
+	return summary, nil
+}
+
+func NotFound(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
+}
