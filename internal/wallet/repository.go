@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"affluena/internal/page"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,15 +30,16 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateWall
 	return wallet, err
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Wallet, error) {
+func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, currency_code, balance_minor, created_at, updated_at
 		FROM wallets
 		WHERE user_id = $1
-		ORDER BY created_at DESC
-	`, userID)
+		ORDER BY `+walletOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Wallet]{}, err
 	}
 	defer rows.Close()
 
@@ -44,11 +47,35 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Wallet, error) 
 	for rows.Next() {
 		var wallet Wallet
 		if err := rows.Scan(&wallet.ID, &wallet.UserID, &wallet.Name, &wallet.Type, &wallet.CurrencyCode, &wallet.BalanceMinor, &wallet.CreatedAt, &wallet.UpdatedAt); err != nil {
-			return nil, err
+			return page.Result[Wallet]{}, err
 		}
 		wallets = append(wallets, wallet)
 	}
-	return wallets, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Wallet]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM wallets WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Wallet]{}, err
+	}
+	return page.NewResult(wallets, pagination, total), nil
+}
+
+func walletOrderBy(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "created_at ASC"
+	case "name_asc":
+		return "name ASC"
+	case "name_desc":
+		return "name DESC"
+	case "balance_desc":
+		return "balance_minor DESC, created_at DESC"
+	case "balance_asc":
+		return "balance_minor ASC, created_at DESC"
+	default:
+		return "created_at DESC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Wallet, error) {

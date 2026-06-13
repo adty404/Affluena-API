@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"affluena/internal/page"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -26,15 +28,16 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateCate
 	return category, err
 }
 
-func (r *Repository) List(ctx context.Context, userID string, categoryType string) ([]Category, error) {
+func (r *Repository) List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, created_at, updated_at
 		FROM categories
 		WHERE user_id = $1 AND ($2 = '' OR type = $2)
-		ORDER BY type, name
-	`, userID, categoryType)
+		ORDER BY `+categoryOrderBy(pagination.Sort)+`
+		LIMIT $3 OFFSET $4
+	`, userID, categoryType, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Category]{}, err
 	}
 	defer rows.Close()
 
@@ -42,11 +45,39 @@ func (r *Repository) List(ctx context.Context, userID string, categoryType strin
 	for rows.Next() {
 		var category Category
 		if err := rows.Scan(&category.ID, &category.UserID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt); err != nil {
-			return nil, err
+			return page.Result[Category]{}, err
 		}
 		categories = append(categories, category)
 	}
-	return categories, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Category]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM categories
+		WHERE user_id = $1 AND ($2 = '' OR type = $2)
+	`, userID, categoryType).Scan(&total); err != nil {
+		return page.Result[Category]{}, err
+	}
+	return page.NewResult(categories, pagination, total), nil
+}
+
+func categoryOrderBy(sort string) string {
+	switch sort {
+	case "type_name_desc":
+		return "type DESC, name DESC"
+	case "name_asc":
+		return "name ASC"
+	case "name_desc":
+		return "name DESC"
+	case "created_at_desc":
+		return "created_at DESC"
+	case "created_at_asc":
+		return "created_at ASC"
+	default:
+		return "type ASC, name ASC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Category, error) {

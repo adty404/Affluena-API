@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
@@ -36,16 +37,17 @@ func (r *SubscriptionRepository) Create(ctx context.Context, userID string, subs
 		subscription.AmountMinor, subscription.BillingCycle, subscription.NextDueDate, subscription.Status, subscription.Note))
 }
 
-func (r *SubscriptionRepository) List(ctx context.Context, userID string) ([]Subscription, error) {
+func (r *SubscriptionRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
 			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
 		FROM subscriptions
 		WHERE user_id = $1
-		ORDER BY next_due_date ASC, created_at DESC
-	`, userID)
+		ORDER BY `+subscriptionOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Subscription]{}, err
 	}
 	defer rows.Close()
 
@@ -53,11 +55,35 @@ func (r *SubscriptionRepository) List(ctx context.Context, userID string) ([]Sub
 	for rows.Next() {
 		subscription, err := scanSubscription(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Subscription]{}, err
 		}
 		subscriptions = append(subscriptions, subscription)
 	}
-	return subscriptions, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Subscription]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM subscriptions WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Subscription]{}, err
+	}
+	return page.NewResult(subscriptions, pagination, total), nil
+}
+
+func subscriptionOrderBy(sort string) string {
+	switch sort {
+	case "next_due_date_desc":
+		return "next_due_date DESC, created_at DESC"
+	case "created_at_desc":
+		return "created_at DESC"
+	case "created_at_asc":
+		return "created_at ASC"
+	case "name_asc":
+		return "name ASC"
+	case "name_desc":
+		return "name DESC"
+	default:
+		return "next_due_date ASC, created_at DESC"
+	}
 }
 
 func (r *SubscriptionRepository) Get(ctx context.Context, userID string, id string) (Subscription, error) {

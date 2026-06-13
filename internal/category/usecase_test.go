@@ -5,12 +5,15 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeCategoryRepository struct {
 	createInput CreateCategoryInput
 	created     Category
 	listType    string
+	listPage    page.Params
 	listed      []Category
 	got         Category
 	updated     Category
@@ -26,12 +29,13 @@ func (f *fakeCategoryRepository) Create(ctx context.Context, userID string, inpu
 	return f.created, nil
 }
 
-func (f *fakeCategoryRepository) List(ctx context.Context, userID string, categoryType string) ([]Category, error) {
+func (f *fakeCategoryRepository) List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error) {
 	f.listType = categoryType
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[Category]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeCategoryRepository) Get(ctx context.Context, userID string, id string) (Category, error) {
@@ -106,7 +110,7 @@ func TestCategoryUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income"}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1", ""); !errors.Is(err, repoErr) {
+	if _, err := uc.List(context.Background(), "user-1", "", page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected list repo error, got %v", err)
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Salary", Type: "income"}); !errors.Is(err, repoErr) {
@@ -125,8 +129,8 @@ func TestCategoryUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1", "")
-	if err != nil || len(listed) != 1 || listed[0].ID != "category-1" {
+	listed, err := uc.List(context.Background(), "user-1", "", page.Params{Limit: 10, Sort: "type_name_asc"})
+	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "category-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "category-1")
@@ -145,15 +149,18 @@ func TestCategoryUseCaseListAcceptsOptionalTypeFilter(t *testing.T) {
 	repo := &fakeCategoryRepository{listed: []Category{{ID: "category-1", Type: "income"}}}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1", "income")
+	listed, err := uc.List(context.Background(), "user-1", "income", page.Params{Limit: 10, Sort: "type_name_asc"})
 	if err != nil {
 		t.Fatalf("List returned error: %v", err)
 	}
-	if len(listed) != 1 || listed[0].Type != "income" {
+	if len(listed.Items) != 1 || listed.Items[0].Type != "income" {
 		t.Fatalf("unexpected List result %+v", listed)
 	}
 	if repo.listType != "income" {
 		t.Fatalf("expected repository to receive income filter, got %q", repo.listType)
+	}
+	if repo.listPage.Limit != 10 || repo.listPage.Sort != "type_name_asc" {
+		t.Fatalf("expected repository to receive pagination, got %+v", repo.listPage)
 	}
 }
 
@@ -161,7 +168,7 @@ func TestCategoryUseCaseListRejectsInvalidTypeFilter(t *testing.T) {
 	repo := &fakeCategoryRepository{}
 	uc := NewUseCase(repo)
 
-	if _, err := uc.List(context.Background(), "user-1", "transfer"); err == nil {
+	if _, err := uc.List(context.Background(), "user-1", "transfer", page.Params{Limit: 100}); err == nil {
 		t.Fatal("expected invalid category type error")
 	}
 	if repo.listType != "" {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ type Handler struct {
 
 type quickEntryUseCase interface {
 	Create(ctx context.Context, userID string, template Template) (Template, error)
-	List(ctx context.Context, userID string) ([]Template, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error)
 	Get(ctx context.Context, userID string, id string) (Template, error)
 	Update(ctx context.Context, userID string, id string, template Template) (Template, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -67,12 +68,23 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	templates, err := h.usecase.List(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "name_asc", templateSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list quick entry templates failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"templates": templates})
+	httpx.JSON(c, http.StatusOK, gin.H{"templates": result.Items, "pagination": result.Pagination})
+}
+
+var templateSorts = map[string]struct{}{
+	"name_asc":        {},
+	"name_desc":       {},
+	"created_at_desc": {},
+	"created_at_asc":  {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

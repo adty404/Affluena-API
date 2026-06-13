@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 )
 
@@ -13,6 +14,7 @@ type fakeTemplateRepository struct {
 	createTemplate Template
 	updateTemplate Template
 	created        Template
+	listPage       page.Params
 	listed         []Template
 	got            Template
 	updated        Template
@@ -28,11 +30,12 @@ func (f *fakeTemplateRepository) Create(ctx context.Context, userID string, temp
 	return f.created, nil
 }
 
-func (f *fakeTemplateRepository) List(ctx context.Context, userID string) ([]Template, error) {
+func (f *fakeTemplateRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[Template]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeTemplateRepository) Get(ctx context.Context, userID string, id string) (Template, error) {

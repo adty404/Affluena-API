@@ -3,11 +3,13 @@ package tracker
 import (
 	"context"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type InstallmentRepositoryPort interface {
 	Create(ctx context.Context, userID string, installment Installment) (Installment, error)
-	List(ctx context.Context, userID string) ([]Installment, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error)
 	Get(ctx context.Context, userID string, id string) (Installment, error)
 	Update(ctx context.Context, userID string, id string, installment Installment) (Installment, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -16,7 +18,7 @@ type InstallmentRepositoryPort interface {
 
 type SubscriptionRepositoryPort interface {
 	Create(ctx context.Context, userID string, subscription Subscription) (Subscription, error)
-	List(ctx context.Context, userID string) ([]Subscription, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error)
 	Get(ctx context.Context, userID string, id string) (Subscription, error)
 	Update(ctx context.Context, userID string, id string, subscription Subscription) (Subscription, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -36,8 +38,8 @@ func (u *UseCase) CreateInstallment(ctx context.Context, userID string, installm
 	return u.installments.Create(ctx, userID, installment)
 }
 
-func (u *UseCase) ListInstallments(ctx context.Context, userID string) ([]Installment, error) {
-	return u.installments.List(ctx, userID)
+func (u *UseCase) ListInstallments(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error) {
+	return u.installments.List(ctx, userID, pagination)
 }
 
 func (u *UseCase) GetInstallment(ctx context.Context, userID string, id string) (Installment, error) {
@@ -60,8 +62,8 @@ func (u *UseCase) CreateSubscription(ctx context.Context, userID string, subscri
 	return u.subscriptions.Create(ctx, userID, subscription)
 }
 
-func (u *UseCase) ListSubscriptions(ctx context.Context, userID string) ([]Subscription, error) {
-	return u.subscriptions.List(ctx, userID)
+func (u *UseCase) ListSubscriptions(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error) {
+	return u.subscriptions.List(ctx, userID, pagination)
 }
 
 func (u *UseCase) GetSubscription(ctx context.Context, userID string, id string) (Subscription, error) {

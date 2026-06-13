@@ -5,11 +5,14 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeBudgetRepository struct {
 	createInput CreateBudgetInput
 	created     Budget
+	listPage    page.Params
 	listed      []BudgetSummary
 	got         Budget
 	updated     Budget
@@ -25,11 +28,12 @@ func (f *fakeBudgetRepository) Create(ctx context.Context, userID string, input 
 	return f.created, nil
 }
 
-func (f *fakeBudgetRepository) List(ctx context.Context, userID string, month time.Time) ([]BudgetSummary, error) {
+func (f *fakeBudgetRepository) List(ctx context.Context, userID string, month time.Time, pagination page.Params) (page.Result[BudgetSummary], error) {
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[BudgetSummary]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeBudgetRepository) Get(ctx context.Context, userID string, id string) (Budget, error) {
@@ -90,9 +94,12 @@ func TestBudgetUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1", "2026-06")
-	if err != nil || len(listed) != 1 || listed[0].ID != "budget-1" {
+	listed, err := uc.List(context.Background(), "user-1", "2026-06", page.Params{Limit: 10, Sort: "created_at_desc"})
+	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "budget-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
+	}
+	if repo.listPage.Limit != 10 || repo.listPage.Sort != "created_at_desc" {
+		t.Fatalf("expected repository to receive pagination, got %+v", repo.listPage)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "budget-1")
 	if err != nil || got.ID != "budget-1" {

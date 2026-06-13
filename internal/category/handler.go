@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +17,7 @@ type Handler struct {
 
 type categoryUseCase interface {
 	Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error)
-	List(ctx context.Context, userID string, categoryType string) ([]Category, error)
+	List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error)
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -56,7 +57,11 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.usecase.List(c.Request.Context(), userID, c.Query("type"))
+	pagination, ok := httpx.ParsePage(c, "type_name_asc", categorySorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, c.Query("type"), pagination)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCategoryType) {
 			httpx.Error(c, http.StatusBadRequest, err.Error())
@@ -65,7 +70,16 @@ func (h *Handler) List(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, "list categories failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"categories": categories})
+	httpx.JSON(c, http.StatusOK, gin.H{"categories": result.Items, "pagination": result.Pagination})
+}
+
+var categorySorts = map[string]struct{}{
+	"type_name_asc":   {},
+	"type_name_desc":  {},
+	"name_asc":        {},
+	"name_desc":       {},
+	"created_at_desc": {},
+	"created_at_asc":  {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

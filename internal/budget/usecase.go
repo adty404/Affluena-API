@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error)
-	List(ctx context.Context, userID string, month time.Time) ([]BudgetSummary, error)
+	List(ctx context.Context, userID string, month time.Time, pagination page.Params) (page.Result[BudgetSummary], error)
 	Get(ctx context.Context, userID string, id string) (Budget, error)
 	Update(ctx context.Context, userID string, id string, input UpdateBudgetInput) (Budget, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -34,12 +36,12 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateBudgetI
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string, monthValue string) ([]BudgetSummary, error) {
+func (u *UseCase) List(ctx context.Context, userID string, monthValue string, pagination page.Params) (page.Result[BudgetSummary], error) {
 	month, err := ParseBudgetMonth(monthValue)
 	if err != nil {
-		return nil, err
+		return page.Result[BudgetSummary]{}, err
 	}
-	return u.repo.List(ctx, userID, month)
+	return u.repo.List(ctx, userID, month, pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Budget, error) {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"affluena/internal/page"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,16 +32,17 @@ func (r *Repository) Create(ctx context.Context, userID string, template Templat
 	return created, translateNotFound(err)
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Template, error) {
+func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, note, created_at, updated_at
 		FROM quick_entry_templates
 		WHERE user_id = $1
-		ORDER BY name
-	`, userID)
+		ORDER BY `+templateOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Template]{}, err
 	}
 	defer rows.Close()
 
@@ -47,11 +50,31 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Template, error
 	for rows.Next() {
 		template, err := scanTemplate(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Template]{}, err
 		}
 		templates = append(templates, template)
 	}
-	return templates, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Template]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM quick_entry_templates WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Template]{}, err
+	}
+	return page.NewResult(templates, pagination, total), nil
+}
+
+func templateOrderBy(sort string) string {
+	switch sort {
+	case "name_desc":
+		return "name DESC"
+	case "created_at_desc":
+		return "created_at DESC"
+	case "created_at_asc":
+		return "created_at ASC"
+	default:
+		return "name ASC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Template, error) {

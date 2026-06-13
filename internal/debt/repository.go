@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
@@ -85,7 +86,7 @@ func (r *Repository) Create(ctx context.Context, userID string, input DebtInput)
 	return debt, nil
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Debt, error) {
+func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, type, counterparty_name, wallet_id::text,
 			disbursement_category_id::text, payment_category_id::text,
@@ -94,10 +95,11 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Debt, error) {
 			created_at, updated_at
 		FROM debts
 		WHERE user_id = $1
-		ORDER BY opened_at DESC, created_at DESC
-	`, userID)
+		ORDER BY `+debtOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Debt]{}, err
 	}
 	defer rows.Close()
 
@@ -105,11 +107,35 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Debt, error) {
 	for rows.Next() {
 		debt, err := scanDebt(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Debt]{}, err
 		}
 		debts = append(debts, debt)
 	}
-	return debts, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Debt]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM debts WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Debt]{}, err
+	}
+	return page.NewResult(debts, pagination, total), nil
+}
+
+func debtOrderBy(sort string) string {
+	switch sort {
+	case "opened_at_asc":
+		return "opened_at ASC, created_at ASC"
+	case "due_date_asc":
+		return "due_date ASC NULLS LAST, created_at DESC"
+	case "due_date_desc":
+		return "due_date DESC NULLS LAST, created_at DESC"
+	case "amount_desc":
+		return "principal_amount_minor DESC, opened_at DESC"
+	case "amount_asc":
+		return "principal_amount_minor ASC, opened_at DESC"
+	default:
+		return "opened_at DESC, created_at DESC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Debt, error) {

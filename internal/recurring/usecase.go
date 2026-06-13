@@ -3,11 +3,13 @@ package recurring
 import (
 	"context"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input RuleInput) (Rule, error)
-	List(ctx context.Context, userID string) ([]Rule, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error)
 	Get(ctx context.Context, userID string, id string) (Rule, error)
 	Update(ctx context.Context, userID string, id string, input RuleInput) (Rule, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -27,8 +29,8 @@ func (u *UseCase) Create(ctx context.Context, userID string, input RuleInput) (R
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string) ([]Rule, error) {
-	return u.repo.List(ctx, userID)
+func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error) {
+	return u.repo.List(ctx, userID, pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Rule, error) {

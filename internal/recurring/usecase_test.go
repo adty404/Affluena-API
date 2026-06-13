@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeRecurringRepository struct {
@@ -13,6 +15,7 @@ type fakeRecurringRepository struct {
 	dueNow      time.Time
 	dueLimit    int
 	created     Rule
+	listPage    page.Params
 	listed      []Rule
 	got         Rule
 	updated     Rule
@@ -26,8 +29,12 @@ func (f *fakeRecurringRepository) Create(ctx context.Context, userID string, inp
 	return f.created, f.err
 }
 
-func (f *fakeRecurringRepository) List(ctx context.Context, userID string) ([]Rule, error) {
-	return f.listed, f.err
+func (f *fakeRecurringRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error) {
+	f.listPage = pagination
+	if f.err != nil {
+		return page.Result[Rule]{}, f.err
+	}
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeRecurringRepository) Get(ctx context.Context, userID string, id string) (Rule, error) {
@@ -68,7 +75,7 @@ func TestRecurringUseCaseDelegatesRuleActions(t *testing.T) {
 	if got, err := uc.Create(context.Background(), "user-1", RuleInput{}); err != nil || got.ID != "rule-1" {
 		t.Fatalf("unexpected Create result %+v err=%v", got, err)
 	}
-	if got, err := uc.List(context.Background(), "user-1"); err != nil || len(got) != 1 {
+	if got, err := uc.List(context.Background(), "user-1", page.Params{Limit: 10, Sort: "next_run_at_asc"}); err != nil || len(got.Items) != 1 {
 		t.Fatalf("unexpected List result %+v err=%v", got, err)
 	}
 	if got, err := uc.Get(context.Background(), "user-1", "rule-1"); err != nil || got.ID != "rule-1" {
@@ -131,7 +138,7 @@ func TestRecurringUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", RuleInput{}); err != repoErr {
 		t.Fatalf("expected create error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1"); err != repoErr {
+	if _, err := uc.List(context.Background(), "user-1", page.Params{Limit: 100}); err != repoErr {
 		t.Fatalf("expected list error, got %v", err)
 	}
 	if err := uc.Delete(context.Background(), "user-1", "rule-1"); err != repoErr {

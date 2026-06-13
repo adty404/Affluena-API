@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeInstallmentRepository struct {
@@ -13,6 +15,7 @@ type fakeInstallmentRepository struct {
 	paidAt      time.Time
 	payNote     string
 	created     Installment
+	listPage    page.Params
 	listed      []Installment
 	got         Installment
 	updated     Installment
@@ -25,8 +28,12 @@ func (f *fakeInstallmentRepository) Create(ctx context.Context, userID string, i
 	return f.created, f.err
 }
 
-func (f *fakeInstallmentRepository) List(ctx context.Context, userID string) ([]Installment, error) {
-	return f.listed, f.err
+func (f *fakeInstallmentRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error) {
+	f.listPage = pagination
+	if f.err != nil {
+		return page.Result[Installment]{}, f.err
+	}
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeInstallmentRepository) Get(ctx context.Context, userID string, id string) (Installment, error) {
@@ -54,6 +61,7 @@ type fakeSubscriptionRepository struct {
 	paidAt      time.Time
 	payNote     string
 	created     Subscription
+	listPage    page.Params
 	listed      []Subscription
 	got         Subscription
 	updated     Subscription
@@ -66,8 +74,12 @@ func (f *fakeSubscriptionRepository) Create(ctx context.Context, userID string, 
 	return f.created, f.err
 }
 
-func (f *fakeSubscriptionRepository) List(ctx context.Context, userID string) ([]Subscription, error) {
-	return f.listed, f.err
+func (f *fakeSubscriptionRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error) {
+	f.listPage = pagination
+	if f.err != nil {
+		return page.Result[Subscription]{}, f.err
+	}
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeSubscriptionRepository) Get(ctx context.Context, userID string, id string) (Subscription, error) {
@@ -102,7 +114,7 @@ func TestTrackerUseCaseDelegatesInstallments(t *testing.T) {
 	if got, err := uc.CreateInstallment(context.Background(), "user-1", Installment{}); err != nil || got.ID != "installment-1" {
 		t.Fatalf("unexpected CreateInstallment result %+v err=%v", got, err)
 	}
-	if got, err := uc.ListInstallments(context.Background(), "user-1"); err != nil || len(got) != 1 {
+	if got, err := uc.ListInstallments(context.Background(), "user-1", page.Params{Limit: 10, Sort: "created_at_desc"}); err != nil || len(got.Items) != 1 {
 		t.Fatalf("unexpected ListInstallments result %+v err=%v", got, err)
 	}
 	if got, err := uc.GetInstallment(context.Background(), "user-1", "installment-1"); err != nil || got.ID != "installment-1" {
@@ -161,7 +173,7 @@ func TestTrackerUseCaseDelegatesSubscriptions(t *testing.T) {
 	if got, err := uc.CreateSubscription(context.Background(), "user-1", Subscription{}); err != nil || got.ID != "subscription-1" {
 		t.Fatalf("unexpected CreateSubscription result %+v err=%v", got, err)
 	}
-	if got, err := uc.ListSubscriptions(context.Background(), "user-1"); err != nil || len(got) != 1 {
+	if got, err := uc.ListSubscriptions(context.Background(), "user-1", page.Params{Limit: 10, Sort: "next_due_date_asc"}); err != nil || len(got.Items) != 1 {
 		t.Fatalf("unexpected ListSubscriptions result %+v err=%v", got, err)
 	}
 	if got, err := uc.GetSubscription(context.Background(), "user-1", "subscription-1"); err != nil || got.ID != "subscription-1" {
@@ -215,7 +227,7 @@ func TestTrackerUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.CreateInstallment(context.Background(), "user-1", Installment{}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected installment create error, got %v", err)
 	}
-	if _, err := uc.ListInstallments(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+	if _, err := uc.ListInstallments(context.Background(), "user-1", page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected installment list error, got %v", err)
 	}
 	if err := uc.DeleteInstallment(context.Background(), "user-1", "installment-1"); !errors.Is(err, repoErr) {
@@ -224,7 +236,7 @@ func TestTrackerUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.CreateSubscription(context.Background(), "user-1", Subscription{}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected subscription create error, got %v", err)
 	}
-	if _, err := uc.ListSubscriptions(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+	if _, err := uc.ListSubscriptions(context.Background(), "user-1", page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected subscription list error, got %v", err)
 	}
 	if err := uc.DeleteSubscription(context.Background(), "user-1", "subscription-1"); !errors.Is(err, repoErr) {
