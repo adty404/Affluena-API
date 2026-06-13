@@ -86,3 +86,10 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - Antarmuka pengguna visual (Frontend/UI/PWA).
 - Integrasi _payment gateway_ pihak ketiga atau akses mutasi API Bank _direct_.
 - Fitur OCR (_Optical Character Recognition_) untuk _scan_ struk otomatis.
+
+### 3.10 Advanced Analytics & Reporting
+Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
+
+- **Cashflow Trend**: Mendapatkan data income dan expense selama 6-12 bulan ke belakang untuk melihat pergerakan cashflow.
+- **Expense Distribution**: Melihat distribusi pengeluaran berdasarkan kategori dalam bentuk persentase.
+- **Spend Forecasting**: Sistem menghitung rata-rata harian pengeluaran dan memprediksi total pengeluaran di akhir bulan, serta memberikan peringatan ("overbudget") jika prediksi melewati batas budget yang dianggarkan.

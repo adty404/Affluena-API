@@ -1,2346 +1,2436 @@
 {
-  "info": {
-    "_postman_id": "7f7c2866-85cc-4c17-96b6-000000000001",
-    "name": "Affluena-API",
-    "description": "Postman collection for Affluena-API. Run Auth/Register or Auth/Login first to populate access_token and refresh_token. Create wallets and categories before running dependent finance flows.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{access_token}}",
-        "type": "string"
-      }
-    ]
-  },
-  "event": [
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "pm.test('Status is not 5xx', function () {",
-          "  pm.expect(pm.response.code).to.be.below(500);",
-          "});"
+    "info": {
+        "_postman_id": "7f7c2866-85cc-4c17-96b6-000000000001",
+        "name": "Affluena-API",
+        "description": "Postman collection for Affluena-API. Run Auth/Register or Auth/Login first to populate access_token and refresh_token. Create wallets and categories before running dependent finance flows.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
         ]
-      }
-    }
-  ],
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8080"
     },
-    {
-      "key": "email",
-      "value": "user@example.com"
-    },
-    {
-      "key": "password",
-      "value": "password123"
-    },
-    {
-      "key": "access_token",
-      "value": ""
-    },
-    {
-      "key": "refresh_token",
-      "value": ""
-    },
-    {
-      "key": "wallet_id",
-      "value": ""
-    },
-    {
-      "key": "to_wallet_id",
-      "value": ""
-    },
-    {
-      "key": "income_category_id",
-      "value": ""
-    },
-    {
-      "key": "expense_category_id",
-      "value": ""
-    },
-    {
-      "key": "transaction_id",
-      "value": ""
-    },
-    {
-      "key": "quick_entry_template_id",
-      "value": ""
-    },
-    {
-      "key": "category_budget_id",
-      "value": ""
-    },
-    {
-      "key": "debt_id",
-      "value": ""
-    },
-    {
-      "key": "installment_id",
-      "value": ""
-    },
-    {
-      "key": "subscription_id",
-      "value": ""
-    },
-    {
-      "key": "recurring_id",
-      "value": ""
-    }
-  ],
-  "item": [
-    {
-      "name": "Health",
-      "item": [
+    "event": [
         {
-          "name": "GET /healthz",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/healthz",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "healthz"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Register",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
+            "listen": "test",
+            "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
-                  "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
-                  "}"
+                    "pm.test('Status is not 5xx', function () {",
+                    "  pm.expect(pm.response.code).to.be.below(500);",
+                    "});"
                 ]
-              }
             }
-          ],
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "register"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
-                  "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "login"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
-                  "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/refresh",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "refresh"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Me",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "me"
-              ]
-            }
-          }
         }
-      ]
-    },
-    {
-      "name": "Dashboard",
-      "item": [
+    ],
+    "variable": [
         {
-          "name": "Summary",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/dashboard/summary?month=2026-06",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "dashboard",
-                "summary"
-              ],
-              "query": [
-                {
-                  "key": "month",
-                  "value": "2026-06"
-                }
-              ]
-            }
-          }
+            "key": "base_url",
+            "value": "http://localhost:8080"
+        },
+        {
+            "key": "email",
+            "value": "user@example.com"
+        },
+        {
+            "key": "password",
+            "value": "password123"
+        },
+        {
+            "key": "access_token",
+            "value": ""
+        },
+        {
+            "key": "refresh_token",
+            "value": ""
+        },
+        {
+            "key": "wallet_id",
+            "value": ""
+        },
+        {
+            "key": "to_wallet_id",
+            "value": ""
+        },
+        {
+            "key": "income_category_id",
+            "value": ""
+        },
+        {
+            "key": "expense_category_id",
+            "value": ""
+        },
+        {
+            "key": "transaction_id",
+            "value": ""
+        },
+        {
+            "key": "quick_entry_template_id",
+            "value": ""
+        },
+        {
+            "key": "category_budget_id",
+            "value": ""
+        },
+        {
+            "key": "debt_id",
+            "value": ""
+        },
+        {
+            "key": "installment_id",
+            "value": ""
+        },
+        {
+            "key": "subscription_id",
+            "value": ""
+        },
+        {
+            "key": "recurring_id",
+            "value": ""
         }
-      ]
-    },
-    {
-      "name": "Wallets",
-      "item": [
+    ],
+    "item": [
         {
-          "name": "Create Main Wallet",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('wallet_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Transfer Wallet",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('to_wallet_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cash Secondary {{$timestamp}}\",\n  \"type\": \"cash\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 0\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Wallets",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets?limit=100&offset=0&sort=created_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets"
-              ],
-              "query": [
+            "name": "Health",
+            "item": [
                 {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "created_at_desc"
+                    "name": "GET /healthz",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/healthz",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "healthz"
+                            ]
+                        }
+                    }
                 }
-              ]
-            }
-          }
+            ]
         },
         {
-          "name": "Get Wallet",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets",
-                "{{wallet_id}}"
-              ]
-            }
-          }
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
+                                    "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
+                                    "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.collectionVariables.set('access_token', body.tokens.access_token);",
+                                    "  pm.collectionVariables.set('refresh_token', body.tokens.refresh_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/refresh",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "refresh"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Me",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "me"
+                            ]
+                        }
+                    }
+                }
+            ]
         },
         {
-          "name": "Update Wallet",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"BCA Main Updated {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets",
-                "{{wallet_id}}"
-              ]
-            }
-          }
+            "name": "Dashboard",
+            "item": [
+                {
+                    "name": "Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/dashboard/summary?month=2026-06",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "summary"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2026-06"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Cashflow Trend",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/dashboard/cashflow-trend?months=6",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "cashflow-trend"
+                            ],
+                            "query": [
+                                {
+                                    "key": "months",
+                                    "value": "6"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Expense Distribution",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/dashboard/expense-distribution?month=2024-01",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "expense-distribution"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2024-01"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Forecast",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/dashboard/forecast?month=2024-01",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "forecast"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2024-01"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
         },
         {
-          "name": "Delete Transfer Wallet (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/wallets/{{to_wallet_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "wallets",
-                "{{to_wallet_id}}"
-              ]
-            }
-          }
+            "name": "Wallets",
+            "item": [
+                {
+                    "name": "Create Main Wallet",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('wallet_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Transfer Wallet",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('to_wallet_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Cash Secondary {{$timestamp}}\",\n  \"type\": \"cash\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Wallets",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets?limit=100&offset=0&sort=created_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "created_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Wallet",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets",
+                                "{{wallet_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Wallet",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"BCA Main Updated {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets",
+                                "{{wallet_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Transfer Wallet (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/wallets/{{to_wallet_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "wallets",
+                                "{{to_wallet_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Categories",
+            "item": [
+                {
+                    "name": "Create Income Category",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('income_category_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Salary {{$timestamp}}\",\n  \"type\": \"income\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Expense Category",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('expense_category_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Food {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories?limit=100&offset=0&sort=type_name_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "type_name_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Income Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories?type=income&limit=100&offset=0&sort=type_name_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "income"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "type_name_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Expense Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories?type=expense&limit=100&offset=0&sort=type_name_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "expense"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "type_name_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories",
+                                "{{expense_category_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Food Updated {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories",
+                                "{{expense_category_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Category (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories",
+                                "{{expense_category_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Transactions",
+            "item": [
+                {
+                    "name": "Create Income Transaction",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('transaction_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"income\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{income_category_id}}\",\n  \"amount_minor\": 500000,\n  \"transaction_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Salary\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Expense Transaction",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 50000,\n  \"transaction_at\": \"2026-06-13T09:00:00Z\",\n  \"note\": \"Lunch\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Transfer Transaction",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions?limit=100&offset=0&sort=transaction_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "transaction_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Expense Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30&limit=100&offset=0&sort=transaction_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "expense"
+                                },
+                                {
+                                    "key": "from",
+                                    "value": "2026-06-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-06-30"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "transaction_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Wallet Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions?wallet_id={{wallet_id}}&limit=100&offset=0&sort=transaction_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "wallet_id",
+                                    "value": "{{wallet_id}}"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "transaction_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Transaction",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions",
+                                "{{transaction_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Transaction",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"income\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{income_category_id}}\",\n  \"amount_minor\": 600000,\n  \"transaction_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Salary updated\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions",
+                                "{{transaction_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Transaction (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "transactions",
+                                "{{transaction_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Quick Entry Templates",
+            "item": [
+                {
+                    "name": "Create Quick Entry Template",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('quick_entry_template_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Lunch Quick {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 35000,\n  \"note\": \"Quick lunch\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Quick Entry Templates",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates?limit=100&offset=0&sort=name_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "name_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Quick Entry Template",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates",
+                                "{{quick_entry_template_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Execute Quick Entry Template",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"transaction_at\": \"2026-06-13T11:00:00Z\",\n  \"note\": \"Executed from Postman\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}/execute",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates",
+                                "{{quick_entry_template_id}}",
+                                "execute"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Quick Entry Template",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Lunch Quick Updated {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 40000,\n  \"note\": \"Updated quick lunch\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates",
+                                "{{quick_entry_template_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Quick Entry Template (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "quick-entry-templates",
+                                "{{quick_entry_template_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Category Budgets",
+            "item": [
+                {
+                    "name": "Create Category Budget",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('category_budget_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2000000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Category Budgets",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets?month=2026-06&limit=100&offset=0&sort=created_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2026-06"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "created_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Category Budget",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets",
+                                "{{category_budget_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Category Budget",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2500000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets",
+                                "{{category_budget_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Category Budget (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets",
+                                "{{category_budget_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Debt & Loan Manager",
+            "item": [
+                {
+                    "name": "Create Receivable",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('debt_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"receivable\",\n  \"counterparty_name\": \"Friend\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"disbursement_category_id\": \"{{expense_category_id}}\",\n  \"payment_category_id\": \"{{income_category_id}}\",\n  \"principal_amount_minor\": 500000,\n  \"opened_at\": \"2026-06-13T08:00:00Z\",\n  \"due_date\": \"2026-07-01\",\n  \"note\": \"Short loan\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Debts",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts?limit=100&offset=0&sort=opened_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "opened_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Debt",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts",
+                                "{{debt_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Pay Debt",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount_minor\": 200000,\n  \"paid_at\": \"2026-06-20T08:00:00Z\",\n  \"note\": \"First repayment\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts/{{debt_id}}/pay",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts",
+                                "{{debt_id}}",
+                                "pay"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Debt",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"counterparty_name\": \"Friend Updated\",\n  \"due_date\": \"2026-08-01\",\n  \"status\": \"partial\",\n  \"note\": \"Updated tracking note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts",
+                                "{{debt_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Debt (Soft Cancel, Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "debts",
+                                "{{debt_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Installments",
+            "item": [
+                {
+                    "name": "Create Installment",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('installment_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Gym Membership {{$timestamp}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"note\": \"Quarterly membership\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Installments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments?limit=100&offset=0&sort=created_at_desc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "created_at_desc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Installment",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments",
+                                "{{installment_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Pay Installment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"paid_at\": \"2026-06-15T08:00:00Z\",\n  \"note\": \"Installment paid\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments/{{installment_id}}/pay",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments",
+                                "{{installment_id}}",
+                                "pay"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Installment",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Gym Membership Updated\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"remaining_months\": 2,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"status\": \"active\",\n  \"note\": \"Updated\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments",
+                                "{{installment_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Installment (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "installments",
+                                "{{installment_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Subscriptions",
+            "item": [
+                {
+                    "name": "Create Subscription",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('subscription_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Google One {{$timestamp}}\",\n  \"account_detail\": \"personal@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Subscriptions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions?limit=100&offset=0&sort=next_due_date_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "next_due_date_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Subscription",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions",
+                                "{{subscription_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Pay Subscription",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"paid_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Subscription paid\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}/pay",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions",
+                                "{{subscription_id}}",
+                                "pay"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Subscription",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Google One Updated\",\n  \"account_detail\": \"work@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions",
+                                "{{subscription_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Subscription (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions",
+                                "{{subscription_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Recurring Transactions",
+            "item": [
+                {
+                    "name": "Create Recurring Transaction",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('recurring_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Monthly Internet {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 350000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-06-01T00:00:00Z\",\n  \"note\": \"Internet bill\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Recurring Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions?limit=100&offset=0&sort=next_run_at_asc",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "next_run_at_asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Recurring Transaction",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions",
+                                "{{recurring_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Run Recurring Transaction",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"now\": \"2026-06-01T00:00:00Z\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}/run",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions",
+                                "{{recurring_id}}",
+                                "run"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Recurring Transaction",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Monthly Internet Updated\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 360000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-07-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"note\": \"Updated internet bill\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions",
+                                "{{recurring_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Recurring Transaction (Optional / Run Last)",
+                    "disabled": true,
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "recurring-transactions",
+                                "{{recurring_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Financial Goals",
+            "item": [
+                {
+                    "name": "Create Goal",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Wedding Fund\",\n    \"target_amount_minor\": 50000000,\n    \"deadline\": \"2027-01-01T00:00:00Z\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/goals",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "goals"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Goals",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/goals?limit=100&offset=0",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "goals"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Goal by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/goals/{{goal_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "goals",
+                                "{{goal_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Invite Member",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"partner@example.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/goals/{{goal_id}}/members",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "goals",
+                                "{{goal_id}}",
+                                "members"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Respond to Invitation",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"joined\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/goals/{{goal_id}}/members/{{user_id}}/respond",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "goals",
+                                "{{goal_id}}",
+                                "members",
+                                "{{user_id}}",
+                                "respond"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Tags",
+            "item": [
+                {
+                    "name": "Create Tag",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Vacation 2026\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tags",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "tags"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Tags",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tags?limit=100&offset=0",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "tags"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Tag",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Bali Trip 2026\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tags/{{tag_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "tags",
+                                "{{tag_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Tag",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tags/{{tag_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "tags",
+                                "{{tag_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
         }
-      ]
-    },
-    {
-      "name": "Categories",
-      "item": [
-        {
-          "name": "Create Income Category",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('income_category_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Salary {{$timestamp}}\",\n  \"type\": \"income\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Expense Category",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('expense_category_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Food {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories?limit=100&offset=0&sort=type_name_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "type_name_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Income Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories?type=income&limit=100&offset=0&sort=type_name_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "income"
-                },
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "type_name_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Expense Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories?type=expense&limit=100&offset=0&sort=type_name_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "expense"
-                },
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "type_name_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Category",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories",
-                "{{expense_category_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Category",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Food Updated {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories",
-                "{{expense_category_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Category (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "categories",
-                "{{expense_category_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Transactions",
-      "item": [
-        {
-          "name": "Create Income Transaction",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('transaction_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"income\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{income_category_id}}\",\n  \"amount_minor\": 500000,\n  \"transaction_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Salary\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Expense Transaction",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 50000,\n  \"transaction_at\": \"2026-06-13T09:00:00Z\",\n  \"note\": \"Lunch\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Transfer Transaction",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Transactions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions?limit=100&offset=0&sort=transaction_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "transaction_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Expense Transactions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30&limit=100&offset=0&sort=transaction_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "expense"
-                },
-                {
-                  "key": "from",
-                  "value": "2026-06-01"
-                },
-                {
-                  "key": "to",
-                  "value": "2026-06-30"
-                },
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "transaction_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Wallet Transactions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions?wallet_id={{wallet_id}}&limit=100&offset=0&sort=transaction_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions"
-              ],
-              "query": [
-                {
-                  "key": "wallet_id",
-                  "value": "{{wallet_id}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "transaction_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Transaction",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions",
-                "{{transaction_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Transaction",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"income\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{income_category_id}}\",\n  \"amount_minor\": 600000,\n  \"transaction_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Salary updated\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions",
-                "{{transaction_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Transaction (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions",
-                "{{transaction_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Quick Entry Templates",
-      "item": [
-        {
-          "name": "Create Quick Entry Template",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('quick_entry_template_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Lunch Quick {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 35000,\n  \"note\": \"Quick lunch\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Quick Entry Templates",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates?limit=100&offset=0&sort=name_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "name_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Quick Entry Template",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates",
-                "{{quick_entry_template_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Execute Quick Entry Template",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"transaction_at\": \"2026-06-13T11:00:00Z\",\n  \"note\": \"Executed from Postman\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}/execute",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates",
-                "{{quick_entry_template_id}}",
-                "execute"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Quick Entry Template",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Lunch Quick Updated {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 40000,\n  \"note\": \"Updated quick lunch\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates",
-                "{{quick_entry_template_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Quick Entry Template (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates/{{quick_entry_template_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "quick-entry-templates",
-                "{{quick_entry_template_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Category Budgets",
-      "item": [
-        {
-          "name": "Create Category Budget",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('category_budget_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2000000\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "category-budgets"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Category Budgets",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets?month=2026-06&limit=100&offset=0&sort=created_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "category-budgets"
-              ],
-              "query": [
-                {
-                  "key": "month",
-                  "value": "2026-06"
-                },
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "created_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Category Budget",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "category-budgets",
-                "{{category_budget_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Category Budget",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2500000\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "category-budgets",
-                "{{category_budget_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Category Budget (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "category-budgets",
-                "{{category_budget_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Debt & Loan Manager",
-      "item": [
-        {
-          "name": "Create Receivable",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('debt_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"receivable\",\n  \"counterparty_name\": \"Friend\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"disbursement_category_id\": \"{{expense_category_id}}\",\n  \"payment_category_id\": \"{{income_category_id}}\",\n  \"principal_amount_minor\": 500000,\n  \"opened_at\": \"2026-06-13T08:00:00Z\",\n  \"due_date\": \"2026-07-01\",\n  \"note\": \"Short loan\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Debts",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts?limit=100&offset=0&sort=opened_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "opened_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Debt",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts",
-                "{{debt_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Pay Debt",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount_minor\": 200000,\n  \"paid_at\": \"2026-06-20T08:00:00Z\",\n  \"note\": \"First repayment\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts/{{debt_id}}/pay",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts",
-                "{{debt_id}}",
-                "pay"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Debt",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"counterparty_name\": \"Friend Updated\",\n  \"due_date\": \"2026-08-01\",\n  \"status\": \"partial\",\n  \"note\": \"Updated tracking note\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts",
-                "{{debt_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Debt (Soft Cancel, Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/debts/{{debt_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "debts",
-                "{{debt_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Installments",
-      "item": [
-        {
-          "name": "Create Installment",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('installment_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Gym Membership {{$timestamp}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"note\": \"Quarterly membership\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Installments",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments?limit=100&offset=0&sort=created_at_desc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "created_at_desc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Installment",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments",
-                "{{installment_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Pay Installment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paid_at\": \"2026-06-15T08:00:00Z\",\n  \"note\": \"Installment paid\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments/{{installment_id}}/pay",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments",
-                "{{installment_id}}",
-                "pay"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Installment",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Gym Membership Updated\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"remaining_months\": 2,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"status\": \"active\",\n  \"note\": \"Updated\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments",
-                "{{installment_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Installment (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "installments",
-                "{{installment_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Subscriptions",
-      "item": [
-        {
-          "name": "Create Subscription",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('subscription_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Google One {{$timestamp}}\",\n  \"account_detail\": \"personal@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Subscriptions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions?limit=100&offset=0&sort=next_due_date_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "next_due_date_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Subscription",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions",
-                "{{subscription_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Pay Subscription",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paid_at\": \"2026-06-13T08:00:00Z\",\n  \"note\": \"Subscription paid\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}/pay",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions",
-                "{{subscription_id}}",
-                "pay"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Subscription",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Google One Updated\",\n  \"account_detail\": \"work@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions",
-                "{{subscription_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Subscription (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "subscriptions",
-                "{{subscription_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Recurring Transactions",
-      "item": [
-        {
-          "name": "Create Recurring Transaction",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('recurring_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Monthly Internet {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 350000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-06-01T00:00:00Z\",\n  \"note\": \"Internet bill\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Recurring Transactions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions?limit=100&offset=0&sort=next_run_at_asc",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                },
-                {
-                  "key": "sort",
-                  "value": "next_run_at_asc"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Recurring Transaction",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions",
-                "{{recurring_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Run Recurring Transaction",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"now\": \"2026-06-01T00:00:00Z\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}/run",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions",
-                "{{recurring_id}}",
-                "run"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Recurring Transaction",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Monthly Internet Updated\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 360000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-07-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"note\": \"Updated internet bill\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions",
-                "{{recurring_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Recurring Transaction (Optional / Run Last)",
-          "disabled": true,
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "recurring-transactions",
-                "{{recurring_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Financial Goals",
-      "item": [
-        {
-          "name": "Create Goal",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Wedding Fund\",\n    \"target_amount_minor\": 50000000,\n    \"deadline\": \"2027-01-01T00:00:00Z\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/goals",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "goals"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Goals",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/goals?limit=100&offset=0",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "goals"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Goal by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/goals/{{goal_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "goals",
-                "{{goal_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Invite Member",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"partner@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/goals/{{goal_id}}/members",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "goals",
-                "{{goal_id}}",
-                "members"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Respond to Invitation",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"status\": \"joined\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/goals/{{goal_id}}/members/{{user_id}}/respond",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "goals",
-                "{{goal_id}}",
-                "members",
-                "{{user_id}}",
-                "respond"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Tags",
-      "item": [
-        {
-          "name": "Create Tag",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Vacation 2026\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "tags"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List Tags",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags?limit=100&offset=0",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "tags"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Tag",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Bali Trip 2026\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "tags",
-                "{{tag_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Tag",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "tags",
-                "{{tag_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    }
-  ]
+    ]
 }

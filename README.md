@@ -314,3 +314,9 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 - `RECURRING_SCHEDULER_ENABLED`
 - `RECURRING_SCHEDULER_INTERVAL`
 - `RECURRING_SCHEDULER_BATCH_SIZE`
+
+### 📊 Dashboard & Analytics
+- `GET /api/v1/dashboard/summary` - Get monthly financial overview.
+- `GET /api/v1/dashboard/cashflow-trend?months=6` - Get income/expense trends over time.
+- `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` - Get breakdown of expenses by category.
+- `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Predict if spending will exceed budget based on daily average.
