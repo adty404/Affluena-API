@@ -74,3 +74,35 @@ func TestAPILogMiddleware_MasksPassword(t *testing.T) {
 		t.Errorf("expected masked request payload, got %v", repo.lastLog.RequestPayload)
 	}
 }
+
+func TestAPILogMiddleware_MasksAuthResponseTokens(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &mockRepo{}
+
+	router := gin.New()
+	router.Use(APILogMiddleware(repo))
+
+	router.POST("/auth/login", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"tokens": gin.H{
+				"access_token":  "access-token-secret",
+				"refresh_token": "refresh-token-secret",
+			},
+		})
+	})
+
+	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBufferString(`{"email":"test@example.com","password":"secretpassword"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	time.Sleep(50 * time.Millisecond)
+
+	if repo.lastLog.ResponsePayload == nil {
+		t.Fatal("expected response payload to be captured")
+	}
+	if *repo.lastLog.ResponsePayload != `{"masked": true}` {
+		t.Fatalf("expected masked auth response payload, got %s", *repo.lastLog.ResponsePayload)
+	}
+}
