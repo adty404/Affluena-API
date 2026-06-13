@@ -302,6 +302,8 @@ Create, update, delete, quick entry execution, and split bill execution use data
 
 Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
 
+Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Shared-wallet analytics count each wallet transaction once even when multiple members have joined.
+
 Category `parent_id` must point to a category owned by the authenticated user with the same category `type`. Category trees are limited to 3 levels and cyclic parent relationships are rejected.
 
 Financial goal creation and invitation acceptance create goal wallets atomically. Goal wallet names include the goal ID suffix, so duplicate goal names can safely coexist. Rejected invitations are not returned as accessible goals, and `PUT /api/v1/goals/:id/members/:user_id/respond` only lets the authenticated member respond for their own `:user_id`.

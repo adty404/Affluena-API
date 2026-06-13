@@ -1,12 +1,17 @@
 package server
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"affluena-api/internal/config"
+	"affluena-api/internal/dashboard"
+	"affluena-api/internal/transaction"
 	"affluena-api/internal/wallet"
 )
 
@@ -105,4 +110,153 @@ func TestWalletShareLifecycle(t *testing.T) {
 	if summary.NetWorthMinor != -50000 {
 		t.Fatalf("expected net worth -50000, got %d", summary.NetWorthMinor)
 	}
+}
+
+func TestSharedWalletOwnerSeesMemberTransactionsAndAnalyticsOnce(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-share-owner-visibility-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "share-owner-visibility")
+	memberBID, memberBToken := registerIntegrationAPIUser(t, router, "share-member-b-visibility")
+	memberCID, memberCToken := registerIntegrationAPIUser(t, router, "share-member-c-visibility")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberBID)
+	defer cleanupServerIntegrationUsers(t, pool, memberCID)
+
+	walletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Household Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	memberBEmail := getIntegrationUserEmail(t, router, memberBToken)
+	memberCEmail := getIntegrationUserEmail(t, router, memberCToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+memberBEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberBToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+memberBID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+memberCEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberCToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+memberCID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	categoryID := createAPIResource(t, router, memberBToken, "/api/v1/categories", `{
+		"name": "Shared Groceries",
+		"type": "expense"
+	}`)
+	txAt := time.Now().UTC().Truncate(time.Second)
+	txID := createAPIResource(t, router, memberBToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 10000,
+		"transaction_at": "`+txAt.Format(time.RFC3339)+`",
+		"note": "Shared groceries"
+	}`)
+
+	transactionsBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/transactions?wallet_id="+walletID, "", http.StatusOK)
+	var transactionsResp struct {
+		Transactions []transaction.Transaction `json:"transactions"`
+	}
+	if err := json.Unmarshal(transactionsBody, &transactionsResp); err != nil {
+		t.Fatalf("parse owner transaction list: %v", err)
+	}
+	if countTransactionID(transactionsResp.Transactions, txID) != 1 {
+		t.Fatalf("expected owner transaction list to contain member transaction %s once, got %+v", txID, transactionsResp.Transactions)
+	}
+
+	month := txAt.Format("2006-01")
+	summaryBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/dashboard/summary?month="+month, "", http.StatusOK)
+	var summary struct {
+		MonthlyExpenseMinor int64 `json:"monthly_expense_minor"`
+		NetWorthMinor       int64 `json:"net_worth_minor"`
+	}
+	if err := json.Unmarshal(summaryBody, &summary); err != nil {
+		t.Fatalf("parse owner dashboard summary: %v", err)
+	}
+	if summary.MonthlyExpenseMinor != 10000 || summary.NetWorthMinor != 90000 {
+		t.Fatalf("expected owner summary expense/net worth 10000/90000, got %+v", summary)
+	}
+
+	trendBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/dashboard/cashflow-trend?months=1", "", http.StatusOK)
+	var trendResp struct {
+		Trend []dashboard.CashflowTrend `json:"trend"`
+	}
+	if err := json.Unmarshal(trendBody, &trendResp); err != nil {
+		t.Fatalf("parse owner cashflow trend: %v", err)
+	}
+	if len(trendResp.Trend) != 1 || trendResp.Trend[0].ExpenseMinor != 10000 {
+		t.Fatalf("expected owner cashflow trend expense 10000, got %+v", trendResp.Trend)
+	}
+
+	forecastBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/dashboard/forecast?month="+month, "", http.StatusOK)
+	var forecast dashboard.Forecast
+	if err := json.Unmarshal(forecastBody, &forecast); err != nil {
+		t.Fatalf("parse owner forecast: %v", err)
+	}
+	if forecast.CurrentExpenseMinor != 10000 {
+		t.Fatalf("expected owner forecast current expense 10000, got %+v", forecast)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/export/csv", nil)
+	req.Header.Set("Authorization", "Bearer "+ownerToken)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected owner export status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	records, err := csv.NewReader(strings.NewReader(recorder.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse owner export CSV: %v", err)
+	}
+	if countCSVRowsWithID(records, txID) != 1 {
+		t.Fatalf("expected owner export to contain member transaction %s once, got %v", txID, records)
+	}
+}
+
+func getIntegrationUserEmail(t *testing.T, router http.Handler, token string) string {
+	t.Helper()
+
+	body := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/auth/me", "", http.StatusOK)
+	var parsed struct {
+		User struct {
+			Email string `json:"email"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("parse auth/me response: %v", err)
+	}
+	if parsed.User.Email == "" {
+		t.Fatalf("auth/me response missing email: %s", string(body))
+	}
+	return parsed.User.Email
+}
+
+func countTransactionID(transactions []transaction.Transaction, id string) int {
+	count := 0
+	for _, tx := range transactions {
+		if tx.ID == id {
+			count++
+		}
+	}
+	return count
+}
+
+func countCSVRowsWithID(records [][]string, id string) int {
+	count := 0
+	for _, record := range records {
+		if len(record) > 0 && record[0] == id {
+			count++
+		}
+	}
+	return count
 }

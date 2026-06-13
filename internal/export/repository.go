@@ -46,6 +46,8 @@ func (r *Repository) GetCSVRows(ctx context.Context, userID string, opts ExportO
 		LEFT JOIN categories c ON t.category_id = c.id
 		WHERE (
 			t.user_id = $1 OR
+			EXISTS (SELECT 1 FROM wallets aw WHERE aw.id = t.wallet_id AND aw.user_id = $1) OR
+			EXISTS (SELECT 1 FROM wallets atw WHERE atw.id = t.to_wallet_id AND atw.user_id = $1) OR
 			t.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
 			t.to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
 		)

@@ -15,6 +15,14 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
+const accessibleTransactionPredicate = `(
+	transactions.user_id = $1 OR
+	EXISTS (SELECT 1 FROM wallets aw WHERE aw.id = transactions.wallet_id AND aw.user_id = $1) OR
+	EXISTS (SELECT 1 FROM wallets atw WHERE atw.id = transactions.to_wallet_id AND atw.user_id = $1) OR
+	transactions.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
+	transactions.to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+)`
+
 func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
@@ -65,11 +73,7 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
-		WHERE (
-			user_id = $1 OR 
-			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
-			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
-		)
+		WHERE `+accessibleTransactionPredicate+`
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
@@ -100,11 +104,7 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 	if err := r.pool.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM transactions
-		WHERE (
-			user_id = $1 OR 
-			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
-			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
-		)
+		WHERE `+accessibleTransactionPredicate+`
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
@@ -216,11 +216,7 @@ func (r *Repository) get(ctx context.Context, q interface {
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
-		WHERE (
-			user_id = $1 OR 
-			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
-			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
-		) AND id = $2
+		WHERE ` + accessibleTransactionPredicate + ` AND id = $2
 	`
 	if forUpdate {
 		sql += ` FOR UPDATE`

@@ -120,6 +120,7 @@ Existing high-value integration tests:
 - `internal/server/pagination_integration_test.go`: proves list endpoint pagination metadata and wallet sorting.
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
 - `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
+- `internal/server/wallet_share_integration_test.go`: proves shared wallet invite lifecycle, member transactions, owner visibility, export, and analytics without duplicate counting.
 - `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
 - `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
 - `internal/server/splitbill_integration_test.go`: proves split bill success behavior and rollback when debt creation fails.
