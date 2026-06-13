@@ -58,10 +58,10 @@ Important invariants:
 The expected loop for code changes is:
 
 1. Understand the current implementation with `rg`, file reads, and existing tests.
-2. Add or update tests first for behavior changes. Watch the new test fail for the right reason before implementing.
-3. Implement the smallest scoped change that satisfies the requirement.
-4. Audit and update every related documentation artifact whenever code behavior changes: `README.md`, other relevant `.md` files, Postman, examples, workflow docs, and migration notes if applicable.
-5. Run targeted tests while developing.
+2. Implement the smallest scoped change that satisfies the requirement.
+3. Add comprehensive unit/integration tests to cover all cases that a human or user might perform, including both **red flows** (edge cases, invalid inputs, unauthorized access) and **green flows** (successful operations).
+4. Audit and update every related documentation artifact whenever code behavior changes: `README.md`, other relevant `.md` files, and the Postman collection.
+5. Run targeted tests and the full verification gate while developing.
 6. Run the full gate before commit:
 
    ```bash

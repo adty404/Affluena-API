@@ -99,6 +99,11 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/recurring-transactions/:id`
 - `DELETE /api/v1/recurring-transactions/:id`
 - `POST /api/v1/recurring-transactions/:id/run`
+- `POST /api/v1/goals`
+- `GET /api/v1/goals[?limit=100&offset=0&sort=created_at_desc]`
+- `GET /api/v1/goals/:id`
+- `POST /api/v1/goals/:id/members`
+- `PUT /api/v1/goals/:id/members/:user_id/respond`
 
 ## Pagination And Sorting
 
@@ -119,6 +124,7 @@ Supported `sort` values:
 - Installments: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `due_day_asc`, `due_day_desc`.
 - Subscriptions: `next_due_date_asc`, `next_due_date_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Recurring transactions: `next_run_at_asc`, `next_run_at_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
+- Goals: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `deadline_asc`, `deadline_desc`.
 
 ## Example Flow
 
