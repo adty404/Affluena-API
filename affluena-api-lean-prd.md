@@ -96,7 +96,17 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - Integrasi _payment gateway_ pihak ketiga atau akses mutasi API Bank _direct_.
 - Fitur OCR (_Optical Character Recognition_) untuk _scan_ struk otomatis.
 
-### 3.11 Advanced Analytics & Reporting
+### 3.11. Split Bill (Macro Transaction)
+
+- **Fitur:** Memfasilitasi pembayaran tagihan gabungan dalam satu transaksi, lalu memecahnya secara otomatis menjadi pengeluaran pribadi dan piutang ke teman.
+- **Use Case:** Pengguna membayar tagihan makan malam Rp 300.000 dengan teman-temannya. Ia membuat satu request Split Bill, dan API secara cerdas akan mencatat Rp 100.000 sebagai `Expense` miliknya, serta Rp 200.000 sebagai `Disbursement` untuk membuat 2 entitas `Debt` (Piutang) baru bagi temannya.
+
+### 3.12. Mailer & Notifications
+
+- **Fitur:** Mengirimkan peringatan melalui email asinkron berbasis SMTP jika terdapat parameter keuangan yang mengkhawatirkan.
+- **Use Case:** Saat pengguna mencatatkan transaksi pengeluaran (misal belanja makanan), di _background_, _scheduler/goroutine_ internal mendeteksi bahwa pengeluaran kategori Makanan sudah mencapai >80% atau >100% dari limit bulanan, kemudian mengirim peringatan HTML elegan via Mailtrap / SendGrid agar pengguna lebih berhati-hati.
+
+### 3.13 Advanced Analytics & Reporting
 Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
 
 - **Cashflow Trend**: Mendapatkan data income dan expense selama 1-12 bulan ke belakang untuk melihat pergerakan cashflow.
