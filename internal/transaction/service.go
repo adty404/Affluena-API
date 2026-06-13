@@ -29,6 +29,7 @@ type TransactionInput struct {
 	ToWalletID     string
 	CategoryID     string
 	AmountMinor    int64
+	TagIDs         []string
 	TransactionUTC time.Time
 	Note           string
 }

@@ -33,6 +33,7 @@ type transactionRequest struct {
 	ToWalletID    string          `json:"to_wallet_id"`
 	CategoryID    string          `json:"category_id"`
 	AmountMinor   int64           `json:"amount_minor" binding:"required"`
+	TagIDs        []string        `json:"tag_ids"`
 	TransactionAt string          `json:"transaction_at"`
 	Note          string          `json:"note"`
 }
@@ -138,6 +139,7 @@ func bindFilter(c *gin.Context) (TransactionFilter, bool) {
 		Type:       TransactionType(c.Query("type")),
 		WalletID:   c.Query("wallet_id"),
 		CategoryID: c.Query("category_id"),
+		TagID:      c.Query("tag_id"),
 	}
 	if filter.Type != "" && !IsValidType(filter.Type) {
 		httpx.Error(c, http.StatusBadRequest, "invalid transaction type")
@@ -199,6 +201,7 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		ToWalletID:     req.ToWalletID,
 		CategoryID:     req.CategoryID,
 		AmountMinor:    req.AmountMinor,
+		TagIDs:         req.TagIDs,
 		TransactionUTC: transactionAt,
 		Note:           req.Note,
 	}
