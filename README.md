@@ -54,10 +54,11 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
-- `POST /api/v1/categories`
+### 📂 Categories (Up to 3 Levels)
+- `POST /api/v1/categories` (Supports `parent_id` for nesting)
 - `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=type_name_asc]`
 - `GET /api/v1/categories/:id`
-- `PUT /api/v1/categories/:id`
+- `PUT /api/v1/categories/:id` (Supports updating `parent_id`)
 - `DELETE /api/v1/categories/:id`
 - `POST /api/v1/tags`
 - `GET /api/v1/tags[?limit=100&offset=0&sort=created_at_desc]`
