@@ -71,6 +71,23 @@ func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 	}
 }
 
+func TestWalletUseCaseCreatePreservesExplicitCurrency(t *testing.T) {
+	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
+	uc := NewUseCase(repo)
+
+	_, err := uc.Create(context.Background(), "user-1", CreateWalletInput{
+		Name:         "USD cash",
+		Type:         "cash",
+		CurrencyCode: "USD",
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if repo.createInput.CurrencyCode != "USD" {
+		t.Fatalf("expected explicit currency USD to be preserved, got %q", repo.createInput.CurrencyCode)
+	}
+}
+
 func TestWalletUseCaseRejectsInvalidType(t *testing.T) {
 	uc := NewUseCase(&fakeWalletRepository{})
 
@@ -79,6 +96,41 @@ func TestWalletUseCaseRejectsInvalidType(t *testing.T) {
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{Name: "Bad", Type: "crypto", CurrencyCode: "IDR"}); err == nil {
 		t.Fatal("expected invalid wallet type error")
+	}
+}
+
+func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
+	repo := &fakeWalletRepository{updated: Wallet{ID: "wallet-1", Name: "Updated"}}
+	uc := NewUseCase(repo)
+
+	updated, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{
+		Name:         "Updated",
+		Type:         "bank",
+		CurrencyCode: "IDR",
+	})
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.Name != "Updated" {
+		t.Fatalf("expected updated wallet, got %+v", updated)
+	}
+}
+
+func TestWalletUseCasePropagatesRepositoryErrors(t *testing.T) {
+	repoErr := errors.New("repo failed")
+	uc := NewUseCase(&fakeWalletRepository{err: repoErr})
+
+	if _, err := uc.Create(context.Background(), "user-1", CreateWalletInput{Name: "Cash", Type: "cash"}); !errors.Is(err, repoErr) {
+		t.Fatalf("expected create repo error, got %v", err)
+	}
+	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected list repo error, got %v", err)
+	}
+	if _, err := uc.Get(context.Background(), "user-1", "wallet-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected get repo error, got %v", err)
+	}
+	if err := uc.Delete(context.Background(), "user-1", "wallet-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected delete repo error, got %v", err)
 	}
 }
 

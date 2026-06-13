@@ -49,6 +49,58 @@ func TestApplyPaymentRejectsInvalidPayment(t *testing.T) {
 	if _, err := ApplyPayment(cancelled, 10_000); err == nil {
 		t.Fatal("expected cancelled debt payment to fail")
 	}
+
+	paidOff := PaymentState{
+		PrincipalAmountMinor: 100_000,
+		PaidAmountMinor:      100_000,
+		Status:               DebtStatusPaidOff,
+	}
+	if _, err := ApplyPayment(paidOff, 1); err == nil {
+		t.Fatal("expected paid off debt payment to fail")
+	}
+}
+
+func TestResolveStatusValidatesProgressConsistency(t *testing.T) {
+	tests := []struct {
+		name       string
+		principal  int64
+		paid       int64
+		status     DebtStatus
+		wantStatus DebtStatus
+		wantErr    bool
+	}{
+		{name: "defaults open", principal: 100_000, paid: 0, wantStatus: DebtStatusOpen},
+		{name: "defaults partial", principal: 100_000, paid: 40_000, wantStatus: DebtStatusPartial},
+		{name: "defaults paid off", principal: 100_000, paid: 100_000, wantStatus: DebtStatusPaidOff},
+		{name: "cancelled can keep unpaid progress", principal: 100_000, paid: 25_000, status: DebtStatusCancelled, wantStatus: DebtStatusCancelled},
+		{name: "rejects zero principal", principal: 0, paid: 0, wantErr: true},
+		{name: "rejects negative paid amount", principal: 100_000, paid: -1, wantErr: true},
+		{name: "rejects paid amount above principal", principal: 100_000, paid: 100_001, wantErr: true},
+		{name: "rejects inconsistent open status", principal: 100_000, paid: 50_000, status: DebtStatusOpen, wantErr: true},
+		{name: "rejects inconsistent paid off status", principal: 100_000, paid: 50_000, status: DebtStatusPaidOff, wantErr: true},
+		{name: "rejects invalid status", principal: 100_000, paid: 50_000, status: DebtStatus("lost"), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveStatus(tt.principal, tt.paid, tt.status)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ResolveStatus returned error: %v", err)
+			}
+			if got.Status != tt.wantStatus {
+				t.Fatalf("expected status %s, got %s", tt.wantStatus, got.Status)
+			}
+			if got.RemainingAmountMinor != tt.principal-tt.paid {
+				t.Fatalf("expected remaining %d, got %d", tt.principal-tt.paid, got.RemainingAmountMinor)
+			}
+		})
+	}
 }
 
 func TestDebtTransactionTypes(t *testing.T) {
@@ -87,6 +139,12 @@ func TestDebtTransactionTypes(t *testing.T) {
 			name:     "invalid type fails",
 			debtType: DebtType("bad"),
 			action:   DebtActionPayment,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid action fails",
+			debtType: DebtTypeReceivable,
+			action:   DebtAction("refund"),
 			wantErr:  true,
 		},
 	}

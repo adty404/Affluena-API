@@ -78,6 +78,43 @@ func TestCategoryUseCaseRejectsInvalidType(t *testing.T) {
 	}
 }
 
+func TestCategoryUseCaseAcceptsKnownTypes(t *testing.T) {
+	tests := []string{"income", "expense"}
+
+	for _, categoryType := range tests {
+		t.Run(categoryType, func(t *testing.T) {
+			repo := &fakeCategoryRepository{created: Category{ID: "category-1", Type: categoryType}}
+			uc := NewUseCase(repo)
+
+			created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Category", Type: categoryType})
+			if err != nil {
+				t.Fatalf("Create returned error: %v", err)
+			}
+			if created.Type != categoryType {
+				t.Fatalf("expected category type %s, got %+v", categoryType, created)
+			}
+		})
+	}
+}
+
+func TestCategoryUseCasePropagatesRepositoryErrors(t *testing.T) {
+	repoErr := errors.New("repo failed")
+	uc := NewUseCase(&fakeCategoryRepository{err: repoErr})
+
+	if _, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income"}); !errors.Is(err, repoErr) {
+		t.Fatalf("expected create repo error, got %v", err)
+	}
+	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected list repo error, got %v", err)
+	}
+	if _, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Salary", Type: "income"}); !errors.Is(err, repoErr) {
+		t.Fatalf("expected update repo error, got %v", err)
+	}
+	if err := uc.Delete(context.Background(), "user-1", "category-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected delete repo error, got %v", err)
+	}
+}
+
 func TestCategoryUseCaseDelegatesReadAndDelete(t *testing.T) {
 	now := time.Now().UTC()
 	repo := &fakeCategoryRepository{

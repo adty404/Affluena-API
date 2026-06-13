@@ -37,6 +37,14 @@ func (r *Repository) Create(ctx context.Context, userID string, input DebtInput)
 	}
 	defer tx.Rollback(ctx)
 
+	paymentType, err := TransactionTypeFor(input.Type, DebtActionPayment)
+	if err != nil {
+		return Debt{}, err
+	}
+	if err := ensureCategory(ctx, tx, userID, input.PaymentCategoryID, string(paymentType)); err != nil {
+		return Debt{}, translateNotFound(err)
+	}
+
 	txType, err := TransactionTypeFor(input.Type, DebtActionOrigination)
 	if err != nil {
 		return Debt{}, err
@@ -286,6 +294,29 @@ func scanDebtPayment(row rowScanner) (DebtPayment, error) {
 		&payment.CreatedAt,
 	)
 	return payment, err
+}
+
+func ensureCategory(ctx context.Context, q interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, userID string, categoryID string, transactionType string) error {
+	categoryType := transactionType
+	if transactionType != "income" {
+		categoryType = "expense"
+	}
+
+	var exists bool
+	if err := q.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM categories
+			WHERE user_id = $1 AND id = $2 AND type = $3
+		)
+	`, userID, categoryID, categoryType).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 type rowScanner interface {

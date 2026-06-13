@@ -26,6 +26,16 @@ docker compose up postgres
 go run ./cmd/api
 ```
 
+## Verify
+
+Run the full pre-commit/pre-push gate:
+
+```bash
+make verify
+```
+
+The verify script checks Go formatting, unit tests, `go vet`, API build, Postman JSON validity, Docker Compose rebuild, integration tests against PostgreSQL, and `/healthz`.
+
 ## Endpoints
 
 Public:
