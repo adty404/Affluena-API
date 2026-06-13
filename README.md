@@ -298,7 +298,7 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 - `transfer`: subtracts from `wallet_id`, adds to `to_wallet_id`
 - `adjustment`: applies signed `amount_minor` directly to `wallet_id`
 
-Create, update, delete, and quick entry execution use database transactions so wallet balances and transaction rows change atomically.
+Create, update, delete, quick entry execution, and split bill execution use database transactions so wallet balances and transaction rows change atomically.
 
 Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
 
@@ -314,6 +314,8 @@ Debt creation and debt payment endpoints also run atomically:
 - `payable` payment creates an expense transaction and decreases the wallet.
 
 Debt statuses are `open`, `partial`, `paid_off`, and `cancelled`. Payment over the remaining amount is rejected. `DELETE /api/v1/debts/:id` soft-cancels tracking and keeps transaction history intact.
+
+Split bill execution creates the user's personal expense and all receivable debts in one PostgreSQL transaction. If any split debt reference is invalid, the whole request rolls back and the wallet balance remains unchanged.
 
 Installment and subscription payment endpoints also run atomically: the API creates an expense transaction, updates wallet balance, and advances tracker state in one PostgreSQL transaction.
 

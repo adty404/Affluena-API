@@ -23,6 +23,23 @@ func NewRepository(pool *pgxpool.Pool, transactionRepo *transaction.Repository) 
 }
 
 func (r *Repository) Create(ctx context.Context, userID string, input DebtInput) (Debt, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return Debt{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	debt, err := r.CreateInTx(ctx, tx, userID, input)
+	if err != nil {
+		return Debt{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Debt{}, err
+	}
+	return debt, nil
+}
+
+func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, input DebtInput) (Debt, error) {
 	if !IsValidDebtType(input.Type) {
 		return Debt{}, errInvalidDebtType
 	}
@@ -32,11 +49,6 @@ func (r *Repository) Create(ctx context.Context, userID string, input DebtInput)
 	if input.OpenedAt.IsZero() {
 		input.OpenedAt = time.Now().UTC()
 	}
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return Debt{}, err
-	}
-	defer tx.Rollback(ctx)
 
 	paymentType, err := TransactionTypeFor(input.Type, DebtActionPayment)
 	if err != nil {
@@ -79,9 +91,6 @@ func (r *Repository) Create(ctx context.Context, userID string, input DebtInput)
 		nullableDate(input.DueDate), DebtStatusOpen, input.Note))
 	if err != nil {
 		return Debt{}, translateNotFound(err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Debt{}, err
 	}
 	return debt, nil
 }

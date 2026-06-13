@@ -4912,7 +4912,7 @@
                                 "split"
                             ]
                         },
-                        "description": "Memecah satu transaksi pengeluaran menjadi pengeluaran pribadi dan piutang otomatis untuk teman (Split Bill). Endpoint ini akan memotong `total_amount_minor` dari `wallet_id`, mencatat sebagian sebagai pengeluaran murni, dan sisanya dicatat sebagai `disbursement` piutang di Debt Manager."
+                        "description": "Memecah satu transaksi pengeluaran menjadi pengeluaran pribadi dan piutang otomatis untuk teman (Split Bill). Endpoint ini akan memotong `total_amount_minor` dari `wallet_id`, mencatat sebagian sebagai pengeluaran murni, dan sisanya dicatat sebagai `disbursement` piutang di Debt Manager. Seluruh operasi berjalan atomik: jika salah satu referensi debt tidak valid, transaksi utama, debt, dan perubahan saldo akan di-rollback."
                     },
                     "response": [
                         {

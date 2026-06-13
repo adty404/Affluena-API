@@ -7,40 +7,45 @@ import (
 	"affluena-api/internal/activity"
 	"affluena-api/internal/debt"
 	"affluena-api/internal/transaction"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
-	ErrInvalidSplitAmount = errors.New("total split amount exceeds transaction amount")
+	ErrInvalidSplitAmount            = errors.New("total split amount exceeds transaction amount")
+	ErrInvalidSplitParticipantAmount = errors.New("split amount must be positive")
 )
 
-type transactionUseCase interface {
-	Create(ctx context.Context, userID string, input transaction.TransactionInput) (transaction.Transaction, error)
+type transactionRepository interface {
+	CreateInTx(ctx context.Context, tx pgx.Tx, userID string, input transaction.TransactionInput) (transaction.Transaction, error)
 }
 
-type debtUseCase interface {
-	Create(ctx context.Context, userID string, input debt.DebtInput) (debt.Debt, error)
+type debtRepository interface {
+	CreateInTx(ctx context.Context, tx pgx.Tx, userID string, input debt.DebtInput) (debt.Debt, error)
 }
 
 type UseCase struct {
-	transactionUC transactionUseCase
-	debtUC        debtUseCase
-	activityUC    activity.UseCase
+	pool            *pgxpool.Pool
+	transactionRepo transactionRepository
+	debtRepo        debtRepository
+	activityUC      activity.UseCase
 }
 
-func NewUseCase(transactionUC transactionUseCase, debtUC debtUseCase, activityUC activity.UseCase) *UseCase {
+func NewUseCase(pool *pgxpool.Pool, transactionRepo transactionRepository, debtRepo debtRepository, activityUC activity.UseCase) *UseCase {
 	return &UseCase{
-		transactionUC: transactionUC,
-		debtUC:        debtUC,
-		activityUC:    activityUC,
+		pool:            pool,
+		transactionRepo: transactionRepo,
+		debtRepo:        debtRepo,
+		activityUC:      activityUC,
 	}
 }
 
 func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTransactionInput) (SplitTransactionResponse, error) {
-	// 1. Calculate and validate amounts
 	var totalSplitMinor int64 = 0
 	for _, split := range input.Splits {
 		if split.AmountMinor <= 0 {
-			return SplitTransactionResponse{}, errors.New("split amount must be positive")
+			return SplitTransactionResponse{}, ErrInvalidSplitParticipantAmount
 		}
 		totalSplitMinor += split.AmountMinor
 	}
@@ -51,7 +56,12 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 
 	userExpenseMinor := input.TotalAmountMinor - totalSplitMinor
 
-	// 2. Create the main expense transaction for the user
+	tx, err := u.pool.Begin(ctx)
+	if err != nil {
+		return SplitTransactionResponse{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	userTxInput := transaction.TransactionInput{
 		Type:           transaction.TransactionTypeExpense,
 		WalletID:       input.WalletID,
@@ -62,12 +72,11 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 		Note:           input.Note,
 	}
 
-	userTx, err := u.transactionUC.Create(ctx, userID, userTxInput)
+	userTx, err := u.transactionRepo.CreateInTx(ctx, tx, userID, userTxInput)
 	if err != nil {
 		return SplitTransactionResponse{}, err
 	}
 
-	// 3. Loop and create debts for counterparties
 	var debtIDs []string
 	for _, split := range input.Splits {
 		debtInput := debt.DebtInput{
@@ -81,13 +90,14 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 			Note:                   input.Note + " (Split: " + split.CounterpartyName + ")",
 		}
 
-		createdDebt, err := u.debtUC.Create(ctx, userID, debtInput)
+		createdDebt, err := u.debtRepo.CreateInTx(ctx, tx, userID, debtInput)
 		if err != nil {
-			// Note: Macro endpoint. We don't rollback the previously created transactions here to keep it simple.
-			// The user can manually delete if something fails.
-			return SplitTransactionResponse{TransactionID: userTx.ID, DebtIDs: debtIDs}, err
+			return SplitTransactionResponse{}, err
 		}
 		debtIDs = append(debtIDs, createdDebt.ID)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return SplitTransactionResponse{}, err
 	}
 
 	if u.activityUC != nil {

@@ -2,10 +2,13 @@ package splitbill
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
+	"affluena-api/internal/debt"
 	"affluena-api/internal/httpx"
+	"affluena-api/internal/transaction"
 
 	"github.com/gin-gonic/gin"
 )
@@ -66,8 +69,12 @@ func (h *Handler) Split(c *gin.Context) {
 }
 
 func writeError(c *gin.Context, err error) {
-	if err == ErrInvalidSplitAmount {
+	if errors.Is(err, ErrInvalidSplitAmount) || errors.Is(err, ErrInvalidSplitParticipantAmount) {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if debt.NotFound(err) || transaction.NotFound(err) {
+		httpx.Error(c, http.StatusNotFound, err.Error())
 		return
 	}
 	httpx.Error(c, http.StatusInternalServerError, "internal server error")
