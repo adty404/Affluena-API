@@ -70,6 +70,9 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`
+### 📤 Export
+- `GET /api/v1/export/csv[?from=YYYY-MM-DDTHH:MM:SSZ&to=YYYY-MM-DDTHH:MM:SSZ]`
+
 - `POST /api/v1/quick-entry-templates`
 - `GET /api/v1/quick-entry-templates[?limit=100&offset=0&sort=name_asc]`
 - `GET /api/v1/quick-entry-templates/:id`

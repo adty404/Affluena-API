@@ -9,6 +9,7 @@ import (
 	"affluena-api/internal/config"
 	"affluena-api/internal/dashboard"
 	"affluena-api/internal/debt"
+	"affluena-api/internal/export"
 	"affluena-api/internal/goal"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
@@ -49,6 +50,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 		tracker.NewInstallmentRepository(pool, transactionRepo),
 		tracker.NewSubscriptionRepository(pool, transactionRepo),
 	))
+	exportHandler := export.NewHandler(export.NewUseCase(export.NewRepository(pool)))
 
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -67,6 +69,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/dashboard/cashflow-trend", dashboardHandler.CashflowTrend)
 	protected.GET("/dashboard/expense-distribution", dashboardHandler.ExpenseDistribution)
 	protected.GET("/dashboard/forecast", dashboardHandler.Forecast)
+
+	protected.GET("/export/csv", exportHandler.ExportCSV)
 
 	protected.POST("/wallets", walletHandler.Create)
 	protected.GET("/wallets", walletHandler.List)

@@ -1153,6 +1153,42 @@
                             ]
                         }
                     }
+                },
+                {
+                    "name": "Export CSV",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/export/csv?from=2024-01-01T00:00:00Z&to=2024-12-31T23:59:59Z",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "export",
+                                "csv"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2024-01-01T00:00:00Z",
+                                    "description": "RFC3339 start date"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2024-12-31T23:59:59Z",
+                                    "description": "RFC3339 end date"
+                                }
+                            ]
+                        }
+                    }
                 }
             ]
         },
