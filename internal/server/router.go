@@ -43,7 +43,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool)))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
 	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo)))
-	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool), wallet.NewRepository(pool)))
+	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool)))
 	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo)))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
 		tracker.NewInstallmentRepository(pool, transactionRepo),

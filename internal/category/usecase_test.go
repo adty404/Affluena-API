@@ -22,6 +22,7 @@ type fakeCategoryRepository struct {
 	err         error
 	depthErr    error
 	cycleErr    error
+	parentErr   error
 }
 
 func (f *fakeCategoryRepository) Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error) {
@@ -215,6 +216,10 @@ func (m *fakeCategoryRepository) CheckCycle(ctx context.Context, categoryID stri
 	return m.cycleErr
 }
 
+func (m *fakeCategoryRepository) CheckParent(ctx context.Context, userID string, categoryType string, parentID *string) error {
+	return m.parentErr
+}
+
 func TestCategoryUseCaseRejectsExceededDepth(t *testing.T) {
 	depthErr := errors.New("category depth cannot exceed 3 levels")
 	repo := &fakeCategoryRepository{depthErr: depthErr}
@@ -241,5 +246,22 @@ func TestCategoryUseCaseRejectsCyclicReference(t *testing.T) {
 	_, err := uc.Update(context.Background(), "user-1", "cat-1", UpdateCategoryInput{Name: "Food", Type: "expense", ParentID: &parentID})
 	if !errors.Is(err, cycleErr) {
 		t.Fatalf("expected cyclic reference error, got %v", err)
+	}
+}
+
+func TestCategoryUseCaseRejectsInvalidParent(t *testing.T) {
+	parentErr := errors.New("category parent must belong to the same user and type")
+	repo := &fakeCategoryRepository{parentErr: parentErr}
+	uc := NewUseCase(repo)
+
+	parentID := "some-parent"
+	_, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Burger", Type: "expense", ParentID: &parentID})
+	if !errors.Is(err, parentErr) {
+		t.Fatalf("expected parent validation error, got %v", err)
+	}
+
+	_, err = uc.Update(context.Background(), "user-1", "cat-1", UpdateCategoryInput{Name: "Burger", Type: "expense", ParentID: &parentID})
+	if !errors.Is(err, parentErr) {
+		t.Fatalf("expected parent validation error, got %v", err)
 	}
 }

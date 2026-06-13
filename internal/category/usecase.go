@@ -12,6 +12,7 @@ type RepositoryPort interface {
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
+	CheckParent(ctx context.Context, userID string, categoryType string, parentID *string) error
 	CheckDepth(ctx context.Context, parentID *string) error
 	CheckCycle(ctx context.Context, categoryID string, newParentID *string) error
 }
@@ -27,6 +28,9 @@ func NewUseCase(repo RepositoryPort) *UseCase {
 func (u *UseCase) Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error) {
 	if !IsValidType(input.Type) {
 		return Category{}, ErrInvalidCategoryType
+	}
+	if err := u.repo.CheckParent(ctx, userID, input.Type, input.ParentID); err != nil {
+		return Category{}, err
 	}
 	if err := u.repo.CheckDepth(ctx, input.ParentID); err != nil {
 		return Category{}, err
@@ -50,6 +54,9 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 		return Category{}, ErrInvalidCategoryType
 	}
 	if err := u.repo.CheckCycle(ctx, id, input.ParentID); err != nil {
+		return Category{}, err
+	}
+	if err := u.repo.CheckParent(ctx, userID, input.Type, input.ParentID); err != nil {
 		return Category{}, err
 	}
 	if err := u.repo.CheckDepth(ctx, input.ParentID); err != nil {

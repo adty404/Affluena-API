@@ -137,6 +137,81 @@ func TestGoalLifecycleAndMembers(t *testing.T) {
 	assertWalletBalance(t, router, tokenB, bankB, 3000000)
 }
 
+func TestGoalDuplicateNamesAndInviteEdgeCases(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "goal-edge-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userA, tokenA := registerIntegrationAPIUser(t, router, "goal-edge-a")
+	userB, tokenB := registerIntegrationAPIUser(t, router, "goal-edge-b")
+	defer cleanupServerIntegrationUsers(t, pool, userA, userB)
+
+	resB := performAPIRequest(t, router, tokenB, http.MethodGet, "/api/v1/auth/me", "", http.StatusOK)
+	var userBData struct {
+		User struct {
+			Email string `json:"email"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(resB, &userBData); err != nil {
+		t.Fatalf("parse user B response: %v", err)
+	}
+
+	goalA := createAPIResource(t, router, tokenA, "/api/v1/goals", `{
+		"name": "Wedding",
+		"target_amount_minor": 10000000,
+		"deadline": "2026-12-31T00:00:00Z"
+	}`)
+	goalB := createAPIResource(t, router, tokenA, "/api/v1/goals", `{
+		"name": "Wedding",
+		"target_amount_minor": 20000000,
+		"deadline": "2027-12-31T00:00:00Z"
+	}`)
+
+	walletA := findGoalWallet(t, router, tokenA, goalA)
+	walletB := findGoalWallet(t, router, tokenA, goalB)
+	if walletA == "" || walletB == "" || walletA == walletB {
+		t.Fatalf("expected duplicate goal names to create distinct goal wallets, got %q and %q", walletA, walletB)
+	}
+
+	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/goals/"+goalA+"/members", `{
+		"email": "`+userBData.User.Email+`"
+	}`, http.StatusOK)
+
+	assertAPIStatus(t, router, tokenB, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userA+"/respond", `{
+		"status": "joined"
+	}`, http.StatusNotFound)
+	if got := findGoalWallet(t, router, tokenB, goalA); got != "" {
+		t.Fatalf("expected mismatched member response to avoid creating goal wallet, got %q", got)
+	}
+
+	assertAPIStatus(t, router, tokenB, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userB+"/respond", `{
+		"status": "rejected"
+	}`, http.StatusOK)
+	assertAPIStatus(t, router, tokenB, http.MethodGet, "/api/v1/goals/"+goalA, "", http.StatusNotFound)
+	assertGoalListContains(t, router, tokenB, goalA, false)
+	if got := findGoalWallet(t, router, tokenB, goalA); got != "" {
+		t.Fatalf("expected rejected invite to avoid creating goal wallet, got %q", got)
+	}
+
+	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/goals/"+goalA+"/members", `{
+		"email": "`+userBData.User.Email+`"
+	}`, http.StatusOK)
+	assertAPIStatus(t, router, tokenB, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userB+"/respond", `{
+		"status": "joined"
+	}`, http.StatusOK)
+	if got := findGoalWallet(t, router, tokenB, goalA); got == "" {
+		t.Fatalf("expected re-invited member to receive goal wallet after joining")
+	}
+
+	assertAPIStatus(t, router, tokenA, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userA+"/respond", `{
+		"status": "rejected"
+	}`, http.StatusBadRequest)
+}
+
 func findGoalWallet(t *testing.T, router http.Handler, token string, goalID string) string {
 	t.Helper()
 	res := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
@@ -156,4 +231,25 @@ func findGoalWallet(t *testing.T, router http.Handler, token string, goalID stri
 		}
 	}
 	return ""
+}
+
+func assertGoalListContains(t *testing.T, router http.Handler, token string, goalID string, want bool) {
+	t.Helper()
+
+	res := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/goals", "", http.StatusOK)
+	var goals []goal.Goal
+	if err := json.Unmarshal(res, &goals); err != nil {
+		t.Fatalf("parse goals response: %v", err)
+	}
+	for _, g := range goals {
+		if g.ID == goalID {
+			if !want {
+				t.Fatalf("did not expect goal %s in list: %+v", goalID, goals)
+			}
+			return
+		}
+	}
+	if want {
+		t.Fatalf("expected goal %s in list: %+v", goalID, goals)
+	}
 }

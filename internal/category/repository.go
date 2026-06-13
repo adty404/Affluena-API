@@ -121,6 +121,29 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 var ErrDepthExceeded = errors.New("category depth cannot exceed 3 levels")
 var ErrCyclicReference = errors.New("cyclic category reference detected")
 
+func (r *Repository) CheckParent(ctx context.Context, userID string, categoryType string, parentID *string) error {
+	if parentID == nil {
+		return nil
+	}
+
+	var parentType string
+	err := r.pool.QueryRow(ctx, `
+		SELECT type
+		FROM categories
+		WHERE user_id = $1 AND id = $2
+	`, userID, *parentID).Scan(&parentType)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if parentType != categoryType {
+		return ErrParentTypeMismatch
+	}
+	return nil
+}
+
 func (r *Repository) CheckDepth(ctx context.Context, parentID *string) error {
 	if parentID == nil {
 		return nil
