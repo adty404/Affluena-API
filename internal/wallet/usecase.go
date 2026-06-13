@@ -13,6 +13,9 @@ type RepositoryPort interface {
 	Get(ctx context.Context, userID string, id string) (Wallet, error)
 	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
 	Delete(ctx context.Context, userID string, id string) error
+	AddMember(ctx context.Context, walletID string, userID string, status string) error
+	FindUserByEmail(ctx context.Context, email string) (string, error)
+	RespondInvite(ctx context.Context, walletID string, userID string, status string) error
 }
 
 type UseCase struct {
@@ -50,4 +53,33 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
 	return u.repo.Delete(ctx, userID, id)
+}
+
+func (u *UseCase) InviteMember(ctx context.Context, userID string, id string, input InviteMemberInput) error {
+	// check if user is the owner
+	w, err := u.repo.Get(ctx, userID, id)
+	if err != nil {
+		return err
+	}
+	if w.UserID != userID {
+		return ErrNotAuthorized
+	}
+
+	// find the invited user
+	invitedUserID, err := u.repo.FindUserByEmail(ctx, input.Email)
+	if err != nil {
+		return errors.New("user with that email not found")
+	}
+	if invitedUserID == userID {
+		return errors.New("cannot invite yourself")
+	}
+
+	return u.repo.AddMember(ctx, id, invitedUserID, "pending")
+}
+
+func (u *UseCase) RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error {
+	if memberID != userID {
+		return ErrNotFound
+	}
+	return u.repo.RespondInvite(ctx, id, userID, input.Status)
 }

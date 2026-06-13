@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -20,6 +21,8 @@ type walletUseCase interface {
 	Get(ctx context.Context, userID string, id string) (Wallet, error)
 	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
 	Delete(ctx context.Context, userID string, id string) error
+	InviteMember(ctx context.Context, userID string, id string, input InviteMemberInput) error
+	RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error
 }
 
 func NewHandler(usecase walletUseCase) *Handler {
@@ -150,4 +153,52 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) InviteMember(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	var req InviteMemberInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.usecase.InviteMember(c.Request.Context(), userID, c.Param("id"), req); err != nil {
+		if errors.Is(err, ErrNotAuthorized) {
+			httpx.Error(c, http.StatusForbidden, err.Error())
+			return
+		}
+		if NotFound(err) {
+			httpx.Error(c, http.StatusNotFound, "wallet not found")
+			return
+		}
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	c.Status(http.StatusCreated)
+}
+
+func (h *Handler) RespondInvite(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	var req RespondInviteInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.usecase.RespondInvite(c.Request.Context(), userID, c.Param("id"), c.Param("member_id"), req); err != nil {
+		if NotFound(err) {
+			httpx.Error(c, http.StatusNotFound, "wallet or invitation not found")
+			return
+		}
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	c.Status(http.StatusOK)
 }

@@ -77,6 +77,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/wallets/:id", walletHandler.Get)
 	protected.PUT("/wallets/:id", walletHandler.Update)
 	protected.DELETE("/wallets/:id", walletHandler.Delete)
+	protected.POST("/wallets/:id/invites", walletHandler.InviteMember)
+	protected.PATCH("/wallets/:id/members/:member_id", walletHandler.RespondInvite)
 
 	protected.POST("/categories", categoryHandler.Create)
 	protected.GET("/categories", categoryHandler.List)

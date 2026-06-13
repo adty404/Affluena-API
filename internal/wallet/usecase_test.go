@@ -55,6 +55,21 @@ func (f *fakeWalletRepository) Delete(ctx context.Context, userID string, id str
 	return f.err
 }
 
+func (f *fakeWalletRepository) AddMember(ctx context.Context, walletID string, userID string, status string) error {
+	return f.err
+}
+
+func (f *fakeWalletRepository) FindUserByEmail(ctx context.Context, email string) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return "user-2", nil
+}
+
+func (f *fakeWalletRepository) RespondInvite(ctx context.Context, walletID string, userID string, status string) error {
+	return f.err
+}
+
 func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
 	uc := NewUseCase(repo)

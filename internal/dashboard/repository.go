@@ -21,20 +21,23 @@ func (r *Repository) Summary(ctx context.Context, userID string, month time.Time
 
 	if err := r.pool.QueryRow(ctx, `
 		SELECT COALESCE(SUM(balance_minor), 0)
-		FROM wallets
-		WHERE user_id = $1
+		FROM wallets w
+		LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.status = 'joined'
+		WHERE w.user_id = $1 OR ws.user_id = $1
 	`, userID).Scan(&summary.NetWorthMinor); err != nil {
 		return Summary{}, err
 	}
 
 	if err := r.pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(SUM(amount_minor) FILTER (WHERE type = 'income'), 0),
-			COALESCE(SUM(amount_minor) FILTER (WHERE type = 'expense'), 0)
-		FROM transactions
-		WHERE user_id = $1
-			AND transaction_at >= $2
-			AND transaction_at < $3
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'income'), 0),
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'expense'), 0)
+		FROM transactions t
+		LEFT JOIN wallets w ON t.wallet_id = w.id
+		LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.status = 'joined'
+		WHERE (w.user_id = $1 OR ws.user_id = $1)
+			AND t.transaction_at >= $2
+			AND t.transaction_at < $3
 	`, userID, month, nextMonth).Scan(&summary.MonthlyIncomeMinor, &summary.MonthlyExpenseMinor); err != nil {
 		return Summary{}, err
 	}
@@ -88,7 +91,7 @@ func (r *Repository) budgetSummary(ctx context.Context, userID string, month tim
 				), 0) AS spent_minor
 			FROM category_budgets b
 			LEFT JOIN category_tree ct ON ct.root_id = b.category_id
-			LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = ct.id
+			LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = ct.id AND t.type = 'expense' AND t.transaction_at >= b.month AND t.transaction_at < b.month + interval '1 month'
 			WHERE b.user_id = $1 AND b.month = $2
 			GROUP BY b.id
 		)
@@ -207,8 +210,11 @@ func (r *Repository) CashflowTrend(ctx context.Context, userID string, months in
 			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'expense'), 0) AS expense_minor
 		FROM months m
 		LEFT JOIN transactions t 
-			ON t.user_id = $1 
-			AND date_trunc('month', t.transaction_at AT TIME ZONE 'UTC') = m.m
+			ON date_trunc('month', t.transaction_at AT TIME ZONE 'UTC') = m.m
+			AND (
+				t.user_id = $1 OR
+				t.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+			)
 		GROUP BY m.m
 		ORDER BY m.m ASC
 	`
@@ -248,7 +254,10 @@ func (r *Repository) ExpenseDistribution(ctx context.Context, userID string, mon
 				SUM(t.amount_minor) AS amount_minor
 			FROM transactions t
 			LEFT JOIN category_tree ct ON t.category_id = ct.id
-			WHERE t.user_id = $1 
+			WHERE (
+				t.user_id = $1 OR
+				t.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+			)
 				AND t.type = 'expense'
 				AND t.transaction_at >= $2 
 				AND t.transaction_at < $3
@@ -289,7 +298,10 @@ func (r *Repository) Forecast(ctx context.Context, userID string, month time.Tim
 	err := r.pool.QueryRow(ctx, `
 		SELECT COALESCE(SUM(amount_minor), 0)
 		FROM transactions
-		WHERE user_id = $1 AND type = 'expense'
+		WHERE (
+			user_id = $1 OR
+			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+		) AND type = 'expense'
 			AND transaction_at >= $2 AND transaction_at < $3
 	`, userID, month, nextMonth).Scan(&currentSpent)
 	if err != nil {
