@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"affluena-api/internal/activity"
+	"affluena-api/internal/alert"
 	"affluena-api/internal/apilog"
 	"affluena-api/internal/auth"
 	"affluena-api/internal/budget"
@@ -13,6 +14,7 @@ import (
 	"affluena-api/internal/debt"
 	"affluena-api/internal/export"
 	"affluena-api/internal/goal"
+	"affluena-api/internal/mailer"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/splitbill"
@@ -48,14 +50,23 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool), activityUC))
 	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool), activityUC))
 	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool), activityUC))
+	budgetUC := budget.NewUseCase(budget.NewRepository(pool), activityUC)
+	budgetHandler := budget.NewHandler(budgetUC)
+
+	var alertUC alert.UseCase
+	if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
+		smtpMailer := mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+		alertUC = alert.NewUseCase(alert.NewRepository(pool), budgetUC, smtpMailer)
+	}
+
 	transactionRepo := transaction.NewRepository(pool)
-	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo, activityUC))
-	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo, nil), activityUC))
-	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool), activityUC))
+	transactionUC := transaction.NewUseCase(transactionRepo, activityUC, alertUC)
+	transactionHandler := transaction.NewHandler(transactionUC)
+	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transactionUC, activityUC))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
 	debtUseCase := debt.NewUseCase(debt.NewRepository(pool, transactionRepo), activityUC)
 	debtHandler := debt.NewHandler(debtUseCase)
-	splitBillHandler := splitbill.NewHandler(splitbill.NewUseCase(transaction.NewUseCase(transactionRepo, activityUC), debtUseCase, activityUC))
+	splitBillHandler := splitbill.NewHandler(splitbill.NewUseCase(transactionUC, debtUseCase, activityUC))
 	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool), activityUC))
 	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo), activityUC))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(

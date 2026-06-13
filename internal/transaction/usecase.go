@@ -17,13 +17,18 @@ type RepositoryPort interface {
 	Delete(ctx context.Context, userID string, id string) error
 }
 
+type alertUseCase interface {
+	CheckBudgetAndAlert(ctx context.Context, userID, categoryID string)
+}
+
 type UseCase struct {
 	repo       RepositoryPort
 	activityUC activity.UseCase
+	alertUC    alertUseCase
 }
 
-func NewUseCase(repo RepositoryPort, activityUC activity.UseCase) *UseCase {
-	return &UseCase{repo: repo, activityUC: activityUC}
+func NewUseCase(repo RepositoryPort, activityUC activity.UseCase, alertUC alertUseCase) *UseCase {
+	return &UseCase{repo: repo, activityUC: activityUC, alertUC: alertUC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error) {
@@ -34,6 +39,11 @@ func (u *UseCase) Create(ctx context.Context, userID string, input TransactionIn
 	if err == nil && u.activityUC != nil {
 		desc := fmt.Sprintf("Mencatat transaksi %s sebesar %.2f", input.Type, float64(input.AmountMinor))
 		u.activityUC.LogActivity(ctx, userID, "CREATE", "TRANSACTION", &t.ID, desc)
+	}
+	if err == nil && u.alertUC != nil && input.Type == TransactionTypeExpense && input.CategoryID != "" {
+		// Run alert check asynchronously
+		// Use context.Background() since the request context might be cancelled
+		go u.alertUC.CheckBudgetAndAlert(context.Background(), userID, input.CategoryID)
 	}
 	return t, err
 }
