@@ -149,7 +149,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Health Check\nEndpoint sederhana untuk memverifikasi status operasional layanan (Uptime API)."
     },
     {
       "name": "Auth",
@@ -464,7 +465,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Autentikasi\nMenangani registrasi, login, dan penyegaran (refresh) token JWT. Seluruh endpoint dalam folder ini (kecuali `/auth/me`) bersifat publik dan tidak memerlukan autentikasi."
     },
     {
       "name": "Dashboard",
@@ -987,7 +989,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Dasbor & Analitik\nMenyediakan data ringkasan finansial (`summary`), _cashflow trend_, distribusi pengeluaran, serta proyeksi perkiraan arus kas bulan berjalan, untuk dirender ke dalam grafik antarmuka Frontend."
     },
     {
       "name": "Wallets",
@@ -1850,7 +1853,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Dompet (Wallet)\nMengelola dompet pribadi maupun dompet bersama (Shared Wallets). Pengguna dapat membuat dompet bertipe `cash`, `bank`, `ewallet`, `credit_card`, dan `investment`. Dompet bersama memungkinkan anggota (suami-istri/teman) saling melihat dan mencatat transaksi."
     },
     {
       "name": "Categories",
@@ -3280,7 +3284,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Kategori Transaksi\nDigunakan untuk memisahkan pengeluaran (`expense`) dan pemasukan (`income`). Kategori mendukung struktur hierarki (parent-child) untuk klasifikasi finansial yang lebih presisi."
     },
     {
       "name": "Transactions",
@@ -4875,7 +4880,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Transaksi\nInti dari Affluena. Menangani pencatatan pemasukan, pengeluaran, dan transfer antar dompet. Transaksi memengaruhi saldo dompet, limit anggaran, dan dapat diasosiasikan dengan _tags_ maupun kategori pengeluaran tertentu."
     },
     {
       "name": "Quick Entry Templates",
@@ -5429,7 +5435,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Templat Cepat\nMemungkinkan pengguna menyimpan templat transaksi rutin (seperti makan siang, bensin) yang sering terjadi. Pengguna dapat mengeksekusi templat secara langsung untuk mempercepat proses pencatatan pengeluaran harian."
     },
     {
       "name": "Category Budgets",
@@ -5924,7 +5931,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Anggaran\nMengatur batas pengeluaran maksimum (limit) untuk suatu kategori pada bulan tertentu. Digunakan dalam Dasbor dan pelaporan untuk memonitor apakah pengeluaran melebihi anggaran."
     },
     {
       "name": "Debt & Loan Manager",
@@ -6478,7 +6486,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Hutang & Piutang\nMemudahkan pelacakan uang yang dipinjam atau dipinjamkan. Mendukung pembayaran sebagian atau pelunasan secara penuh atas hutang/piutang yang dicatat."
     },
     {
       "name": "Installments",
@@ -7032,7 +7041,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Cicilan (Installments)\nMencatat dan memantau kewajiban cicilan berbunga yang memiliki jumlah tetap, bunga, serta tanggal jatuh tempo. Cicilan dapat dilunasi secara parsial melalui transaksi reguler."
     },
     {
       "name": "Subscriptions",
@@ -7695,7 +7705,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Berlangganan (Subscriptions)\nUntuk melacak pembayaran langganan periodik (misal: Netflix, Spotify, biaya langganan software) yang memotong dana secara rutin, baik harian, mingguan, bulanan, atau tahunan."
     },
     {
       "name": "Recurring Transactions",
@@ -8249,7 +8260,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Transaksi Berulang\nMirip dengan Subscriptions namun berjalan otomatis di _background_ melalui _Scheduler_. Sistem secara mandiri membuat transaksi baru setiap kali jadwal yang ditetapkan telah jatuh tempo."
     },
     {
       "name": "Financial Goals",
@@ -9000,7 +9012,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Tujuan Finansial (Goals)\nMemungkinkan pembuatan tabungan untuk target jangka panjang (misal: Liburan, Dana Darurat). Target dapat dibuat sebagai *Shared Goal* yang dapat diisi secara patungan (bersama teman atau pasangan)."
     },
     {
       "name": "Tags",
@@ -9320,7 +9333,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "### Modul Label (Tags)\nMemberikan kebebasan ekstra bagi pengguna untuk menandai transaksi dengan label custom (seperti `#liburan-bali`, `#kesehatan`) agar lebih mudah saat penyaringan atau _filtering_ data."
     }
   ]
 }
