@@ -71,14 +71,47 @@ func TestBalanceDeltasRejectInvalidInputs(t *testing.T) {
 	cases := []TransactionInput{
 		{Type: TransactionTypeIncome, WalletID: "", AmountMinor: 1, CategoryID: "category-1", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
 		{Type: TransactionTypeExpense, WalletID: "wallet-1", AmountMinor: 0, CategoryID: "category-1", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionTypeIncome, WalletID: "wallet-1", AmountMinor: -1, CategoryID: "category-1", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionTypeExpense, WalletID: "wallet-1", AmountMinor: -1, CategoryID: "category-1", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionTypeTransfer, WalletID: "wallet-1", ToWalletID: "wallet-2", AmountMinor: -1, TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
 		{Type: TransactionTypeTransfer, WalletID: "wallet-1", ToWalletID: "", AmountMinor: 1, TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
 		{Type: TransactionTypeTransfer, WalletID: "same-wallet", ToWalletID: "same-wallet", AmountMinor: 1, TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
 		{Type: TransactionTypeIncome, WalletID: "wallet-1", AmountMinor: 1, CategoryID: "", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionTypeExpense, WalletID: "wallet-1", AmountMinor: 1, CategoryID: "", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionType("refund"), WalletID: "wallet-1", AmountMinor: 1, TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
+		{Type: TransactionTypeAdjustment, WalletID: "wallet-1", AmountMinor: 1},
 	}
 
 	for _, tc := range cases {
 		if _, err := BalanceDeltas(tc); err == nil {
 			t.Fatalf("expected validation error for %#v", tc)
 		}
+	}
+}
+
+func TestBalanceDeltasAllowsPositiveAndNegativeAdjustments(t *testing.T) {
+	tests := []struct {
+		name        string
+		amountMinor int64
+	}{
+		{name: "increase balance", amountMinor: 25_000},
+		{name: "decrease balance", amountMinor: -25_000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deltas, err := BalanceDeltas(TransactionInput{
+				Type:           TransactionTypeAdjustment,
+				WalletID:       "wallet-1",
+				AmountMinor:    tt.amountMinor,
+				TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z"),
+			})
+			if err != nil {
+				t.Fatalf("BalanceDeltas returned error: %v", err)
+			}
+			if len(deltas) != 1 || deltas[0].AmountMinor != tt.amountMinor {
+				t.Fatalf("expected adjustment delta %d, got %#v", tt.amountMinor, deltas)
+			}
+		})
 	}
 }

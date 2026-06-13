@@ -9,6 +9,7 @@ import (
 
 type fakeTransactionRepository struct {
 	createInput TransactionInput
+	updateInput TransactionInput
 	created     Transaction
 	listed      []Transaction
 	got         Transaction
@@ -40,6 +41,7 @@ func (f *fakeTransactionRepository) Get(ctx context.Context, userID string, id s
 }
 
 func (f *fakeTransactionRepository) Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error) {
+	f.updateInput = input
 	if f.err != nil {
 		return Transaction{}, f.err
 	}
@@ -85,6 +87,29 @@ func TestTransactionUseCaseRejectsInvalidInput(t *testing.T) {
 	}
 }
 
+func TestTransactionUseCaseUpdateValidatesAndDelegates(t *testing.T) {
+	repo := &fakeTransactionRepository{updated: Transaction{ID: "tx-1"}}
+	uc := NewUseCase(repo)
+	input := TransactionInput{
+		Type:           TransactionTypeTransfer,
+		WalletID:       "wallet-1",
+		ToWalletID:     "wallet-2",
+		AmountMinor:    100_000,
+		TransactionUTC: time.Now().UTC(),
+	}
+
+	updated, err := uc.Update(context.Background(), "user-1", "tx-1", input)
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.ID != "tx-1" {
+		t.Fatalf("expected tx-1, got %+v", updated)
+	}
+	if repo.updateInput.ToWalletID != "wallet-2" {
+		t.Fatalf("expected update input to be delegated, got %+v", repo.updateInput)
+	}
+}
+
 func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 	repo := &fakeTransactionRepository{
 		listed: []Transaction{{ID: "tx-1"}},
@@ -105,6 +130,31 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	if repo.deletedID != "tx-1" {
 		t.Fatalf("expected delete id tx-1, got %q", repo.deletedID)
+	}
+}
+
+func TestTransactionUseCasePropagatesRepositoryErrors(t *testing.T) {
+	repoErr := errors.New("repo failed")
+	uc := NewUseCase(&fakeTransactionRepository{err: repoErr})
+	valid := TransactionInput{
+		Type:           TransactionTypeIncome,
+		WalletID:       "wallet-1",
+		CategoryID:     "category-1",
+		AmountMinor:    100_000,
+		TransactionUTC: time.Now().UTC(),
+	}
+
+	if _, err := uc.Create(context.Background(), "user-1", valid); !errors.Is(err, repoErr) {
+		t.Fatalf("expected create repo error, got %v", err)
+	}
+	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected list repo error, got %v", err)
+	}
+	if _, err := uc.Update(context.Background(), "user-1", "tx-1", valid); !errors.Is(err, repoErr) {
+		t.Fatalf("expected update repo error, got %v", err)
+	}
+	if err := uc.Delete(context.Background(), "user-1", "tx-1"); !errors.Is(err, repoErr) {
+		t.Fatalf("expected delete repo error, got %v", err)
 	}
 }
 

@@ -23,12 +23,16 @@ func TestApplyInstallmentPaymentMarksPaidOffAtZeroRemaining(t *testing.T) {
 }
 
 func TestApplyInstallmentPaymentRejectsPaidOffInstallment(t *testing.T) {
-	_, err := ApplyInstallmentPayment(InstallmentPaymentState{
-		RemainingMonths: 0,
-		Status:          InstallmentStatusPaidOff,
-	})
-	if err == nil {
-		t.Fatal("expected paid-off installment payment to fail")
+	cases := []InstallmentPaymentState{
+		{RemainingMonths: 0, Status: InstallmentStatusPaidOff},
+		{RemainingMonths: 1, Status: InstallmentStatusCancelled},
+		{RemainingMonths: 0, Status: InstallmentStatusActive},
+	}
+
+	for _, tc := range cases {
+		if _, err := ApplyInstallmentPayment(tc); err == nil {
+			t.Fatalf("expected installment payment to fail for %#v", tc)
+		}
 	}
 }
 
@@ -49,6 +53,12 @@ func TestAdvanceSubscriptionDueDate(t *testing.T) {
 	}
 	if !weekly.Equal(time.Date(2026, 2, 7, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("expected weekly due date 2026-02-07, got %s", weekly)
+	}
+}
+
+func TestAdvanceSubscriptionDueDateRejectsInvalidCycle(t *testing.T) {
+	if _, err := AdvanceSubscriptionDueDate(time.Now().UTC(), BillingCycle("yearly")); err == nil {
+		t.Fatal("expected invalid billing cycle to fail")
 	}
 }
 
@@ -80,5 +90,44 @@ func TestResolveInstallmentRemainingAndStatusRejectsInconsistentState(t *testing
 	one := 1
 	if _, _, err := ResolveInstallmentRemainingAndStatus(3, &one, InstallmentStatusPaidOff); err == nil {
 		t.Fatal("expected paid off installment with remaining months to fail")
+	}
+
+	negative := -1
+	if _, _, err := ResolveInstallmentRemainingAndStatus(3, &negative, InstallmentStatusActive); err == nil {
+		t.Fatal("expected negative remaining months to fail")
+	}
+
+	tooMany := 4
+	if _, _, err := ResolveInstallmentRemainingAndStatus(3, &tooMany, InstallmentStatusActive); err == nil {
+		t.Fatal("expected remaining months above tenor to fail")
+	}
+
+	if _, _, err := ResolveInstallmentRemainingAndStatus(0, nil, InstallmentStatusActive); err == nil {
+		t.Fatal("expected non-positive tenor to fail")
+	}
+
+	if _, _, err := ResolveInstallmentRemainingAndStatus(3, nil, InstallmentStatus("late")); err == nil {
+		t.Fatal("expected invalid installment status to fail")
+	}
+}
+
+func TestTrackerValidationHelpers(t *testing.T) {
+	if !IsValidInstallmentStatus(InstallmentStatusActive) || !IsValidInstallmentStatus(InstallmentStatusPaidOff) || !IsValidInstallmentStatus(InstallmentStatusCancelled) {
+		t.Fatal("expected known installment statuses to be valid")
+	}
+	if IsValidInstallmentStatus(InstallmentStatus("late")) {
+		t.Fatal("expected unknown installment status to be invalid")
+	}
+	if !IsValidBillingCycle(BillingCycleWeekly) || !IsValidBillingCycle(BillingCycleMonthly) {
+		t.Fatal("expected known billing cycles to be valid")
+	}
+	if IsValidBillingCycle(BillingCycle("yearly")) {
+		t.Fatal("expected yearly billing cycle to be invalid")
+	}
+	if !IsValidSubscriptionStatus(SubscriptionStatusActive) || !IsValidSubscriptionStatus(SubscriptionStatusPaused) || !IsValidSubscriptionStatus(SubscriptionStatusCancelled) {
+		t.Fatal("expected known subscription statuses to be valid")
+	}
+	if IsValidSubscriptionStatus(SubscriptionStatus("expired")) {
+		t.Fatal("expected unknown subscription status to be invalid")
 	}
 }

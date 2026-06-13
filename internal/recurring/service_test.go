@@ -41,6 +41,19 @@ func TestAdvancePastAdvancesUntilAfterNow(t *testing.T) {
 	}
 }
 
+func TestAdvancePastLeavesFutureRunUnchanged(t *testing.T) {
+	future := time.Date(2026, 6, 22, 9, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 6, 20, 9, 0, 0, 0, time.UTC)
+
+	next, err := AdvancePast(future, FrequencyWeekly, 1, now)
+	if err != nil {
+		t.Fatalf("AdvancePast returned error: %v", err)
+	}
+	if !next.Equal(future) {
+		t.Fatalf("expected future run to remain %s, got %s", future, next)
+	}
+}
+
 func TestValidationRejectsBadFrequencyStatusAndInterval(t *testing.T) {
 	if IsValidFrequency(Frequency("daily")) {
 		t.Fatal("expected daily to be invalid for MVP")
@@ -50,6 +63,22 @@ func TestValidationRejectsBadFrequencyStatusAndInterval(t *testing.T) {
 	}
 	if _, err := AdvanceNextRunAt(time.Now().UTC(), FrequencyWeekly, 0); err == nil {
 		t.Fatal("expected zero interval to fail")
+	}
+}
+
+func TestNextStateAfterRunKeepsStatusWhenWithinEndAt(t *testing.T) {
+	current := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+	endAt := time.Date(2026, 6, 8, 9, 0, 0, 0, time.UTC)
+
+	nextRunAt, status, err := NextStateAfterRun(current, FrequencyWeekly, 1, &endAt, StatusActive)
+	if err != nil {
+		t.Fatalf("NextStateAfterRun returned error: %v", err)
+	}
+	if !nextRunAt.Equal(endAt) {
+		t.Fatalf("expected next run at end boundary %s, got %s", endAt, nextRunAt)
+	}
+	if status != StatusActive {
+		t.Fatalf("expected active status at end boundary, got %s", status)
 	}
 }
 

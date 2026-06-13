@@ -10,15 +10,18 @@ import (
 )
 
 type fakeTemplateRepository struct {
-	created   Template
-	listed    []Template
-	got       Template
-	updated   Template
-	deletedID string
-	err       error
+	createTemplate Template
+	updateTemplate Template
+	created        Template
+	listed         []Template
+	got            Template
+	updated        Template
+	deletedID      string
+	err            error
 }
 
 func (f *fakeTemplateRepository) Create(ctx context.Context, userID string, template Template) (Template, error) {
+	f.createTemplate = template
 	if f.err != nil {
 		return Template{}, f.err
 	}
@@ -40,6 +43,7 @@ func (f *fakeTemplateRepository) Get(ctx context.Context, userID string, id stri
 }
 
 func (f *fakeTemplateRepository) Update(ctx context.Context, userID string, id string, template Template) (Template, error) {
+	f.updateTemplate = template
 	if f.err != nil {
 		return Template{}, f.err
 	}
@@ -79,6 +83,44 @@ func TestQuickEntryUseCaseRejectsInvalidTemplate(t *testing.T) {
 	}
 }
 
+func TestQuickEntryUseCaseCreateAndUpdateValidateTemplates(t *testing.T) {
+	valid := Template{
+		Name:        "Salary",
+		Type:        string(transaction.TransactionTypeIncome),
+		WalletID:    "wallet-1",
+		CategoryID:  "category-1",
+		AmountMinor: 100_000,
+		Note:        "Monthly salary",
+	}
+	repo := &fakeTemplateRepository{created: Template{ID: "template-1"}, updated: Template{ID: "template-1"}}
+	uc := NewUseCase(repo, &fakeTransactionCreator{})
+
+	if _, err := uc.Create(context.Background(), "user-1", valid); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if repo.createTemplate.Note != "Monthly salary" {
+		t.Fatalf("expected create template to be delegated, got %+v", repo.createTemplate)
+	}
+
+	if _, err := uc.Update(context.Background(), "user-1", "template-1", valid); err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if repo.updateTemplate.CategoryID != "category-1" {
+		t.Fatalf("expected update template to be delegated, got %+v", repo.updateTemplate)
+	}
+
+	invalidTransfer := Template{
+		Name:        "Bad transfer",
+		Type:        string(transaction.TransactionTypeTransfer),
+		WalletID:    "wallet-1",
+		ToWalletID:  "wallet-1",
+		AmountMinor: 100_000,
+	}
+	if _, err := uc.Update(context.Background(), "user-1", "template-1", invalidTransfer); err == nil {
+		t.Fatal("expected invalid transfer template to fail")
+	}
+}
+
 func TestQuickEntryUseCaseExecuteCreatesTransactionFromTemplate(t *testing.T) {
 	executedAt := time.Date(2026, 6, 13, 10, 0, 0, 0, time.UTC)
 	templates := &fakeTemplateRepository{got: Template{
@@ -104,6 +146,53 @@ func TestQuickEntryUseCaseExecuteCreatesTransactionFromTemplate(t *testing.T) {
 	}
 	if transactions.input.Note != "Override note" || !transactions.input.TransactionUTC.Equal(executedAt) {
 		t.Fatalf("unexpected transaction input %+v", transactions.input)
+	}
+}
+
+func TestQuickEntryUseCaseExecuteUsesTemplateDefaults(t *testing.T) {
+	templates := &fakeTemplateRepository{got: Template{
+		ID:          "template-1",
+		Type:        string(transaction.TransactionTypeIncome),
+		WalletID:    "wallet-1",
+		CategoryID:  "category-1",
+		AmountMinor: 150_000,
+		Note:        "Template note",
+	}}
+	transactions := &fakeTransactionCreator{created: transaction.Transaction{ID: "tx-1"}}
+	uc := NewUseCase(templates, transactions)
+
+	result, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{})
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+	if result.Transaction.ID != "tx-1" {
+		t.Fatalf("expected tx-1, got %+v", result)
+	}
+	if transactions.input.Note != "Template note" {
+		t.Fatalf("expected template note, got %q", transactions.input.Note)
+	}
+	if transactions.input.TransactionUTC.IsZero() {
+		t.Fatal("expected execute to default transaction time")
+	}
+}
+
+func TestQuickEntryUseCaseExecutePropagatesRepositoryAndTransactionErrors(t *testing.T) {
+	repoErr := errors.New("template missing")
+	uc := NewUseCase(&fakeTemplateRepository{err: repoErr}, &fakeTransactionCreator{})
+	if _, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{}); !errors.Is(err, repoErr) {
+		t.Fatalf("expected template repository error, got %v", err)
+	}
+
+	txErr := errors.New("transaction failed")
+	uc = NewUseCase(&fakeTemplateRepository{got: Template{
+		ID:          "template-1",
+		Type:        string(transaction.TransactionTypeExpense),
+		WalletID:    "wallet-1",
+		CategoryID:  "category-1",
+		AmountMinor: 50_000,
+	}}, &fakeTransactionCreator{err: txErr})
+	if _, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{}); !errors.Is(err, txErr) {
+		t.Fatalf("expected transaction error, got %v", err)
 	}
 }
 
