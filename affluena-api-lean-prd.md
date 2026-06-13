@@ -65,6 +65,11 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - **Fitur:** Limit maksimal pengeluaran bulanan berdasarkan ID Kategori.
 - **Use Case:** Memasang limit _budget_ khusus untuk pos _gaming/entertainment_ (misalnya belanja _game_ di Steam seperti Resident Evil 4 Remake atau _item_ Dota 2) serta pos _personal care_ (belanja stok rutin Skintific, Lanbena, dan produk rambut seperti Regrou/Erha). API akan mengembalikan data limit yang terpakai untuk dirender menjadi visualisasi _progress bar_ di klien.
 
+### 3.8. Financial Goals (Tabungan Bersama)
+
+- **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi).
+- **Use Case:** Membuat target tabungan "Menikah" dengan target nominal tertentu. Pengguna bisa mengundang pasangannya, dan keduanya bisa mengalokasikan (menyisihkan) uang dari dompet pribadi ke dalam _Goal Wallet_ yang berelasi dengan target tabungan ini. Progres tabungan dapat terpantau bersama.
+
 ## 4. Non-Functional Requirements
 
 - **Performance:** _Response time_ untuk _endpoint_ krusial (_Quick Entry_) di bawah 200ms.

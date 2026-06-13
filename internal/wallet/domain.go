@@ -14,6 +14,7 @@ type Wallet struct {
 	Type         string    `json:"type"`
 	CurrencyCode string    `json:"currency_code"`
 	BalanceMinor int64     `json:"balance_minor"`
+	GoalID       *string   `json:"goal_id,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -23,6 +24,7 @@ type CreateWalletInput struct {
 	Type         string
 	CurrencyCode string
 	BalanceMinor int64
+	GoalID       *string
 }
 
 type UpdateWalletInput struct {
@@ -33,7 +35,7 @@ type UpdateWalletInput struct {
 
 func IsValidType(walletType string) bool {
 	switch walletType {
-	case "cash", "bank", "e_wallet", "investment":
+	case "cash", "bank", "e_wallet", "investment", "goal":
 		return true
 	default:
 		return false

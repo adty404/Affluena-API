@@ -9,6 +9,7 @@ import (
 	"affluena-api/internal/config"
 	"affluena-api/internal/dashboard"
 	"affluena-api/internal/debt"
+	"affluena-api/internal/goal"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/tracker"
@@ -40,6 +41,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool)))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
 	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo)))
+	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool), wallet.NewRepository(pool)))
 	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo)))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
 		tracker.NewInstallmentRepository(pool, transactionRepo),
@@ -98,6 +100,12 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.PUT("/debts/:id", debtHandler.Update)
 	protected.DELETE("/debts/:id", debtHandler.Delete)
 	protected.POST("/debts/:id/pay", debtHandler.Pay)
+
+	protected.POST("/goals", goalHandler.Create)
+	protected.GET("/goals", goalHandler.List)
+	protected.GET("/goals/:id", goalHandler.Get)
+	protected.POST("/goals/:id/members", goalHandler.InviteMember)
+	protected.PUT("/goals/:id/members/:user_id/respond", goalHandler.RespondInvite)
 
 	protected.POST("/installments", trackerHandler.CreateInstallment)
 	protected.GET("/installments", trackerHandler.ListInstallments)
