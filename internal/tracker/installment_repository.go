@@ -22,6 +22,9 @@ func NewInstallmentRepository(pool *pgxpool.Pool, transactionRepo *transaction.R
 }
 
 func (r *InstallmentRepository) Create(ctx context.Context, userID string, installment Installment) (Installment, error) {
+	if err := ValidateInstallmentPlan(installment.TotalAmountMinor, installment.MonthlyAmountMinor, installment.TenorMonths); err != nil {
+		return Installment{}, err
+	}
 	if err := ensureExpensePaymentRefs(ctx, r.pool, userID, installment.WalletID, installment.CategoryID); err != nil {
 		return Installment{}, err
 	}
@@ -101,6 +104,9 @@ func (r *InstallmentRepository) Get(ctx context.Context, userID string, id strin
 }
 
 func (r *InstallmentRepository) Update(ctx context.Context, userID string, id string, installment Installment) (Installment, error) {
+	if err := ValidateInstallmentPlan(installment.TotalAmountMinor, installment.MonthlyAmountMinor, installment.TenorMonths); err != nil {
+		return Installment{}, err
+	}
 	if err := ensureExpensePaymentRefs(ctx, r.pool, userID, installment.WalletID, installment.CategoryID); err != nil {
 		return Installment{}, err
 	}

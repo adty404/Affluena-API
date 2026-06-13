@@ -62,6 +62,15 @@ func TestAdvanceSubscriptionDueDateRejectsInvalidCycle(t *testing.T) {
 	}
 }
 
+func TestValidateInstallmentPlan(t *testing.T) {
+	if err := ValidateInstallmentPlan(600_000, 200_000, 3); err != nil {
+		t.Fatalf("expected matching installment plan to pass: %v", err)
+	}
+	if err := ValidateInstallmentPlan(100_000, 60_000, 2); err == nil {
+		t.Fatal("expected mismatched installment plan to fail")
+	}
+}
+
 func TestResolveInstallmentRemainingAndStatus(t *testing.T) {
 	remaining, status, err := ResolveInstallmentRemainingAndStatus(3, nil, "")
 	if err != nil {

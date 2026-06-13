@@ -47,7 +47,7 @@ Manajemen mutasi masuk, keluar, dan penyesuaian saldo.
 
 Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
-- **Installment (Cicilan):** Mencatat total tagihan, jumlah bulan cicilan, cicilan per bulan, dan sisa tenor.
+- **Installment (Cicilan):** Mencatat total tagihan, jumlah bulan cicilan, cicilan per bulan, dan sisa tenor. Total tagihan wajib sama dengan cicilan per bulan dikali tenor agar siklus pembayaran tidak menagih lebih atau kurang dari nilai yang dideklarasikan.
     - _Use Case:_ Memantau sisa cicilan 3 bulan untuk langganan LeetCode Premium atau tagihan _membership_ FTL Gym SCBD. Sistem otomatis mengurangi sisa bulan setiap kali _trigger_ pembayaran diaktifkan.
 - **Subscription (Langganan):** Pelacakan layanan dengan siklus pembayaran tertentu (mingguan/bulanan).
     - _Use Case:_ _Tracker_ rutin untuk _renewal_ paket _meal plan_ mingguan Yellowfit Protein+ agar alokasi dananya selalu disiapkan sebelum jatuh tempo.

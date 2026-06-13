@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"errors"
+	"math"
 	"time"
 
 	"affluena-api/internal/caldate"
@@ -59,6 +60,24 @@ func AdvanceSubscriptionDueDate(due time.Time, cycle BillingCycle) (time.Time, e
 	default:
 		return time.Time{}, errors.New("invalid billing cycle")
 	}
+}
+
+func ValidateInstallmentPlan(totalAmountMinor int64, monthlyAmountMinor int64, tenorMonths int) error {
+	if totalAmountMinor <= 0 {
+		return errors.New("total_amount_minor must be positive")
+	}
+	if monthlyAmountMinor <= 0 {
+		return errors.New("monthly_amount_minor must be positive")
+	}
+	if tenorMonths <= 0 {
+		return errors.New("tenor_months must be positive")
+	}
+
+	tenor := int64(tenorMonths)
+	if monthlyAmountMinor > math.MaxInt64/tenor || monthlyAmountMinor*tenor != totalAmountMinor {
+		return errors.New("total_amount_minor must equal monthly_amount_minor times tenor_months")
+	}
+	return nil
 }
 
 func ResolveInstallmentRemainingAndStatus(tenorMonths int, remainingMonths *int, status InstallmentStatus) (int, InstallmentStatus, error) {
