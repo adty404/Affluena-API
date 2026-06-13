@@ -277,7 +277,15 @@ func applyDeltas(ctx context.Context, tx pgx.Tx, userID string, deltas []Balance
 			UPDATE wallets
 			SET balance_minor = balance_minor + $1, updated_at = now()
 			WHERE id = $2
-		`, delta.AmountMinor, delta.WalletID)
+				AND (
+					user_id = $3 OR
+					EXISTS (
+						SELECT 1
+						FROM wallet_shares
+						WHERE wallet_id = wallets.id AND user_id = $3 AND status = 'joined'
+					)
+				)
+		`, delta.AmountMinor, delta.WalletID, userID)
 		if err != nil {
 			return err
 		}

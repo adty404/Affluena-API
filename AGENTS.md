@@ -52,6 +52,7 @@ Important invariants:
 - Money is stored as integer minor units, usually `amount_minor`.
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.
+- Transaction balance deltas must only update wallets still accessible to the authenticated user, either as owner or joined shared-wallet member.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
 - Financial goal creation and invite acceptance create related goal wallets atomically; treat those as cross-module workflows and test partial-write risks when touching them.
 - Category CRUD endpoints are generic. Do not create separate income/expense CRUD routes; use list filtering where needed.
