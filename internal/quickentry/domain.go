@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"affluena/internal/transaction"
+	"affluena-api/internal/transaction"
 )
 
 var ErrNotFound = errors.New("quick entry template not found")

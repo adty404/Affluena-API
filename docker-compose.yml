@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: affluena
-      POSTGRES_USER: affluena
-      POSTGRES_PASSWORD: affluena
+      POSTGRES_DB: affluena_api
+      POSTGRES_USER: affluena_api
+      POSTGRES_PASSWORD: affluena_api
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - affluena_api_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U affluena -d affluena"]
+      test: ["CMD-SHELL", "pg_isready -U affluena_api -d affluena_api"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -23,7 +23,7 @@ services:
     environment:
       APP_ENV: development
       HTTP_ADDR: :8080
-      DATABASE_URL: postgres://affluena:affluena@postgres:5432/affluena?sslmode=disable
+      DATABASE_URL: postgres://affluena_api:affluena_api@postgres:5432/affluena_api?sslmode=disable
       JWT_SECRET: replace-with-a-long-random-secret
       RUN_MIGRATIONS: "true"
       RECURRING_SCHEDULER_ENABLED: "true"
@@ -33,4 +33,4 @@ services:
       - "8080:8080"
 
 volumes:
-  postgres_data:
+  affluena_api_postgres_data:

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"affluena/internal/config"
-	"affluena/internal/db"
+	"affluena-api/internal/config"
+	"affluena-api/internal/db"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -253,9 +253,9 @@ func TestUsersCannotReadOrMutateEachOthersWalletsCategoriesAndTransactions(t *te
 func openServerIntegrationPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	databaseURL := os.Getenv("AFFLUENA_TEST_DATABASE_URL")
+	databaseURL := os.Getenv("AFFLUENA_API_TEST_DATABASE_URL")
 	if databaseURL == "" {
-		t.Skip("AFFLUENA_TEST_DATABASE_URL is not set")
+		t.Skip("AFFLUENA_API_TEST_DATABASE_URL is not set")
 	}
 
 	ctx := context.Background()

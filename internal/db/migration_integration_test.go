@@ -141,9 +141,9 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 func openMigrationIntegrationPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	databaseURL := os.Getenv("AFFLUENA_TEST_DATABASE_URL")
+	databaseURL := os.Getenv("AFFLUENA_API_TEST_DATABASE_URL")
 	if databaseURL == "" {
-		t.Skip("AFFLUENA_TEST_DATABASE_URL is not set")
+		t.Skip("AFFLUENA_API_TEST_DATABASE_URL is not set")
 	}
 
 	ctx := context.Background()

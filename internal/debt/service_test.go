@@ -3,7 +3,7 @@ package debt
 import (
 	"testing"
 
-	"affluena/internal/transaction"
+	"affluena-api/internal/transaction"
 )
 
 func TestApplyPaymentTransitionsDebtStatus(t *testing.T) {

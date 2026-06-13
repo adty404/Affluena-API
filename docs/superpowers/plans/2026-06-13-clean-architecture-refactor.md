@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor all Affluena backend modules toward Clean Architecture one by one without changing API behavior or business logic.
+**Goal:** Refactor all Affluena-API backend modules toward Clean Architecture one by one without changing API behavior or business logic.
 
 **Architecture:** Keep the existing package-per-feature layout, but split each module into domain, usecase, repository, and handler responsibilities. Usecases own repository interfaces; repositories remain pgx adapters; handlers remain Gin adapters.
 

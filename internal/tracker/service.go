@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"affluena/internal/caldate"
+	"affluena-api/internal/caldate"
 )
 
 type InstallmentStatus string

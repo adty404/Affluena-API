@@ -2,7 +2,7 @@ package transaction
 
 import "context"
 
-import "affluena/internal/page"
+import "affluena-api/internal/page"
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error)

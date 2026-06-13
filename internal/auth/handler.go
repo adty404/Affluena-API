@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"affluena/internal/httpx"
+	"affluena-api/internal/httpx"
 
 	"github.com/gin-gonic/gin"
 )

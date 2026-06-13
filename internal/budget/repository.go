@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"affluena/internal/page"
+	"affluena-api/internal/page"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

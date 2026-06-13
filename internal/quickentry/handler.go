@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"affluena/internal/httpx"
-	"affluena/internal/page"
-	"affluena/internal/transaction"
+	"affluena-api/internal/httpx"
+	"affluena-api/internal/page"
+	"affluena-api/internal/transaction"
 
 	"github.com/gin-gonic/gin"
 )

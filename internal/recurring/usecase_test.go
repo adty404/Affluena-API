@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"affluena/internal/page"
+	"affluena-api/internal/page"
 )
 
 type fakeRecurringRepository struct {

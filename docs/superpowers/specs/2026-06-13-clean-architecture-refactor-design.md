@@ -2,7 +2,7 @@
 
 ## Goal
 
-Refactor Affluena's backend modules one by one toward Clean Architecture while preserving API routes, request/response JSON, database schema, and business behavior.
+Refactor Affluena-API's backend modules one by one toward Clean Architecture while preserving API routes, request/response JSON, database schema, and business behavior.
 
 ## Target Boundaries
 

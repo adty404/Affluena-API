@@ -1,6 +1,6 @@
-# Affluena Backend API
+# Affluena-API
 
-Affluena is an API-first personal finance backend. It implements native auth, wallets, categories, transactions, quick entry templates, budgeting, trackers, recurring transactions, and debt/loan tracking.
+Affluena-API is an API-first personal finance backend. It implements native auth, wallets, categories, transactions, quick entry templates, budgeting, trackers, recurring transactions, and debt/loan tracking.
 
 ## Stack
 
