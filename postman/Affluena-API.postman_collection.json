@@ -997,6 +997,11 @@
                                 {
                                     "key": "sort",
                                     "value": "transaction_at_desc"
+                                },
+                                {
+                                    "key": "tag_id",
+                                    "value": "{{tag_id}}",
+                                    "disabled": true
                                 }
                             ]
                         }
@@ -2338,6 +2343,19 @@
             "item": [
                 {
                     "name": "Create Tag",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('tag_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [

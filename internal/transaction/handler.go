@@ -145,6 +145,19 @@ func bindFilter(c *gin.Context) (TransactionFilter, bool) {
 		httpx.Error(c, http.StatusBadRequest, "invalid transaction type")
 		return TransactionFilter{}, false
 	}
+	for _, candidate := range []struct {
+		name  string
+		value string
+	}{
+		{name: "wallet_id", value: filter.WalletID},
+		{name: "category_id", value: filter.CategoryID},
+		{name: "tag_id", value: filter.TagID},
+	} {
+		if candidate.value != "" && !isUUID(candidate.value) {
+			httpx.Error(c, http.StatusBadRequest, candidate.name+" must be a UUID")
+			return TransactionFilter{}, false
+		}
+	}
 
 	from, ok := parseFilterDate(c, "from")
 	if !ok {
@@ -194,6 +207,12 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		}
 		transactionAt = parsed.UTC()
 	}
+	for _, tagID := range req.TagIDs {
+		if !isUUID(tagID) {
+			httpx.Error(c, http.StatusBadRequest, "tag_ids must contain UUIDs")
+			return TransactionInput{}, false
+		}
+	}
 
 	input := TransactionInput{
 		Type:           req.Type,
@@ -206,6 +225,25 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		Note:           req.Note,
 	}
 	return input, true
+}
+
+func isUUID(value string) bool {
+	if len(value) != 36 {
+		return false
+	}
+	for i, char := range value {
+		switch i {
+		case 8, 13, 18, 23:
+			if char != '-' {
+				return false
+			}
+		default:
+			if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func writeError(c *gin.Context, err error) {

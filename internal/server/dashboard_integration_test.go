@@ -124,3 +124,164 @@ func TestDashboardAnalyticsIntegration(t *testing.T) {
 		t.Fatalf("Expected status overbudget, got %s", forecast.Status)
 	}
 }
+
+func TestDashboardAnalyticsEdgeCases(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "dash-edge-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userA, tokenA := registerIntegrationAPIUser(t, router, "dash-edge-a")
+	userB, tokenB := registerIntegrationAPIUser(t, router, "dash-edge-b")
+	defer cleanupServerIntegrationUsers(t, pool, userA, userB)
+
+	for _, query := range []string{"months=0", "months=13", "months=abc"} {
+		performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/cashflow-trend?"+query, "", http.StatusBadRequest)
+	}
+
+	resTrend := performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/cashflow-trend?months=3", "", http.StatusOK)
+	var trendResp struct {
+		Trend []dashboard.CashflowTrend `json:"trend"`
+	}
+	if err := json.Unmarshal(resTrend, &trendResp); err != nil {
+		t.Fatalf("parse trend response: %v", err)
+	}
+	if len(trendResp.Trend) != 3 {
+		t.Fatalf("expected 3 empty trend months, got %d", len(trendResp.Trend))
+	}
+	for _, month := range trendResp.Trend {
+		if month.IncomeMinor != 0 || month.ExpenseMinor != 0 || month.CashflowMinor != 0 {
+			t.Fatalf("expected empty trend month, got %+v", month)
+		}
+	}
+
+	currentMonth := time.Now().UTC().Format("2006-01")
+	resDist := performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/expense-distribution?month="+currentMonth, "", http.StatusOK)
+	var distResp struct {
+		Distribution []dashboard.ExpenseDistribution `json:"distribution"`
+	}
+	if err := json.Unmarshal(resDist, &distResp); err != nil {
+		t.Fatalf("parse distribution response: %v", err)
+	}
+	if len(distResp.Distribution) != 0 {
+		t.Fatalf("expected empty distribution, got %+v", distResp.Distribution)
+	}
+
+	resForecast := performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/forecast?month="+currentMonth, "", http.StatusOK)
+	var forecast dashboard.Forecast
+	if err := json.Unmarshal(resForecast, &forecast); err != nil {
+		t.Fatalf("parse forecast response: %v", err)
+	}
+	if forecast.CurrentExpenseMinor != 0 || forecast.DailyAverageMinor != 0 || forecast.ForecastedExpenseMinor != 0 || forecast.BudgetLimitMinor != 0 || forecast.Status != "safe" {
+		t.Fatalf("expected empty safe forecast, got %+v", forecast)
+	}
+
+	walletA := createAPIResource(t, router, tokenA, "/api/v1/wallets", `{
+		"name": "Analytics wallet A",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 1000000
+	}`)
+	parentCategory := createAPIResource(t, router, tokenA, "/api/v1/categories", `{
+		"name": "Living",
+		"type": "expense"
+	}`)
+	childCategory := createAPIResource(t, router, tokenA, "/api/v1/categories", `{
+		"name": "Groceries",
+		"type": "expense",
+		"parent_id": "`+parentCategory+`"
+	}`)
+	createAPIResource(t, router, tokenA, "/api/v1/category-budgets", `{
+		"category_id": "`+parentCategory+`",
+		"month": "`+currentMonth+`",
+		"limit_minor": 100000
+	}`)
+	createAPIResource(t, router, tokenA, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletA+`",
+		"category_id": "`+childCategory+`",
+		"amount_minor": 20000,
+		"transaction_at": "`+time.Now().UTC().Format(time.RFC3339)+`"
+	}`)
+
+	walletB := createAPIResource(t, router, tokenB, "/api/v1/wallets", `{
+		"name": "Analytics wallet B",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 1000000
+	}`)
+	categoryB := createAPIResource(t, router, tokenB, "/api/v1/categories", `{
+		"name": "Other Living",
+		"type": "expense"
+	}`)
+	createAPIResource(t, router, tokenB, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletB+`",
+		"category_id": "`+categoryB+`",
+		"amount_minor": 999999,
+		"transaction_at": "`+time.Now().UTC().Format(time.RFC3339)+`"
+	}`)
+
+	resDist = performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/expense-distribution?month="+currentMonth, "", http.StatusOK)
+	if err := json.Unmarshal(resDist, &distResp); err != nil {
+		t.Fatalf("parse distribution response: %v", err)
+	}
+	if len(distResp.Distribution) != 1 {
+		t.Fatalf("expected one rolled-up distribution row, got %+v", distResp.Distribution)
+	}
+	if distResp.Distribution[0].CategoryID != parentCategory || distResp.Distribution[0].CategoryName != "Living" || distResp.Distribution[0].AmountMinor != 20000 {
+		t.Fatalf("expected child expense rolled up to parent only, got %+v", distResp.Distribution[0])
+	}
+
+	resForecast = performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/dashboard/forecast?month="+currentMonth, "", http.StatusOK)
+	if err := json.Unmarshal(resForecast, &forecast); err != nil {
+		t.Fatalf("parse forecast response: %v", err)
+	}
+	if forecast.CurrentExpenseMinor != 20000 || forecast.BudgetLimitMinor != 100000 || forecast.Status != "safe" {
+		t.Fatalf("expected isolated parent-budget forecast, got %+v", forecast)
+	}
+}
+
+func TestDashboardForecastWithoutBudgetDoesNotOverbudget(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "dash-no-budget-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	user, token := registerIntegrationAPIUser(t, router, "dash-no-budget")
+	defer cleanupServerIntegrationUsers(t, pool, user)
+
+	walletID := createAPIResource(t, router, token, "/api/v1/wallets", `{
+		"name": "Cash Wallet",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 1000000
+	}`)
+	categoryID := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Food",
+		"type": "expense"
+	}`)
+	now := time.Now().UTC()
+	createAPIResource(t, router, token, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 50000,
+		"transaction_at": "`+now.Format(time.RFC3339)+`"
+	}`)
+
+	resForecast := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/dashboard/forecast?month="+now.Format("2006-01"), "", http.StatusOK)
+	var forecast dashboard.Forecast
+	if err := json.Unmarshal(resForecast, &forecast); err != nil {
+		t.Fatalf("parse forecast response: %v", err)
+	}
+	if forecast.BudgetLimitMinor != 0 || forecast.CurrentExpenseMinor != 50000 || forecast.Status != "safe" {
+		t.Fatalf("expected no-budget spending to remain safe, got %+v", forecast)
+	}
+}

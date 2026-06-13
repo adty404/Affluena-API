@@ -74,6 +74,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
 - **Fitur:** Menyematkan label (_hashtag_) lintas-kategori secara tak terbatas pada transaksi, dengan arsitektur _Many-to-Many_.
 - **Use Case:** Melacak total pengeluaran untuk suatu acara spesifik (misal liburan `#Bali2026` atau uang klaim `#ReimburseKantor`) tanpa harus merusak struktur kategori utama (`Makanan`, `Transportasi`, dsb). Pengguna dapat memfilter mutasi uang berdasarkan `tag_id`.
+- **Integrity Rules:** `tag_id` dan `tag_ids` harus valid, dimiliki oleh pengguna yang sedang login, dan tidak boleh menautkan transaksi ke label milik user lain. Duplikasi `tag_ids` dalam satu request disimpan satu kali.
 
 ## 4. Non-Functional Requirements
 
@@ -90,6 +91,6 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 ### 3.10 Advanced Analytics & Reporting
 Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
 
-- **Cashflow Trend**: Mendapatkan data income dan expense selama 6-12 bulan ke belakang untuk melihat pergerakan cashflow.
+- **Cashflow Trend**: Mendapatkan data income dan expense selama 1-12 bulan ke belakang untuk melihat pergerakan cashflow.
 - **Expense Distribution**: Melihat distribusi pengeluaran berdasarkan kategori dalam bentuk persentase.
-- **Spend Forecasting**: Sistem menghitung rata-rata harian pengeluaran dan memprediksi total pengeluaran di akhir bulan, serta memberikan peringatan ("overbudget") jika prediksi melewati batas budget yang dianggarkan.
+- **Spend Forecasting**: Sistem menghitung rata-rata harian pengeluaran dan memprediksi total pengeluaran di akhir bulan, serta memberikan peringatan ("overbudget") jika prediksi melewati batas budget yang dianggarkan. Jika belum ada budget pada bulan tersebut, status tetap "safe".

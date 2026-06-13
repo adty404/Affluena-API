@@ -36,6 +36,8 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		"debts_user_origination_transaction_fk",
 		"debt_payments_user_debt_fk",
 		"debt_payments_user_transaction_fk",
+		"transaction_tags_user_transaction_fk",
+		"transaction_tags_user_tag_fk",
 	}
 
 	for _, name := range expectedConstraints {
@@ -127,6 +129,11 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 			sql:  `INSERT INTO debt_payments (user_id, debt_id, transaction_id, amount_minor, paid_at) VALUES ($1, $2, $3, 1000, now())`,
 			args: []any{fixture.userA, fixture.debtA, fixture.transactionB},
 		},
+		{
+			name: "transaction tag cannot use another user's tag",
+			sql:  `INSERT INTO transaction_tags (user_id, transaction_id, tag_id) VALUES ($1, $2, $3)`,
+			args: []any{fixture.userA, fixture.transactionA, fixture.tagB},
+		},
 	}
 
 	for _, attempt := range attempts {
@@ -172,6 +179,8 @@ type ownershipFixture struct {
 	transactionB     string
 	debtA            string
 	debtB            string
+	tagA             string
+	tagB             string
 }
 
 func createOwnershipFixture(t *testing.T, pool *pgxpool.Pool) ownershipFixture {
@@ -188,6 +197,8 @@ func createOwnershipFixture(t *testing.T, pool *pgxpool.Pool) ownershipFixture {
 	f.incomeCategoryB = insertFixtureCategory(t, pool, f.userB, "Owner B income", "income")
 	f.expenseCategoryA = insertFixtureCategory(t, pool, f.userA, "Owner A expense", "expense")
 	f.expenseCategoryB = insertFixtureCategory(t, pool, f.userB, "Owner B expense", "expense")
+	f.tagA = insertFixtureTag(t, pool, f.userA, "Owner A tag")
+	f.tagB = insertFixtureTag(t, pool, f.userB, "Owner B tag")
 
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO transactions (user_id, type, wallet_id, category_id, amount_minor, transaction_at)
@@ -244,6 +255,15 @@ func insertFixtureCategory(t *testing.T, pool *pgxpool.Pool, userID string, name
 	var id string
 	if err := pool.QueryRow(context.Background(), `INSERT INTO categories (user_id, name, type) VALUES ($1, $2, $3) RETURNING id::text`, userID, name, categoryType).Scan(&id); err != nil {
 		t.Fatalf("insert fixture category: %v", err)
+	}
+	return id
+}
+
+func insertFixtureTag(t *testing.T, pool *pgxpool.Pool, userID string, name string) string {
+	t.Helper()
+	var id string
+	if err := pool.QueryRow(context.Background(), `INSERT INTO tags (user_id, name) VALUES ($1, $2) RETURNING id::text`, userID, name).Scan(&id); err != nil {
+		t.Fatalf("insert fixture tag: %v", err)
 	}
 	return id
 }

@@ -110,3 +110,120 @@ func TestTagLifecycleAndTransactionIntegration(t *testing.T) {
 		t.Fatalf("Expected transaction to have 0 tags after tag deletion due to cascade")
 	}
 }
+
+func TestTransactionTagsRejectCrossUserAndInvalidTagsAtomically(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "tag-isolation-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userA, tokenA := registerIntegrationAPIUser(t, router, "tag-owner-a")
+	userB, tokenB := registerIntegrationAPIUser(t, router, "tag-owner-b")
+	defer cleanupServerIntegrationUsers(t, pool, userA, userB)
+
+	walletA := createAPIResource(t, router, tokenA, "/api/v1/wallets", `{
+		"name": "Owner A wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	categoryA := createAPIResource(t, router, tokenA, "/api/v1/categories", `{
+		"name": "Owner A salary",
+		"type": "income"
+	}`)
+	tagA := createAPIResource(t, router, tokenA, "/api/v1/tags", `{"name": "OwnerATag"}`)
+	tagB := createAPIResource(t, router, tokenB, "/api/v1/tags", `{"name": "OwnerBTag"}`)
+
+	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/transactions", `{
+		"type": "income",
+		"wallet_id": "`+walletA+`",
+		"category_id": "`+categoryA+`",
+		"amount_minor": 50000,
+		"tag_ids": ["`+tagB+`"],
+		"transaction_at": "2026-06-13T08:00:00Z"
+	}`, http.StatusNotFound)
+	assertWalletBalance(t, router, tokenA, walletA, 100000)
+
+	transactionID := createAPIResource(t, router, tokenA, "/api/v1/transactions", `{
+		"type": "income",
+		"wallet_id": "`+walletA+`",
+		"category_id": "`+categoryA+`",
+		"amount_minor": 25000,
+		"tag_ids": ["`+tagA+`"],
+		"transaction_at": "2026-06-13T09:00:00Z"
+	}`)
+	assertWalletBalance(t, router, tokenA, walletA, 125000)
+
+	assertAPIStatus(t, router, tokenA, http.MethodPut, "/api/v1/transactions/"+transactionID, `{
+		"type": "income",
+		"wallet_id": "`+walletA+`",
+		"category_id": "`+categoryA+`",
+		"amount_minor": 30000,
+		"tag_ids": ["`+tagB+`"],
+		"transaction_at": "2026-06-13T09:00:00Z"
+	}`, http.StatusNotFound)
+	assertWalletBalance(t, router, tokenA, walletA, 125000)
+
+	resTx := performAPIRequest(t, router, tokenA, http.MethodGet, "/api/v1/transactions/"+transactionID, "", http.StatusOK)
+	var tx transaction.Transaction
+	json.Unmarshal(resTx, &tx)
+	if tx.AmountMinor != 25000 || len(tx.TagIDs) != 1 || tx.TagIDs[0] != tagA {
+		t.Fatalf("expected original transaction to remain unchanged, got %+v", tx)
+	}
+
+	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/transactions", `{
+		"type": "income",
+		"wallet_id": "`+walletA+`",
+		"category_id": "`+categoryA+`",
+		"amount_minor": 50000,
+		"tag_ids": ["00000000-0000-0000-0000-000000000000"],
+		"transaction_at": "2026-06-13T10:00:00Z"
+	}`, http.StatusNotFound)
+	assertWalletBalance(t, router, tokenA, walletA, 125000)
+}
+
+func TestTransactionTagsDeduplicateAndValidateFilter(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "tag-edge-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	user, token := registerIntegrationAPIUser(t, router, "tag-edge")
+	defer cleanupServerIntegrationUsers(t, pool, user)
+
+	walletID := createAPIResource(t, router, token, "/api/v1/wallets", `{
+		"name": "Tag edge wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 0
+	}`)
+	categoryID := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Tag edge salary",
+		"type": "income"
+	}`)
+	tagID := createAPIResource(t, router, token, "/api/v1/tags", `{"name": "DedupedTag"}`)
+
+	transactionID := createAPIResource(t, router, token, "/api/v1/transactions", `{
+		"type": "income",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 1000,
+		"tag_ids": ["`+tagID+`", "`+tagID+`"],
+		"transaction_at": "2026-06-13T08:00:00Z"
+	}`)
+
+	resTx := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/transactions/"+transactionID, "", http.StatusOK)
+	var tx transaction.Transaction
+	json.Unmarshal(resTx, &tx)
+	if len(tx.TagIDs) != 1 || tx.TagIDs[0] != tagID {
+		t.Fatalf("expected duplicate tag IDs to be stored once, got %+v", tx.TagIDs)
+	}
+
+	assertAPIStatus(t, router, token, http.MethodGet, "/api/v1/transactions?tag_id=not-a-uuid", "", http.StatusBadRequest)
+}
