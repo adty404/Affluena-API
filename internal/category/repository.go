@@ -86,7 +86,7 @@ func (r *Repository) Get(ctx context.Context, userID string, id string) (Categor
 		SELECT id::text, user_id::text, parent_id::text, name, type, created_at, updated_at
 		FROM categories
 		WHERE user_id = $1 AND id = $2
-	`, userID, id).Scan(&category.ID, &category.UserID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt)
+	`, userID, id).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Category{}, ErrNotFound
 	}
