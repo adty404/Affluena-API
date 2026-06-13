@@ -17,8 +17,6 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		name        string
 		cardinality int
 	}{
-		{name: "transactions_user_wallet_fk", cardinality: 2},
-		{name: "transactions_user_to_wallet_fk", cardinality: 2},
 		{name: "transactions_user_category_fk", cardinality: 2},
 		{name: "quick_entry_templates_user_wallet_fk", cardinality: 2},
 		{name: "quick_entry_templates_user_to_wallet_fk", cardinality: 2},
@@ -78,11 +76,7 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 		sql  string
 		args []any
 	}{
-		{
-			name: "transaction cannot use another user's wallet",
-			sql:  `INSERT INTO transactions (user_id, type, wallet_id, category_id, amount_minor, transaction_at) VALUES ($1, 'income', $2, $3, 1000, now())`,
-			args: []any{fixture.userA, fixture.walletB, fixture.incomeCategoryA},
-		},
+
 		{
 			name: "transaction cannot use another user's category",
 			sql:  `INSERT INTO transactions (user_id, type, wallet_id, category_id, amount_minor, transaction_at) VALUES ($1, 'income', $2, $3, 1000, now())`,

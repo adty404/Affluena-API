@@ -60,18 +60,22 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 func (r *Repository) List(ctx context.Context, userID string, filter TransactionFilter, pagination page.Params) (page.Result[Transaction], error) {
 	orderBy := transactionOrderBy(pagination.Sort)
 	rows, err := r.pool.Query(ctx, `
-		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
+		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor,
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
-		WHERE user_id = $1
+		WHERE (
+			user_id = $1 OR 
+			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
+			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+		)
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-			AND ($9 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($9, '')::uuid))
+			AND ($9 = '' OR transactions.id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = transactions.user_id AND tag_id = NULLIF($9, '')::uuid))
 		ORDER BY `+orderBy+`
 		LIMIT $7 OFFSET $8
 	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset, filter.TagID)
@@ -96,13 +100,17 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 	if err := r.pool.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM transactions
-		WHERE user_id = $1
+		WHERE (
+			user_id = $1 OR 
+			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
+			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+		)
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($7, '')::uuid))
+			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = transactions.user_id AND tag_id = NULLIF($7, '')::uuid))
 	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), filter.TagID).Scan(&total); err != nil {
 		return page.Result[Transaction]{}, err
 	}
@@ -203,12 +211,16 @@ func (r *Repository) get(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }, userID string, id string, forUpdate bool) (Transaction, error) {
 	sql := `
-		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
+		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor,
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
-		WHERE user_id = $1 AND id = $2
+		WHERE (
+			user_id = $1 OR 
+			wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
+			to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
+		) AND id = $2
 	`
 	if forUpdate {
 		sql += ` FOR UPDATE`
@@ -268,8 +280,8 @@ func applyDeltas(ctx context.Context, tx pgx.Tx, userID string, deltas []Balance
 		tag, err := tx.Exec(ctx, `
 			UPDATE wallets
 			SET balance_minor = balance_minor + $1, updated_at = now()
-			WHERE user_id = $2 AND id = $3
-		`, delta.AmountMinor, userID, delta.WalletID)
+			WHERE id = $2
+		`, delta.AmountMinor, delta.WalletID)
 		if err != nil {
 			return err
 		}
@@ -290,7 +302,13 @@ func reverseDeltas(deltas []BalanceDelta) []BalanceDelta {
 
 func ensureWallet(ctx context.Context, tx pgx.Tx, userID string, walletID string) error {
 	var exists bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wallets WHERE user_id = $1 AND id = $2)`, userID, walletID).Scan(&exists); err != nil {
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM wallets w
+			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined'
+			WHERE (w.user_id = $1 OR ws.wallet_id IS NOT NULL) AND w.id = $2
+		)
+	`, userID, walletID).Scan(&exists); err != nil {
 		return err
 	}
 	if !exists {
