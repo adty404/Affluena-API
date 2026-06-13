@@ -15,6 +15,7 @@ import (
 	"affluena-api/internal/goal"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
+	"affluena-api/internal/splitbill"
 	"affluena-api/internal/tag"
 	"affluena-api/internal/tracker"
 	"affluena-api/internal/transaction"
@@ -52,7 +53,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo, nil), activityUC))
 	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool), activityUC))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
-	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo), activityUC))
+	debtUseCase := debt.NewUseCase(debt.NewRepository(pool, transactionRepo), activityUC)
+	debtHandler := debt.NewHandler(debtUseCase)
+	splitBillHandler := splitbill.NewHandler(splitbill.NewUseCase(transaction.NewUseCase(transactionRepo, activityUC), debtUseCase, activityUC))
 	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool), activityUC))
 	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo), activityUC))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
@@ -104,6 +107,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.PUT("/tags/:id", tagHandler.Update)
 	protected.DELETE("/tags/:id", tagHandler.Delete)
 
+	protected.POST("/transactions/split", splitBillHandler.Split)
 	protected.POST("/transactions", transactionHandler.Create)
 	protected.GET("/transactions", transactionHandler.List)
 	protected.GET("/transactions/:id", transactionHandler.Get)
