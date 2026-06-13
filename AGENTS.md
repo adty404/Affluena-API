@@ -9,9 +9,10 @@ Affluena is an API-first personal finance backend written in Go. It uses Gin, Po
 Core domains:
 
 - Auth: register, login, refresh token, protected routes.
+- Dashboard: monthly summary for net worth, cashflow, budgets, and upcoming obligations.
 - Wallets: cash, bank, e-wallet, investment/trading wallets.
 - Categories: user-owned income/expense categories. List supports `GET /api/v1/categories?type=income|expense`.
-- Transactions: income, expense, transfer, adjustment, with wallet balance updates.
+- Transactions: income, expense, transfer, adjustment, with wallet balance updates and list filters.
 - Quick entry templates: one-click transaction templates.
 - Category budgets: monthly expense category budget summaries.
 - Installments: finite payment tracking.
@@ -108,6 +109,8 @@ Existing high-value integration tests:
 - `internal/server/isolation_integration_test.go`: proves users cannot access each other's data.
 - `internal/server/financial_flow_integration_test.go`: proves transaction lifecycle preserves balances.
 - `internal/server/category_filter_integration_test.go`: proves category type filtering.
+- `internal/server/transaction_filter_integration_test.go`: proves transaction list filters.
+- `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
 - `internal/server/subscription_account_detail_integration_test.go`: proves subscription `account_detail` lifecycle.
 - `internal/db/migration_integration_test.go`: proves database constraints and migrations.
 - `internal/debt/repository_integration_test.go`: proves debt repository lifecycle.
@@ -131,6 +134,8 @@ Current notable API decisions:
 - `GET /api/v1/categories?type=income` lists income categories.
 - `GET /api/v1/categories?type=expense` lists expense categories.
 - `GET/PUT/DELETE /api/v1/categories/:id` remain generic category CRUD.
+- `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `from`, and `to` filters.
+- `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
 - Subscriptions accept and return optional `account_detail`.
 
 ## Database Migration Rules

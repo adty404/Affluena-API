@@ -14,6 +14,15 @@ const (
 	TransactionTypeAdjustment TransactionType = "adjustment"
 )
 
+func IsValidType(transactionType TransactionType) bool {
+	switch transactionType {
+	case TransactionTypeIncome, TransactionTypeExpense, TransactionTypeTransfer, TransactionTypeAdjustment:
+		return true
+	default:
+		return false
+	}
+}
+
 type TransactionInput struct {
 	Type           TransactionType
 	WalletID       string

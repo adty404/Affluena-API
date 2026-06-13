@@ -7,6 +7,7 @@ import (
 	"affluena/internal/budget"
 	"affluena/internal/category"
 	"affluena/internal/config"
+	"affluena/internal/dashboard"
 	"affluena/internal/debt"
 	"affluena/internal/quickentry"
 	"affluena/internal/recurring"
@@ -37,6 +38,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo))
 	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo)))
 	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool)))
+	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
 	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo)))
 	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo)))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
@@ -56,6 +58,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected := v1.Group("")
 	protected.Use(auth.AuthMiddleware(tokenManager))
 	protected.GET("/auth/me", authHandler.Me)
+
+	protected.GET("/dashboard/summary", dashboardHandler.Summary)
 
 	protected.POST("/wallets", walletHandler.Create)
 	protected.GET("/wallets", walletHandler.List)

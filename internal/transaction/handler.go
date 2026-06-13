@@ -16,7 +16,7 @@ type Handler struct {
 
 type transactionUseCase interface {
 	Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error)
-	List(ctx context.Context, userID string) ([]Transaction, error)
+	List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error)
 	Get(ctx context.Context, userID string, id string) (Transaction, error)
 	Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -60,7 +60,12 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	transactions, err := h.usecase.List(c.Request.Context(), userID)
+	filter, ok := bindFilter(c)
+	if !ok {
+		return
+	}
+
+	transactions, err := h.usecase.List(c.Request.Context(), userID, filter)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list transactions failed")
 		return
@@ -111,6 +116,49 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func bindFilter(c *gin.Context) (TransactionFilter, bool) {
+	filter := TransactionFilter{
+		Type:       TransactionType(c.Query("type")),
+		WalletID:   c.Query("wallet_id"),
+		CategoryID: c.Query("category_id"),
+	}
+	if filter.Type != "" && !IsValidType(filter.Type) {
+		httpx.Error(c, http.StatusBadRequest, "invalid transaction type")
+		return TransactionFilter{}, false
+	}
+
+	from, ok := parseFilterDate(c, "from")
+	if !ok {
+		return TransactionFilter{}, false
+	}
+	to, ok := parseFilterDate(c, "to")
+	if !ok {
+		return TransactionFilter{}, false
+	}
+	if !from.IsZero() && !to.IsZero() && from.After(to) {
+		httpx.Error(c, http.StatusBadRequest, "from must be before or equal to to")
+		return TransactionFilter{}, false
+	}
+	filter.From = from
+	if !to.IsZero() {
+		filter.To = to.AddDate(0, 0, 1)
+	}
+	return filter, true
+}
+
+func parseFilterDate(c *gin.Context, key string) (time.Time, bool) {
+	value := c.Query(key)
+	if value == "" {
+		return time.Time{}, true
+	}
+	parsed, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, key+" must use YYYY-MM-DD")
+		return time.Time{}, false
+	}
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC), true
 }
 
 func bindInput(c *gin.Context) (TransactionInput, bool) {
