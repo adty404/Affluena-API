@@ -2174,6 +2174,19 @@
             "item": [
                 {
                     "name": "Create Goal",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  pm.collectionVariables.set('goal_id', pm.response.json().id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -2217,7 +2230,7 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{base_url}}/api/v1/goals?limit=100&offset=0",
+                            "raw": "{{base_url}}/api/v1/goals",
                             "host": [
                                 "{{base_url}}"
                             ],
@@ -2225,16 +2238,6 @@
                                 "api",
                                 "v1",
                                 "goals"
-                            ],
-                            "query": [
-                                {
-                                    "key": "limit",
-                                    "value": "100"
-                                },
-                                {
-                                    "key": "offset",
-                                    "value": "0"
-                                }
                             ]
                         }
                     }

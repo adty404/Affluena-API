@@ -38,6 +38,7 @@ Sistem mendukung lebih dari satu dompet dengan tipe aset yang berbeda untuk mela
 Manajemen mutasi masuk, keluar, dan penyesuaian saldo.
 
 - **Fitur:** CRUD transaksi mencakup nominal, _wallet_id_, _category_id_, tanggal, dan catatan tambahan.
+- **Category Hierarchy:** Kategori dapat memiliki `parent_id` hingga 3 level. Parent kategori harus dimiliki user yang sama dan memiliki tipe yang sama (`income` dengan `income`, `expense` dengan `expense`), serta tidak boleh membentuk siklus.
 - **Quick Entry:** _Endpoint_ khusus untuk transaksi instan berdasarkan _template_.
 - **Use Case:** Eksekusi _template_ pengeluaran rutin dalam satu klik, seperti biaya tol dan transportasi _commute_ rute Tambun - SCBD, atau pengeluaran makan siang standar.
 
@@ -69,6 +70,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
 - **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi).
 - **Use Case:** Membuat target tabungan "Menikah" dengan target nominal tertentu. Pengguna bisa mengundang pasangannya, dan keduanya bisa mengalokasikan (menyisihkan) uang dari dompet pribadi ke dalam _Goal Wallet_ yang berelasi dengan target tabungan ini. Progres tabungan dapat terpantau bersama.
+- **Integrity Rules:** Pembuatan goal dan penerimaan undangan membuat _Goal Wallet_ secara atomik. Nama goal boleh sama karena _Goal Wallet_ memakai suffix ID goal. Undangan yang ditolak tidak lagi membuka akses goal, dan respons undangan hanya boleh dilakukan oleh member yang sesuai dengan `:user_id` pada route.
 
 ### 3.9. Tags / Labeling
 

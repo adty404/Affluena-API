@@ -55,10 +55,10 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
 ### 📂 Categories (Up to 3 Levels)
-- `POST /api/v1/categories` (Supports `parent_id` for nesting)
+- `POST /api/v1/categories` (Supports same-user, same-type `parent_id` for nesting)
 - `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=type_name_asc]`
 - `GET /api/v1/categories/:id`
-- `PUT /api/v1/categories/:id` (Supports updating `parent_id`)
+- `PUT /api/v1/categories/:id` (Supports updating same-user, same-type `parent_id`)
 - `DELETE /api/v1/categories/:id`
 - `POST /api/v1/tags`
 - `GET /api/v1/tags[?limit=100&offset=0&sort=created_at_desc]`
@@ -106,7 +106,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `DELETE /api/v1/recurring-transactions/:id`
 - `POST /api/v1/recurring-transactions/:id/run`
 - `POST /api/v1/goals`
-- `GET /api/v1/goals[?limit=100&offset=0&sort=created_at_desc]`
+- `GET /api/v1/goals`
 - `GET /api/v1/goals/:id`
 - `POST /api/v1/goals/:id/members`
 - `PUT /api/v1/goals/:id/members/:user_id/respond`
@@ -130,8 +130,9 @@ Supported `sort` values:
 - Installments: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `due_day_asc`, `due_day_desc`.
 - Subscriptions: `next_due_date_asc`, `next_due_date_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Recurring transactions: `next_run_at_asc`, `next_run_at_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
-- Goals: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `deadline_asc`, `deadline_desc`.
 - Tags: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
+
+`GET /api/v1/goals` is the current exception: it returns a JSON array of accessible goals ordered by `created_at DESC`, without pagination metadata.
 
 ## Example Flow
 
@@ -296,6 +297,10 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 Create, update, delete, and quick entry execution use database transactions so wallet balances and transaction rows change atomically.
 
 Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
+
+Category `parent_id` must point to a category owned by the authenticated user with the same category `type`. Category trees are limited to 3 levels and cyclic parent relationships are rejected.
+
+Financial goal creation and invitation acceptance create goal wallets atomically. Goal wallet names include the goal ID suffix, so duplicate goal names can safely coexist. Rejected invitations are not returned as accessible goals, and `PUT /api/v1/goals/:id/members/:user_id/respond` only lets the authenticated member respond for their own `:user_id`.
 
 Debt creation and debt payment endpoints also run atomically:
 

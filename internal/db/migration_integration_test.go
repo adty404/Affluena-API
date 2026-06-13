@@ -13,35 +13,39 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 	pool := openMigrationIntegrationPool(t)
 	ctx := context.Background()
 
-	expectedConstraints := []string{
-		"transactions_user_wallet_fk",
-		"transactions_user_to_wallet_fk",
-		"transactions_user_category_fk",
-		"quick_entry_templates_user_wallet_fk",
-		"quick_entry_templates_user_to_wallet_fk",
-		"quick_entry_templates_user_category_fk",
-		"category_budgets_user_category_fk",
-		"installments_user_wallet_fk",
-		"installments_user_category_fk",
-		"subscriptions_user_wallet_fk",
-		"subscriptions_user_category_fk",
-		"recurring_rules_user_wallet_fk",
-		"recurring_rules_user_to_wallet_fk",
-		"recurring_rules_user_category_fk",
-		"recurring_runs_user_rule_fk",
-		"recurring_runs_user_transaction_fk",
-		"debts_user_wallet_fk",
-		"debts_user_disbursement_category_fk",
-		"debts_user_payment_category_fk",
-		"debts_user_origination_transaction_fk",
-		"debt_payments_user_debt_fk",
-		"debt_payments_user_transaction_fk",
-		"transaction_tags_user_transaction_fk",
-		"transaction_tags_user_tag_fk",
+	expectedConstraints := []struct {
+		name        string
+		cardinality int
+	}{
+		{name: "transactions_user_wallet_fk", cardinality: 2},
+		{name: "transactions_user_to_wallet_fk", cardinality: 2},
+		{name: "transactions_user_category_fk", cardinality: 2},
+		{name: "quick_entry_templates_user_wallet_fk", cardinality: 2},
+		{name: "quick_entry_templates_user_to_wallet_fk", cardinality: 2},
+		{name: "quick_entry_templates_user_category_fk", cardinality: 2},
+		{name: "category_budgets_user_category_fk", cardinality: 2},
+		{name: "installments_user_wallet_fk", cardinality: 2},
+		{name: "installments_user_category_fk", cardinality: 2},
+		{name: "subscriptions_user_wallet_fk", cardinality: 2},
+		{name: "subscriptions_user_category_fk", cardinality: 2},
+		{name: "recurring_rules_user_wallet_fk", cardinality: 2},
+		{name: "recurring_rules_user_to_wallet_fk", cardinality: 2},
+		{name: "recurring_rules_user_category_fk", cardinality: 2},
+		{name: "recurring_runs_user_rule_fk", cardinality: 2},
+		{name: "recurring_runs_user_transaction_fk", cardinality: 2},
+		{name: "debts_user_wallet_fk", cardinality: 2},
+		{name: "debts_user_disbursement_category_fk", cardinality: 2},
+		{name: "debts_user_payment_category_fk", cardinality: 2},
+		{name: "debts_user_origination_transaction_fk", cardinality: 2},
+		{name: "debt_payments_user_debt_fk", cardinality: 2},
+		{name: "debt_payments_user_transaction_fk", cardinality: 2},
+		{name: "transaction_tags_user_transaction_fk", cardinality: 2},
+		{name: "transaction_tags_user_tag_fk", cardinality: 2},
+		{name: "categories_user_parent_type_fk", cardinality: 3},
 	}
 
-	for _, name := range expectedConstraints {
-		t.Run(name, func(t *testing.T) {
+	for _, constraint := range expectedConstraints {
+		t.Run(constraint.name, func(t *testing.T) {
 			var exists bool
 			err := pool.QueryRow(ctx, `
 				SELECT EXISTS (
@@ -49,15 +53,15 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 					FROM pg_constraint
 					WHERE conname = $1
 						AND contype = 'f'
-						AND cardinality(conkey) = 2
-						AND cardinality(confkey) = 2
+						AND cardinality(conkey) = $2
+						AND cardinality(confkey) = $2
 				)
-			`, name).Scan(&exists)
+			`, constraint.name, constraint.cardinality).Scan(&exists)
 			if err != nil {
-				t.Fatalf("query constraint %s: %v", name, err)
+				t.Fatalf("query constraint %s: %v", constraint.name, err)
 			}
 			if !exists {
-				t.Fatalf("expected composite ownership foreign key %s to exist", name)
+				t.Fatalf("expected composite ownership foreign key %s to exist", constraint.name)
 			}
 		})
 	}
@@ -133,6 +137,16 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 			name: "transaction tag cannot use another user's tag",
 			sql:  `INSERT INTO transaction_tags (user_id, transaction_id, tag_id) VALUES ($1, $2, $3)`,
 			args: []any{fixture.userA, fixture.transactionA, fixture.tagB},
+		},
+		{
+			name: "category cannot use another user's parent",
+			sql:  `INSERT INTO categories (user_id, name, type, parent_id) VALUES ($1, 'Cross parent', 'expense', $2)`,
+			args: []any{fixture.userA, fixture.expenseCategoryB},
+		},
+		{
+			name: "category cannot use a parent with another type",
+			sql:  `INSERT INTO categories (user_id, name, type, parent_id) VALUES ($1, 'Mixed type parent', 'expense', $2)`,
+			args: []any{fixture.userA, fixture.incomeCategoryA},
 		},
 	}
 

@@ -107,7 +107,7 @@ func (h *Handler) RespondInvite(c *gin.Context) {
 		return
 	}
 	id := c.Param("id")
-	if err := h.usecase.RespondInvite(c.Request.Context(), userID, id, input); err != nil {
+	if err := h.usecase.RespondInvite(c.Request.Context(), userID, id, c.Param("user_id"), input); err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, err.Error())
 			return

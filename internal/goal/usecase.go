@@ -3,45 +3,27 @@ package goal
 import (
 	"context"
 	"errors"
-	"fmt"
-
-	"affluena-api/internal/wallet"
 )
 
-type Usecase struct {
-	repo       *Repository
-	walletRepo *wallet.Repository
+type RepositoryPort interface {
+	CreateWithOwnerWallet(ctx context.Context, userID string, input CreateGoalInput) (Goal, error)
+	List(ctx context.Context, userID string) ([]Goal, error)
+	Get(ctx context.Context, userID string, id string) (Goal, error)
+	AddMember(ctx context.Context, goalID string, userID string, status string) error
+	FindUserByEmail(ctx context.Context, email string) (string, error)
+	RespondInvite(ctx context.Context, goalID string, userID string, status string) error
 }
 
-func NewUsecase(repo *Repository, walletRepo *wallet.Repository) *Usecase {
-	return &Usecase{repo: repo, walletRepo: walletRepo}
+type Usecase struct {
+	repo RepositoryPort
+}
+
+func NewUsecase(repo RepositoryPort) *Usecase {
+	return &Usecase{repo: repo}
 }
 
 func (u *Usecase) Create(ctx context.Context, userID string, input CreateGoalInput) (Goal, error) {
-	g, err := u.repo.Create(ctx, userID, input)
-	if err != nil {
-		return Goal{}, err
-	}
-
-	// Add owner as member
-	if err := u.repo.AddMember(ctx, g.ID, userID, "joined"); err != nil {
-		return Goal{}, err
-	}
-
-	// Create a Wallet for the owner
-	goalID := g.ID
-	walletInput := wallet.CreateWalletInput{
-		Name:         fmt.Sprintf("[Goal] %s", g.Name),
-		Type:         "goal",
-		CurrencyCode: "IDR",
-		BalanceMinor: 0,
-		GoalID:       &goalID,
-	}
-	if _, err := u.walletRepo.Create(ctx, userID, walletInput); err != nil {
-		return Goal{}, err
-	}
-
-	return u.repo.Get(ctx, userID, g.ID)
+	return u.repo.CreateWithOwnerWallet(ctx, userID, input)
 }
 
 func (u *Usecase) List(ctx context.Context, userID string) ([]Goal, error) {
@@ -74,45 +56,9 @@ func (u *Usecase) InviteMember(ctx context.Context, userID string, id string, in
 	return u.repo.AddMember(ctx, id, invitedUserID, "pending")
 }
 
-func (u *Usecase) RespondInvite(ctx context.Context, userID string, id string, input RespondInviteInput) error {
-	// check if member exists
-	members, err := u.repo.GetMembers(ctx, id)
-	if err != nil {
-		return err
-	}
-	var isMember bool
-	for _, m := range members {
-		if m.UserID == userID {
-			if m.Status == "joined" && input.Status == "joined" {
-				return errors.New("already joined")
-			}
-			isMember = true
-			break
-		}
-	}
-	if !isMember {
+func (u *Usecase) RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error {
+	if memberID != userID {
 		return ErrNotFound
 	}
-
-	if err := u.repo.UpdateMemberStatus(ctx, id, userID, input.Status); err != nil {
-		return err
-	}
-
-	if input.Status == "joined" {
-		// Create wallet for the new joined member
-		g, err := u.repo.Get(ctx, userID, id)
-		if err == nil {
-			goalID := g.ID
-			walletInput := wallet.CreateWalletInput{
-				Name:         fmt.Sprintf("[Goal] %s", g.Name),
-				Type:         "goal",
-				CurrencyCode: "IDR",
-				BalanceMinor: 0,
-				GoalID:       &goalID,
-			}
-			// ignore error if they already have one with same name
-			u.walletRepo.Create(ctx, userID, walletInput)
-		}
-	}
-	return nil
+	return u.repo.RespondInvite(ctx, id, userID, input.Status)
 }

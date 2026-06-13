@@ -8,6 +8,7 @@ import (
 var (
 	ErrNotFound            = errors.New("category not found")
 	ErrInvalidCategoryType = errors.New("invalid category type")
+	ErrParentTypeMismatch  = errors.New("parent category must have the same type")
 )
 
 type Category struct {

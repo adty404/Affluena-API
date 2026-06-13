@@ -11,7 +11,7 @@ Core domains:
 - Auth: register, login, refresh token, protected routes.
 - Dashboard: monthly summary for net worth, cashflow, budgets, upcoming obligations, plus cashflow trend, expense distribution, and spend forecasting analytics.
 - Wallets: cash, bank, e-wallet, investment/trading wallets.
-- Categories: user-owned income/expense categories with optional `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
+- Categories: user-owned income/expense categories with optional same-user, same-type `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
 - Tags: user-owned labels attachable to transactions through `tag_ids`, with transaction filtering by `tag_id`.
 - Transactions: income, expense, transfer, adjustment, with wallet balance updates, tag links, and list filters.
 - Quick entry templates: one-click transaction templates.
@@ -53,9 +53,9 @@ Important invariants:
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
-- Financial goal creation and invite acceptance create related goal wallets; treat those as cross-module workflows and test partial-write risks when touching them.
+- Financial goal creation and invite acceptance create related goal wallets atomically; treat those as cross-module workflows and test partial-write risks when touching them.
 - Category CRUD endpoints are generic. Do not create separate income/expense CRUD routes; use list filtering where needed.
-- Category nesting must not exceed 3 levels and must reject cyclic parent relationships.
+- Category nesting must not exceed 3 levels and must reject cyclic parent relationships, cross-user parents, and parent categories with a different type.
 - User-facing list endpoints usually return `{collection, pagination}` and support `limit`, `offset`, and whitelisted `sort` values. Keep pagination metadata scoped to the authenticated user and matching active filters. Financial goals are a current exception: `GET /api/v1/goals` returns a JSON array ordered by creation time.
 
 ## Required Workflow For Every Change
@@ -144,13 +144,14 @@ Current notable API decisions:
 - `GET /api/v1/categories` lists all user categories.
 - `GET /api/v1/categories?type=income` lists income categories.
 - `GET /api/v1/categories?type=expense` lists expense categories.
-- `POST/PUT /api/v1/categories` accept optional `parent_id`; category trees are limited to 3 levels.
+- `POST/PUT /api/v1/categories` accept optional `parent_id`; category trees are limited to 3 levels and parents must be owned by the authenticated user with the same category type.
 - `GET/PUT/DELETE /api/v1/categories/:id` remain generic category CRUD.
 - `POST/GET/PUT/DELETE /api/v1/tags` manage user-owned transaction labels.
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
 - `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
+- Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
 - `GET /api/v1/dashboard/cashflow-trend?months=6` returns income/expense trends.
 - `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` returns category expense distribution.
@@ -164,7 +165,7 @@ Current notable API decisions:
 - Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
-- Current later migrations include financial goals (`000007`), tags (`000008`), and category hierarchy (`000009`).
+- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), and category parent ownership/type checks (`000011`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Git Rules
