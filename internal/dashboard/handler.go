@@ -54,9 +54,12 @@ func (h *Handler) CashflowTrend(c *gin.Context) {
 
 	months := 6
 	if m := c.Query("months"); m != "" {
-		if parsed, err := strconv.Atoi(m); err == nil && parsed > 0 && parsed <= 12 {
-			months = parsed
+		parsed, err := strconv.Atoi(m)
+		if err != nil || parsed <= 0 || parsed > 12 {
+			httpx.Error(c, http.StatusBadRequest, "months must be between 1 and 12")
+			return
 		}
+		months = parsed
 	}
 
 	trend, err := h.usecase.CashflowTrend(c.Request.Context(), userID, months)

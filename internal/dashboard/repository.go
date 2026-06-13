@@ -328,7 +328,7 @@ func (r *Repository) Forecast(ctx context.Context, userID string, month time.Tim
 	forecastedSpend := dailyAverage * int64(totalDaysInMonth)
 
 	status := "safe"
-	if forecastedSpend > budget.LimitMinor {
+	if budget.LimitMinor > 0 && forecastedSpend > budget.LimitMinor {
 		status = "overbudget"
 	}
 

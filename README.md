@@ -66,7 +66,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/tags/:id`
 - `DELETE /api/v1/tags/:id`
 - `POST /api/v1/transactions`
-- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
+- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&tag_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`
@@ -180,7 +180,7 @@ curl -s http://localhost:8080/api/v1/transactions \
 List filtered transactions:
 
 ```bash
-curl -s 'http://localhost:8080/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30' \
+curl -s 'http://localhost:8080/api/v1/transactions?type=expense&tag_id=<tag_id>&from=2026-06-01&to=2026-06-30' \
   -H "authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -295,6 +295,8 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 
 Create, update, delete, and quick entry execution use database transactions so wallet balances and transaction rows change atomically.
 
+Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
+
 Debt creation and debt payment endpoints also run atomically:
 
 - `receivable` creation creates an expense transaction and decreases the wallet.
@@ -318,6 +320,6 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 
 ### 📊 Dashboard & Analytics
 - `GET /api/v1/dashboard/summary` - Get monthly financial overview.
-- `GET /api/v1/dashboard/cashflow-trend?months=6` - Get income/expense trends over time.
+- `GET /api/v1/dashboard/cashflow-trend?months=6` - Get income/expense trends over time. `months` must be between 1 and 12.
 - `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` - Get breakdown of expenses by category.
-- `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Predict if spending will exceed budget based on daily average.
+- `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Predict if spending will exceed budget based on daily average. Months with no budget remain `safe` instead of overbudget.
