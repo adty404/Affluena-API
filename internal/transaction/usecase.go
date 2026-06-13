@@ -4,7 +4,7 @@ import "context"
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error)
-	List(ctx context.Context, userID string) ([]Transaction, error)
+	List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error)
 	Get(ctx context.Context, userID string, id string) (Transaction, error)
 	Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -25,8 +25,8 @@ func (u *UseCase) Create(ctx context.Context, userID string, input TransactionIn
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string) ([]Transaction, error) {
-	return u.repo.List(ctx, userID)
+func (u *UseCase) List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error) {
+	return u.repo.List(ctx, userID, filter)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Transaction, error) {

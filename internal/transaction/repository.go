@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -47,15 +48,20 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 	return insertTransaction(ctx, tx, userID, input)
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Transaction, error) {
+func (r *Repository) List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
 		FROM transactions
 		WHERE user_id = $1
+			AND ($2 = '' OR type = $2)
+			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
+			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
+			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
+			AND ($6::timestamptz IS NULL OR transaction_at < $6)
 		ORDER BY transaction_at DESC, created_at DESC
 		LIMIT 100
-	`, userID)
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To))
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +292,13 @@ func scanTransaction(row rowScanner) (Transaction, error) {
 
 func nullableUUID(value string) any {
 	if value == "" {
+		return nil
+	}
+	return value
+}
+
+func nullableTime(value time.Time) any {
+	if value.IsZero() {
 		return nil
 	}
 	return value

@@ -48,6 +48,7 @@ Public:
 Protected with `Authorization: Bearer <access_token>`:
 
 - `GET /api/v1/auth/me`
+- `GET /api/v1/dashboard/summary?month=YYYY-MM`
 - `POST /api/v1/wallets`
 - `GET /api/v1/wallets`
 - `GET /api/v1/wallets/:id`
@@ -59,7 +60,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/categories/:id`
 - `DELETE /api/v1/categories/:id`
 - `POST /api/v1/transactions`
-- `GET /api/v1/transactions`
+- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD]`
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`
@@ -141,6 +142,20 @@ curl -s http://localhost:8080/api/v1/transactions \
   -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
   -d '{"type":"expense","wallet_id":"<wallet_id>","category_id":"<category_id>","amount_minor":50000,"note":"Lunch"}'
+```
+
+List filtered transactions:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30' \
+  -H "authorization: Bearer $ACCESS_TOKEN"
+```
+
+Get dashboard summary:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/dashboard/summary?month=2026-06' \
+  -H "authorization: Bearer $ACCESS_TOKEN"
 ```
 
 Execute a quick entry template:

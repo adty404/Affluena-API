@@ -21,6 +21,14 @@ type Transaction struct {
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
+type TransactionFilter struct {
+	Type       TransactionType
+	WalletID   string
+	CategoryID string
+	From       time.Time
+	To         time.Time
+}
+
 func (t Transaction) Input() TransactionInput {
 	return TransactionInput{
 		Type:           t.Type,

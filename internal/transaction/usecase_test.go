@@ -10,6 +10,7 @@ import (
 type fakeTransactionRepository struct {
 	createInput TransactionInput
 	updateInput TransactionInput
+	listFilter  TransactionFilter
 	created     Transaction
 	listed      []Transaction
 	got         Transaction
@@ -26,7 +27,8 @@ func (f *fakeTransactionRepository) Create(ctx context.Context, userID string, i
 	return f.created, nil
 }
 
-func (f *fakeTransactionRepository) List(ctx context.Context, userID string) ([]Transaction, error) {
+func (f *fakeTransactionRepository) List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error) {
+	f.listFilter = filter
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -117,9 +119,12 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1")
+	listed, err := uc.List(context.Background(), "user-1", TransactionFilter{Type: TransactionTypeExpense})
 	if err != nil || len(listed) != 1 || listed[0].ID != "tx-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
+	}
+	if repo.listFilter.Type != TransactionTypeExpense {
+		t.Fatalf("expected list filter to be delegated, got %+v", repo.listFilter)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "tx-1")
 	if err != nil || got.ID != "tx-1" {
@@ -147,7 +152,7 @@ func TestTransactionUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", valid); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+	if _, err := uc.List(context.Background(), "user-1", TransactionFilter{}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected list repo error, got %v", err)
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "tx-1", valid); !errors.Is(err, repoErr) {
