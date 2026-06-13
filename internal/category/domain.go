@@ -13,6 +13,7 @@ var (
 type Category struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
+	ParentID  *string   `json:"parent_id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
@@ -20,13 +21,15 @@ type Category struct {
 }
 
 type CreateCategoryInput struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	ParentID *string
 }
 
 type UpdateCategoryInput struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	ParentID *string
 }
 
 func IsValidType(categoryType string) bool {

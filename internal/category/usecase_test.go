@@ -184,3 +184,11 @@ func TestCategoryNotFoundRecognizesRepositoryNoRows(t *testing.T) {
 		t.Fatal("did not expect unrelated error to be recognized")
 	}
 }
+
+func (m *fakeCategoryRepository) CheckDepth(ctx context.Context, parentID *string) error {
+	return nil
+}
+
+func (m *fakeCategoryRepository) CheckCycle(ctx context.Context, categoryID string, newParentID *string) error {
+	return nil
+}

@@ -71,7 +71,15 @@ func (r *Repository) budgetSummary(ctx context.Context, userID string, month tim
 	var limitMinor int64
 	var spentMinor int64
 	err := r.pool.QueryRow(ctx, `
-		WITH budget_spend AS (
+		WITH RECURSIVE category_tree AS (
+			SELECT id, id AS root_id
+			FROM categories
+			WHERE user_id = $1
+			UNION ALL
+			SELECT c.id, ct.root_id
+			FROM categories c
+			INNER JOIN category_tree ct ON c.parent_id = ct.id
+		), budget_spend AS (
 			SELECT b.limit_minor,
 				COALESCE(SUM(t.amount_minor) FILTER (
 					WHERE t.type = 'expense'
@@ -79,7 +87,8 @@ func (r *Repository) budgetSummary(ctx context.Context, userID string, month tim
 						AND t.transaction_at < b.month + interval '1 month'
 				), 0) AS spent_minor
 			FROM category_budgets b
-			LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = b.category_id
+			LEFT JOIN category_tree ct ON ct.root_id = b.category_id
+			LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = ct.id
 			WHERE b.user_id = $1 AND b.month = $2
 			GROUP BY b.id
 		)
@@ -224,18 +233,26 @@ func (r *Repository) CashflowTrend(ctx context.Context, userID string, months in
 func (r *Repository) ExpenseDistribution(ctx context.Context, userID string, month time.Time) ([]ExpenseDistribution, error) {
 	nextMonth := month.AddDate(0, 1, 0)
 	query := `
-		WITH category_spend AS (
+		WITH RECURSIVE category_tree AS (
+			SELECT id, id AS root_id, name AS root_name
+			FROM categories
+			WHERE user_id = $1 AND parent_id IS NULL
+			UNION ALL
+			SELECT c.id, ct.root_id, ct.root_name
+			FROM categories c
+			INNER JOIN category_tree ct ON c.parent_id = ct.id
+		), category_spend AS (
 			SELECT 
-				COALESCE(c.id::text, '') AS category_id,
-				COALESCE(c.name, 'Uncategorized') AS category_name,
+				COALESCE(ct.root_id::text, '') AS category_id,
+				COALESCE(ct.root_name, 'Uncategorized') AS category_name,
 				SUM(t.amount_minor) AS amount_minor
 			FROM transactions t
-			LEFT JOIN categories c ON t.category_id = c.id
+			LEFT JOIN category_tree ct ON t.category_id = ct.id
 			WHERE t.user_id = $1 
 				AND t.type = 'expense'
 				AND t.transaction_at >= $2 
 				AND t.transaction_at < $3
-			GROUP BY c.id, c.name
+			GROUP BY ct.root_id, ct.root_name
 		), total_spend AS (
 			SELECT SUM(amount_minor) AS total FROM category_spend
 		)
