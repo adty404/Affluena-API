@@ -9,16 +9,18 @@ Affluena-API is an API-first personal finance backend written in Go. It uses Gin
 Core domains:
 
 - Auth: register, login, refresh token, protected routes.
-- Dashboard: monthly summary for net worth, cashflow, budgets, and upcoming obligations.
+- Dashboard: monthly summary for net worth, cashflow, budgets, upcoming obligations, plus cashflow trend, expense distribution, and spend forecasting analytics.
 - Wallets: cash, bank, e-wallet, investment/trading wallets.
-- Categories: user-owned income/expense categories. List supports `GET /api/v1/categories?type=income|expense`.
-- Transactions: income, expense, transfer, adjustment, with wallet balance updates and list filters.
+- Categories: user-owned income/expense categories with optional `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
+- Tags: user-owned labels attachable to transactions through `tag_ids`, with transaction filtering by `tag_id`.
+- Transactions: income, expense, transfer, adjustment, with wallet balance updates, tag links, and list filters.
 - Quick entry templates: one-click transaction templates.
 - Category budgets: monthly expense category budget summaries.
 - Installments: finite payment tracking.
 - Subscriptions: recurring subscription tracking; includes optional `account_detail` to distinguish multiple accounts for the same service.
 - Recurring transactions: native scheduled transaction generation.
 - Debts: payable/receivable tracking with payment lifecycle.
+- Financial goals: collaborative saving goals that create goal wallets and support member invitations.
 
 The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `README.md`. The runnable Postman collection is `postman/Affluena-API.postman_collection.json`.
 
@@ -33,6 +35,7 @@ The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `
 - `internal/tracker`: installment and subscription tracker implementation.
 - `internal/db`: database connection and migrations.
 - `migrations`: ordered SQL migrations.
+- `postman`: runnable API collection that should match the documented API surface.
 - `scripts/verify.sh`: full verification gate.
 - `Makefile`: `make verify` wrapper.
 
@@ -45,13 +48,15 @@ Follow existing patterns before inventing new abstractions. Keep changes scoped 
 Important invariants:
 
 - Every user-owned resource must be scoped by `user_id`.
-- Users must not see or mutate another user's wallets, categories, transactions, budgets, debts, installments, subscriptions, quick entries, or recurring rules.
+- Users must not see or mutate another user's wallets, categories, tags, transactions, budgets, debts, goals, installments, subscriptions, quick entries, or recurring rules.
 - Money is stored as integer minor units, usually `amount_minor`.
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
+- Financial goal creation and invite acceptance create related goal wallets; treat those as cross-module workflows and test partial-write risks when touching them.
 - Category CRUD endpoints are generic. Do not create separate income/expense CRUD routes; use list filtering where needed.
-- User-facing list endpoints return `{collection, pagination}` and support `limit`, `offset`, and whitelisted `sort` values. Keep pagination metadata scoped to the authenticated user and matching active filters.
+- Category nesting must not exceed 3 levels and must reject cyclic parent relationships.
+- User-facing list endpoints usually return `{collection, pagination}` and support `limit`, `offset`, and whitelisted `sort` values. Keep pagination metadata scoped to the authenticated user and matching active filters. Financial goals are a current exception: `GET /api/v1/goals` returns a JSON array ordered by creation time.
 
 ## Required Workflow For Every Change
 
@@ -110,9 +115,13 @@ Existing high-value integration tests:
 - `internal/server/isolation_integration_test.go`: proves users cannot access each other's data.
 - `internal/server/financial_flow_integration_test.go`: proves transaction lifecycle preserves balances.
 - `internal/server/category_filter_integration_test.go`: proves category type filtering.
+- `internal/server/category_hierarchy_test.go`: proves category parent nesting, max-depth behavior, and cyclic-reference protection.
 - `internal/server/transaction_filter_integration_test.go`: proves transaction list filters.
 - `internal/server/pagination_integration_test.go`: proves list endpoint pagination metadata and wallet sorting.
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
+- `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
+- `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
+- `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
 - `internal/server/subscription_account_detail_integration_test.go`: proves subscription `account_detail` lifecycle.
 - `internal/db/migration_integration_test.go`: proves database constraints and migrations.
 - `internal/debt/repository_integration_test.go`: proves debt repository lifecycle.
@@ -135,17 +144,27 @@ Current notable API decisions:
 - `GET /api/v1/categories` lists all user categories.
 - `GET /api/v1/categories?type=income` lists income categories.
 - `GET /api/v1/categories?type=expense` lists expense categories.
+- `POST/PUT /api/v1/categories` accept optional `parent_id`; category trees are limited to 3 levels.
 - `GET/PUT/DELETE /api/v1/categories/:id` remain generic category CRUD.
-- `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `from`, and `to` filters.
-- List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, and recurring transactions support `limit`, `offset`, and `sort`.
+- `POST/GET/PUT/DELETE /api/v1/tags` manage user-owned transaction labels.
+- `POST/PUT /api/v1/transactions` accept `tag_ids`.
+- `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
+- List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
+- `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
+- `GET /api/v1/dashboard/cashflow-trend?months=6` returns income/expense trends.
+- `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` returns category expense distribution.
+- `GET /api/v1/dashboard/forecast?month=YYYY-MM` returns spend forecasting and overbudget warnings.
 - Subscriptions accept and return optional `account_detail`.
+- `POST /api/v1/goals`, `GET /api/v1/goals`, `GET /api/v1/goals/:id`, `POST /api/v1/goals/:id/members`, and `PUT /api/v1/goals/:id/members/:user_id/respond` implement financial goals and invitations.
 
 ## Database Migration Rules
 
 - Add new SQL files in numeric order under `migrations`.
+- Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
+- Current later migrations include financial goals (`000007`), tags (`000008`), and category hierarchy (`000009`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Git Rules

@@ -39,6 +39,10 @@ func TestDashboardAnalyticsIntegration(t *testing.T) {
 		"name": "Transport",
 		"type": "expense"
 	}`)
+	catIncome := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Salary",
+		"type": "income"
+	}`)
 
 	// Create category budget for Food for current month
 	now := time.Now().UTC()
@@ -74,6 +78,7 @@ func TestDashboardAnalyticsIntegration(t *testing.T) {
 	createAPIResource(t, router, token, "/api/v1/transactions", `{
 		"type": "income",
 		"wallet_id": "`+walletID+`",
+		"category_id": "`+catIncome+`",
 		"amount_minor": 50000000,
 		"transaction_at": "`+threeMonthsAgo.Format(time.RFC3339)+`"
 	}`)
