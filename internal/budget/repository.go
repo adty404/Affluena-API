@@ -34,6 +34,15 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateBudg
 
 func (r *Repository) List(ctx context.Context, userID string, month time.Time, pagination page.Params) (page.Result[BudgetSummary], error) {
 	rows, err := r.pool.Query(ctx, `
+		WITH RECURSIVE category_tree AS (
+			SELECT id, id AS root_id
+			FROM categories
+			WHERE user_id = $1
+			UNION ALL
+			SELECT c.id, ct.root_id
+			FROM categories c
+			INNER JOIN category_tree ct ON c.parent_id = ct.id
+		)
 		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor,
 			b.created_at, b.updated_at,
 			COALESCE(SUM(t.amount_minor) FILTER (
@@ -42,7 +51,8 @@ func (r *Repository) List(ctx context.Context, userID string, month time.Time, p
 					AND t.transaction_at < b.month + interval '1 month'
 			), 0) AS spent_minor
 		FROM category_budgets b
-		LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = b.category_id
+		LEFT JOIN category_tree ct ON ct.root_id = b.category_id
+		LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = ct.id
 		WHERE b.user_id = $1 AND b.month = $2
 		GROUP BY b.id
 		ORDER BY `+budgetOrderBy(pagination.Sort)+`

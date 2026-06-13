@@ -28,8 +28,9 @@ func NewHandler(usecase categoryUseCase) *Handler {
 }
 
 type categoryRequest struct {
-	Name string `json:"name" binding:"required"`
-	Type string `json:"type" binding:"required"`
+	Name     string  `json:"name" binding:"required"`
+	Type     string  `json:"type" binding:"required"`
+	ParentID *string `json:"parent_id"`
 }
 
 func (h *Handler) Create(c *gin.Context) {
@@ -43,7 +44,7 @@ func (h *Handler) Create(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type})
+	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -111,7 +112,7 @@ func (h *Handler) Update(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	category, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateCategoryInput{Name: req.Name, Type: req.Type})
+	category, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
 	if err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "category not found")
