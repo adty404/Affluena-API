@@ -17,6 +17,12 @@ type Config struct {
 	RecurringSchedulerEnabled   bool
 	RecurringSchedulerInterval  time.Duration
 	RecurringSchedulerBatchSize int
+
+	SMTPHost string
+	SMTPPort int
+	SMTPUser string
+	SMTPPass string
+	SMTPFrom string
 }
 
 func Load() Config {
@@ -31,6 +37,12 @@ func Load() Config {
 		RecurringSchedulerEnabled:   getBoolEnv("RECURRING_SCHEDULER_ENABLED", true),
 		RecurringSchedulerInterval:  getDurationEnv("RECURRING_SCHEDULER_INTERVAL", time.Minute),
 		RecurringSchedulerBatchSize: getIntEnv("RECURRING_SCHEDULER_BATCH_SIZE", 20),
+
+		SMTPHost: getEnv("SMTP_HOST", "sandbox.smtp.mailtrap.io"),
+		SMTPPort: getIntEnv("SMTP_PORT", 2525),
+		SMTPUser: getEnv("SMTP_USER", ""),
+		SMTPPass: getEnv("SMTP_PASS", ""),
+		SMTPFrom: getEnv("SMTP_FROM", "noreply@affluena.com"),
 	}
 }
 

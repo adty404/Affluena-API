@@ -27,8 +27,13 @@ services:
       JWT_SECRET: replace-with-a-long-random-secret
       RUN_MIGRATIONS: "true"
       RECURRING_SCHEDULER_ENABLED: "true"
-      RECURRING_SCHEDULER_INTERVAL: 5s
+      RECURRING_SCHEDULER_INTERVAL: 1m
       RECURRING_SCHEDULER_BATCH_SIZE: "20"
+      SMTP_HOST: sandbox.smtp.mailtrap.io
+      SMTP_PORT: "2525"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: noreply@affluena.com
     ports:
       - "8080:8080"
 
