@@ -223,6 +223,79 @@ func TestSharedWalletOwnerSeesMemberTransactionsAndAnalyticsOnce(t *testing.T) {
 	}
 }
 
+func TestFormerSharedWalletMemberCannotMutateWalletBalanceThroughOldTransactions(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-share-former-member-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "former-member-owner")
+	memberID, memberToken := registerIntegrationAPIUser(t, router, "former-member")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberID)
+
+	sharedWalletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Former Member Shared Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	memberEmail := getIntegrationUserEmail(t, router, memberToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+sharedWalletID+"/invites", `{
+		"email": "`+memberEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+sharedWalletID+"/members/"+memberID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	expenseCategoryID := createAPIResource(t, router, memberToken, "/api/v1/categories", `{
+		"name": "Former Member Expense",
+		"type": "expense"
+	}`)
+	updateAttemptTxID := createAPIResource(t, router, memberToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+sharedWalletID+`",
+		"category_id": "`+expenseCategoryID+`",
+		"amount_minor": 10000,
+		"transaction_at": "2026-06-14T08:00:00Z"
+	}`)
+	deleteAttemptTxID := createAPIResource(t, router, memberToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+sharedWalletID+`",
+		"category_id": "`+expenseCategoryID+`",
+		"amount_minor": 15000,
+		"transaction_at": "2026-06-14T09:00:00Z"
+	}`)
+	assertWalletBalance(t, router, ownerToken, sharedWalletID, 75000)
+
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+sharedWalletID+"/members/"+memberID, `{
+		"status": "rejected"
+	}`, http.StatusOK)
+	memberWalletID := createAPIResource(t, router, memberToken, "/api/v1/wallets", `{
+		"name": "Former Member Personal Wallet",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 50000
+	}`)
+
+	assertAPIStatus(t, router, memberToken, http.MethodPut, "/api/v1/transactions/"+updateAttemptTxID, `{
+		"type": "expense",
+		"wallet_id": "`+memberWalletID+`",
+		"category_id": "`+expenseCategoryID+`",
+		"amount_minor": 5000,
+		"transaction_at": "2026-06-14T08:00:00Z"
+	}`, http.StatusNotFound)
+	assertAPIStatus(t, router, memberToken, http.MethodDelete, "/api/v1/transactions/"+deleteAttemptTxID, "", http.StatusNotFound)
+
+	assertWalletBalance(t, router, ownerToken, sharedWalletID, 75000)
+	assertWalletBalance(t, router, memberToken, memberWalletID, 50000)
+	assertAPIStatus(t, router, ownerToken, http.MethodGet, "/api/v1/transactions/"+updateAttemptTxID, "", http.StatusOK)
+	assertAPIStatus(t, router, ownerToken, http.MethodGet, "/api/v1/transactions/"+deleteAttemptTxID, "", http.StatusOK)
+}
+
 func getIntegrationUserEmail(t *testing.T, router http.Handler, token string) string {
 	t.Helper()
 

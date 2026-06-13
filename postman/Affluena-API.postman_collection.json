@@ -4952,7 +4952,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Transaksi\nInti dari Affluena. Menangani pencatatan pemasukan, pengeluaran, dan transfer antar dompet. Transaksi memengaruhi saldo dompet, limit anggaran, dan dapat diasosiasikan dengan _tags_ maupun kategori pengeluaran tertentu."
+            "description": "### Modul Transaksi\nInti dari Affluena. Menangani pencatatan pemasukan, pengeluaran, dan transfer antar dompet. Transaksi memengaruhi saldo dompet, limit anggaran, dan dapat diasosiasikan dengan _tags_ maupun kategori pengeluaran tertentu. Update/delete transaksi hanya dapat mengubah saldo wallet yang masih dimiliki user atau masih diakses sebagai joined shared-wallet member."
         },
         {
             "name": "Quick Entry Templates",
