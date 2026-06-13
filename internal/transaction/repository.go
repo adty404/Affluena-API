@@ -47,14 +47,21 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 	if err := applyDeltas(ctx, tx, userID, deltas); err != nil {
 		return Transaction{}, translateNotFound(err)
 	}
-	return insertTransaction(ctx, tx, userID, input)
+	transaction, err := insertTransaction(ctx, tx, userID, input)
+	if err != nil {
+		return Transaction{}, err
+	}
+	if err := syncTags(ctx, tx, transaction.ID, input.TagIDs); err != nil {
+		return Transaction{}, err
+	}
+	return transaction, nil
 }
 
 func (r *Repository) List(ctx context.Context, userID string, filter TransactionFilter, pagination page.Params) (page.Result[Transaction], error) {
 	orderBy := transactionOrderBy(pagination.Sort)
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
+			COALESCE(category_id::text, ''), amount_minor, ARRAY(SELECT tag_id::text FROM transaction_tags WHERE transaction_id = transactions.id), transaction_at, note, created_at, updated_at
 		FROM transactions
 		WHERE user_id = $1
 			AND ($2 = '' OR type = $2)
@@ -62,9 +69,10 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
+			AND ($9 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE tag_id = NULLIF($9, '')::uuid))
 		ORDER BY `+orderBy+`
 		LIMIT $7 OFFSET $8
-	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset)
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset, filter.TagID)
 	if err != nil {
 		return page.Result[Transaction]{}, err
 	}
@@ -92,7 +100,8 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To)).Scan(&total); err != nil {
+			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE tag_id = NULLIF($7, '')::uuid))
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), filter.TagID).Scan(&total); err != nil {
 		return page.Result[Transaction]{}, err
 	}
 	return page.NewResult(transactions, pagination, total), nil
@@ -136,6 +145,9 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 	transaction, err := updateTransaction(ctx, tx, userID, id, input)
 	if err != nil {
 		return Transaction{}, translateNotFound(err)
+	}
+	if err := syncTags(ctx, tx, transaction.ID, input.TagIDs); err != nil {
+		return Transaction{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Transaction{}, err
@@ -190,7 +202,7 @@ func (r *Repository) get(ctx context.Context, q interface {
 }, userID string, id string, forUpdate bool) (Transaction, error) {
 	sql := `
 		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
+			COALESCE(category_id::text, ''), amount_minor, ARRAY(SELECT tag_id::text FROM transaction_tags WHERE transaction_id = transactions.id), transaction_at, note, created_at, updated_at
 		FROM transactions
 		WHERE user_id = $1 AND id = $2
 	`
@@ -216,23 +228,33 @@ func (r *Repository) ensureRefs(ctx context.Context, tx pgx.Tx, userID string, i
 }
 
 func insertTransaction(ctx context.Context, tx pgx.Tx, userID string, input TransactionInput) (Transaction, error) {
-	return scanTransaction(tx.QueryRow(ctx, `
+	transaction, err := scanTransaction(tx.QueryRow(ctx, `
 		INSERT INTO transactions (user_id, type, wallet_id, to_wallet_id, category_id, amount_minor, transaction_at, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
+			COALESCE(category_id::text, ''), amount_minor, '{}'::text[], transaction_at, note, created_at, updated_at
 	`, userID, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.TransactionUTC, input.Note))
+	if err != nil {
+		return Transaction{}, err
+	}
+	transaction.TagIDs = input.TagIDs
+	return transaction, nil
 }
 
 func updateTransaction(ctx context.Context, tx pgx.Tx, userID string, id string, input TransactionInput) (Transaction, error) {
-	return scanTransaction(tx.QueryRow(ctx, `
+	transaction, err := scanTransaction(tx.QueryRow(ctx, `
 		UPDATE transactions
 		SET type = $3, wallet_id = $4, to_wallet_id = $5, category_id = $6, amount_minor = $7,
 			transaction_at = $8, note = $9, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
+			COALESCE(category_id::text, ''), amount_minor, '{}'::text[], transaction_at, note, created_at, updated_at
 	`, userID, id, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.TransactionUTC, input.Note))
+	if err != nil {
+		return Transaction{}, err
+	}
+	transaction.TagIDs = input.TagIDs
+	return transaction, nil
 }
 
 func applyDeltas(ctx context.Context, tx pgx.Tx, userID string, deltas []BalanceDelta) error {
@@ -302,6 +324,7 @@ func scanTransaction(row rowScanner) (Transaction, error) {
 		&transaction.ToWalletID,
 		&transaction.CategoryID,
 		&transaction.AmountMinor,
+		&transaction.TagIDs,
 		&transaction.TransactionAt,
 		&transaction.Note,
 		&transaction.CreatedAt,
@@ -346,4 +369,18 @@ func translateNotFound(err error) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+func syncTags(ctx context.Context, tx pgx.Tx, transactionID string, tagIDs []string) error {
+	_, err := tx.Exec(ctx, `DELETE FROM transaction_tags WHERE transaction_id = $1`, transactionID)
+	if err != nil {
+		return err
+	}
+	for _, tagID := range tagIDs {
+		_, err := tx.Exec(ctx, `INSERT INTO transaction_tags (transaction_id, tag_id) VALUES ($1, $2)`, transactionID, tagID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

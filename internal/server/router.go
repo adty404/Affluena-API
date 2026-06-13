@@ -12,6 +12,7 @@ import (
 	"affluena-api/internal/goal"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
+	"affluena-api/internal/tag"
 	"affluena-api/internal/tracker"
 	"affluena-api/internal/transaction"
 	"affluena-api/internal/wallet"
@@ -35,6 +36,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool)))
 	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool)))
+	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool)))
 	transactionRepo := transaction.NewRepository(pool)
 	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo))
 	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo)))
@@ -74,6 +76,12 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/categories/:id", categoryHandler.Get)
 	protected.PUT("/categories/:id", categoryHandler.Update)
 	protected.DELETE("/categories/:id", categoryHandler.Delete)
+
+	protected.POST("/tags", tagHandler.Create)
+	protected.GET("/tags", tagHandler.List)
+	protected.GET("/tags/:id", tagHandler.Get)
+	protected.PUT("/tags/:id", tagHandler.Update)
+	protected.DELETE("/tags/:id", tagHandler.Delete)
 
 	protected.POST("/transactions", transactionHandler.Create)
 	protected.GET("/transactions", transactionHandler.List)

@@ -15,6 +15,7 @@ type Transaction struct {
 	ToWalletID    string          `json:"to_wallet_id,omitempty"`
 	CategoryID    string          `json:"category_id,omitempty"`
 	AmountMinor   int64           `json:"amount_minor"`
+	TagIDs        []string        `json:"tag_ids"`
 	TransactionAt time.Time       `json:"transaction_at"`
 	Note          string          `json:"note"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -25,6 +26,7 @@ type TransactionFilter struct {
 	Type       TransactionType
 	WalletID   string
 	CategoryID string
+	TagID      string
 	From       time.Time
 	To         time.Time
 }
@@ -36,6 +38,7 @@ func (t Transaction) Input() TransactionInput {
 		ToWalletID:     t.ToWalletID,
 		CategoryID:     t.CategoryID,
 		AmountMinor:    t.AmountMinor,
+		TagIDs:         t.TagIDs,
 		TransactionUTC: t.TransactionAt,
 		Note:           t.Note,
 	}

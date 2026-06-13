@@ -59,6 +59,11 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/categories/:id`
 - `PUT /api/v1/categories/:id`
 - `DELETE /api/v1/categories/:id`
+- `POST /api/v1/tags`
+- `GET /api/v1/tags[?limit=100&offset=0&sort=created_at_desc]`
+- `GET /api/v1/tags/:id`
+- `PUT /api/v1/tags/:id`
+- `DELETE /api/v1/tags/:id`
 - `POST /api/v1/transactions`
 - `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
 - `GET /api/v1/transactions/:id`
@@ -125,6 +130,7 @@ Supported `sort` values:
 - Subscriptions: `next_due_date_asc`, `next_due_date_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Recurring transactions: `next_run_at_asc`, `next_run_at_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Goals: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `deadline_asc`, `deadline_desc`.
+- Tags: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 
 ## Example Flow
 
