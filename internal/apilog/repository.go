@@ -21,8 +21,8 @@ func NewRepository(pool *pgxpool.Pool) Repository {
 
 func (r *repository) SaveLog(ctx context.Context, logEntry APILog) error {
 	query := `
-		INSERT INTO api_logs (method, path, status_code, latency_ms, client_ip, user_agent, user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO api_logs (method, path, status_code, latency_ms, client_ip, user_agent, user_id, request_payload, response_payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		logEntry.Method,
@@ -32,6 +32,8 @@ func (r *repository) SaveLog(ctx context.Context, logEntry APILog) error {
 		logEntry.ClientIP,
 		logEntry.UserAgent,
 		logEntry.UserID,
+		logEntry.RequestPayload,
+		logEntry.ResponsePayload,
 	)
 	if err != nil {
 		slog.Error("failed to save api log to database", "error", err)

@@ -8,7 +8,7 @@
 
 ## 1. Product Overview
 
-**Affluena-API** adalah sistem pencatatan keuangan API-first yang dirancang untuk kecepatan pencatatan harian dan manajemen portofolio aset yang komprehensif. Aplikasi ini memiliki kapabilitas _native_ untuk melacak cicilan berjangka, manajemen _subscription_, pemisahan dompet fiat dan instrumen _trading_, serta memfasilitasi transaksi otomatis berulang tanpa bergantung pada _message broker_ eksternal.
+**Affluena-API** adalah sistem pencatatan keuangan API-first yang dirancang untuk kecepatan pencatatan harian dan manajemen portofolio aset yang komprehensif. Aplikasi ini memiliki kapabilitas _native_ untuk melacak cicilan berjangka, manajemen _subscription_, pemisahan dompet fiat dan instrumen _trading_, serta memfasilitasi transaksi otomatis berulang tanpa bergantung pada _message broker_ eksternal. Sistem ini juga dilengkapi dengan mekanisme observabilitas penuh (API Logging) untuk perekaman setiap aktivitas jaringan yang masuk.
 
 ## 2. Objectives
 
@@ -16,6 +16,7 @@
 - Menyistemasi autentikasi dan manajemen otorisasi sepenuhnya di level aplikasi (Go) tanpa dependensi _third-party_ seperti Keycloak.
 - Menyederhanakan infrastruktur dengan menggunakan _native scheduler_ di Go untuk mengeksekusi _background jobs_ (menggantikan RabbitMQ).
 - Menyediakan _endpoint_ API yang siap dikonsumsi oleh Progressive Web App (PWA) di masa depan.
+- Menciptakan transparansi dan _auditability_ sistem melalui pencatatan log lengkap (hingga payload request/response).
 
 ## 3. Core Features & Use Cases (MVP)
 
@@ -66,10 +67,10 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - **Fitur:** Limit maksimal pengeluaran bulanan berdasarkan ID Kategori.
 - **Use Case:** Memasang limit _budget_ khusus untuk pos _gaming/entertainment_ (misalnya belanja _game_ di Steam seperti Resident Evil 4 Remake atau _item_ Dota 2) serta pos _personal care_ (belanja stok rutin Skintific, Lanbena, dan produk rambut seperti Regrou/Erha). API akan mengembalikan data limit yang terpakai untuk dirender menjadi visualisasi _progress bar_ di klien.
 
-### 3.8. Financial Goals (Tabungan Bersama)
+### 3.8. Financial Goals (Tabungan Bersama) & Shared Wallets
 
-- **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi).
-- **Use Case:** Membuat target tabungan "Menikah" dengan target nominal tertentu. Pengguna bisa mengundang pasangannya, dan keduanya bisa mengalokasikan (menyisihkan) uang dari dompet pribadi ke dalam _Goal Wallet_ yang berelasi dengan target tabungan ini. Progres tabungan dapat terpantau bersama.
+- **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi). Termasuk fungsionalitas berbagi "Shared Wallet" untuk pengeluaran operasional gabungan.
+- **Use Case:** Suami dan istri bisa memiliki satu dompet gabungan khusus pengeluaran belanja dapur. Keduanya bebas mencatat transaksi menggunakan dompet yang di-*share* sehingga *cashflow* dan *dashboard analytics* menjadi lebih akurat di kedua belah pihak.
 - **Integrity Rules:** Pembuatan goal dan penerimaan undangan membuat _Goal Wallet_ secara atomik. Nama goal boleh sama karena _Goal Wallet_ memakai suffix ID goal. Undangan yang ditolak tidak lagi membuka akses goal, dan respons undangan hanya boleh dilakukan oleh member yang sesuai dengan `:user_id` pada route.
 
 ### 3.9. Tags / Labeling
@@ -77,6 +78,11 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - **Fitur:** Menyematkan label (_hashtag_) lintas-kategori secara tak terbatas pada transaksi, dengan arsitektur _Many-to-Many_.
 - **Use Case:** Melacak total pengeluaran untuk suatu acara spesifik (misal liburan `#Bali2026` atau uang klaim `#ReimburseKantor`) tanpa harus merusak struktur kategori utama (`Makanan`, `Transportasi`, dsb). Pengguna dapat memfilter mutasi uang berdasarkan `tag_id`.
 - **Integrity Rules:** `tag_id` dan `tag_ids` harus valid, dimiliki oleh pengguna yang sedang login, dan tidak boleh menautkan transaksi ke label milik user lain. Duplikasi `tag_ids` dalam satu request disimpan satu kali.
+
+### 3.10. API Observability & Audit Trail
+
+- **Fitur:** Mencatat riwayat akses ke server API secara transparan ke dalam _database_, mencakup IP, User Agent, durasi latency, payload request, hingga payload response.
+- **Use Case:** Developer menggunakan histori ini untuk memantau keamanan (serangan ke sistem), melakukan proses _debugging_ jika terjadi masalah _request_ (_payload_ tidak masuk akal), dan memastikan SLA (_Service Level Agreement_) API terjaga dari anomali _latency_. Keamanan password pada *endpoint authentication* tetap disensor (masked).
 
 ## 4. Non-Functional Requirements
 
@@ -90,7 +96,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - Integrasi _payment gateway_ pihak ketiga atau akses mutasi API Bank _direct_.
 - Fitur OCR (_Optical Character Recognition_) untuk _scan_ struk otomatis.
 
-### 3.10 Advanced Analytics & Reporting
+### 3.11 Advanced Analytics & Reporting
 Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
 
 - **Cashflow Trend**: Mendapatkan data income dan expense selama 1-12 bulan ke belakang untuk melihat pergerakan cashflow.

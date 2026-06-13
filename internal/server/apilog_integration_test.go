@@ -40,12 +40,13 @@ func TestAPILogsAreSaved(t *testing.T) {
 	var count int
 	var logUserID *string
 	var method, path string
+	var reqPayload, respPayload *string
 
 	err := pool.QueryRow(context.Background(), `
-		SELECT count(*), max(user_id::text), max(method), max(path)
+		SELECT count(*), max(user_id::text), max(method), max(path), max(request_payload), max(response_payload)
 		FROM api_logs
 		WHERE user_id = $1
-	`, userID).Scan(&count, &logUserID, &method, &path)
+	`, userID).Scan(&count, &logUserID, &method, &path, &reqPayload, &respPayload)
 
 	if err != nil {
 		t.Fatalf("query api_logs: %v", err)
@@ -65,6 +66,14 @@ func TestAPILogsAreSaved(t *testing.T) {
 
 	if path != "/api/v1/auth/me" {
 		t.Fatalf("expected path /api/v1/auth/me, got %s", path)
+	}
+
+	if reqPayload != nil && *reqPayload != "" {
+		t.Fatalf("expected empty request payload for GET, got %s", *reqPayload)
+	}
+
+	if respPayload == nil || len(*respPayload) < 10 {
+		t.Fatalf("expected non-empty response payload, got %v", respPayload)
 	}
 }
 
