@@ -2,6 +2,7 @@ package category
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"affluena/internal/httpx"
@@ -15,7 +16,7 @@ type Handler struct {
 
 type categoryUseCase interface {
 	Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error)
-	List(ctx context.Context, userID string) ([]Category, error)
+	List(ctx context.Context, userID string, categoryType string) ([]Category, error)
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -55,8 +56,12 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.usecase.List(c.Request.Context(), userID)
+	categories, err := h.usecase.List(c.Request.Context(), userID, c.Query("type"))
 	if err != nil {
+		if errors.Is(err, ErrInvalidCategoryType) {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		httpx.Error(c, http.StatusInternalServerError, "list categories failed")
 		return
 	}

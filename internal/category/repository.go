@@ -26,13 +26,13 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateCate
 	return category, err
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Category, error) {
+func (r *Repository) List(ctx context.Context, userID string, categoryType string) ([]Category, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, created_at, updated_at
 		FROM categories
-		WHERE user_id = $1
+		WHERE user_id = $1 AND ($2 = '' OR type = $2)
 		ORDER BY type, name
-	`, userID)
+	`, userID, categoryType)
 	if err != nil {
 		return nil, err
 	}
