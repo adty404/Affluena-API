@@ -59,7 +59,7 @@ The expected loop for code changes is:
 
 1. Understand the current implementation with `rg`, file reads, and existing tests.
 2. Implement the smallest scoped change that satisfies the requirement.
-3. Add comprehensive unit/integration tests to cover all cases that a human or user might perform, including both **red flows** (edge cases, invalid inputs, unauthorized access) and **green flows** (successful operations).
+3. Add comprehensive unit/integration tests to cover all cases that a human or user might perform, including both **red flows** (edge cases, invalid inputs, unauthorized access) and **green flows** (successful operations). **Crucially, if the feature interacts with or impacts other modules, the tests MUST cover those cross-module integrations (e.g., wallet balance updates when achieving a goal) to guarantee data integrity across the system.**
 4. Audit and update every related documentation artifact whenever code behavior changes: `README.md`, other relevant `.md` files, and the Postman collection.
 5. Run targeted tests and the full verification gate while developing.
 6. Run the full gate before commit:
