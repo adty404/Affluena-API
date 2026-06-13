@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"affluena-api/internal/apilog"
 	"affluena-api/internal/auth"
 	"affluena-api/internal/budget"
 	"affluena-api/internal/category"
@@ -27,8 +28,10 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	apilogRepo := apilog.NewRepository(pool)
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(apilog.APILogMiddleware(apilogRepo))
 
 	tokenManager := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration)
 	authRepo := auth.NewRepository(pool)
