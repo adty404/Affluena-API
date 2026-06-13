@@ -70,6 +70,11 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 - **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi).
 - **Use Case:** Membuat target tabungan "Menikah" dengan target nominal tertentu. Pengguna bisa mengundang pasangannya, dan keduanya bisa mengalokasikan (menyisihkan) uang dari dompet pribadi ke dalam _Goal Wallet_ yang berelasi dengan target tabungan ini. Progres tabungan dapat terpantau bersama.
 
+### 3.9. Tags / Labeling
+
+- **Fitur:** Menyematkan label (_hashtag_) lintas-kategori secara tak terbatas pada transaksi, dengan arsitektur _Many-to-Many_.
+- **Use Case:** Melacak total pengeluaran untuk suatu acara spesifik (misal liburan `#Bali2026` atau uang klaim `#ReimburseKantor`) tanpa harus merusak struktur kategori utama (`Makanan`, `Transportasi`, dsb). Pengguna dapat memfilter mutasi uang berdasarkan `tag_id`.
+
 ## 4. Non-Functional Requirements
 
 - **Performance:** _Response time_ untuk _endpoint_ krusial (_Quick Entry_) di bawah 200ms.
