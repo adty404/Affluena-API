@@ -321,6 +321,8 @@ Split bill execution creates the user's personal expense and all receivable debt
 
 Installment and subscription payment endpoints also run atomically: the API creates an expense transaction, updates wallet balance, and advances tracker state in one PostgreSQL transaction.
 
+Installment plans must be internally consistent: `total_amount_minor` must equal `monthly_amount_minor * tenor_months`. This prevents the payment lifecycle from charging more or less than the declared total.
+
 Quick entry execution, installment payment, subscription payment, and manual recurring run endpoints accept an empty request body for one-click daily actions. Optional JSON bodies can still override fields such as payment date, note, wallet, category, or scheduled run time where the endpoint supports it.
 
 Monthly subscription and recurring schedules clamp month-end dates to the target month's last day. For example, January 31 advances to February 28 or 29 instead of rolling into March.

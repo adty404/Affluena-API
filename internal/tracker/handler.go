@@ -277,8 +277,8 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return Installment{}, false
 	}
-	if req.TotalAmountMinor <= 0 || req.MonthlyAmountMinor <= 0 || req.TenorMonths <= 0 {
-		httpx.Error(c, http.StatusBadRequest, "amounts and tenor_months must be positive")
+	if err := ValidateInstallmentPlan(req.TotalAmountMinor, req.MonthlyAmountMinor, req.TenorMonths); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return Installment{}, false
 	}
 	if req.DueDay < 1 || req.DueDay > 31 {

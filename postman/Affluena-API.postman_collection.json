@@ -7113,7 +7113,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Cicilan (Installments)\nMencatat dan memantau kewajiban cicilan berbunga yang memiliki jumlah tetap, bunga, serta tanggal jatuh tempo. Cicilan dapat dilunasi secara parsial melalui transaksi reguler."
+            "description": "### Modul Cicilan (Installments)\nMencatat dan memantau kewajiban cicilan tetap dengan tenor dan tanggal jatuh tempo. `total_amount_minor` harus sama dengan `monthly_amount_minor * tenor_months` agar siklus pembayaran tidak menagih lebih atau kurang dari total yang dideklarasikan."
         },
         {
             "name": "Subscriptions",
