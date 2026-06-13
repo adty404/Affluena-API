@@ -803,7 +803,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Food Updated {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
+                            "raw": "{\n    \"name\": \"Food Updated {{$timestamp}}\",\n    \"type\": \"expense\",\n    \"parent_id\": null\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
@@ -835,6 +835,38 @@
                                 "v1",
                                 "categories",
                                 "{{expense_category_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Sub Category (Level 2/3)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"FastFood\",\n    \"type\": \"expense\",\n    \"parent_id\": \"<UUID_OF_PARENT_CATEGORY>\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories"
                             ]
                         }
                     }
