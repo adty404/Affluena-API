@@ -41,7 +41,7 @@ func main() {
 	if cfg.RecurringSchedulerEnabled {
 		transactionRepo := transaction.NewRepository(pool)
 		recurringRepo := recurring.NewRepository(pool, transactionRepo)
-		recurring.NewScheduler(recurringRepo, cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
+		recurring.NewScheduler(recurring.NewUseCase(recurringRepo), cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
 		slog.Info("recurring scheduler enabled", "interval", cfg.RecurringSchedulerInterval, "batch_size", cfg.RecurringSchedulerBatchSize)
 	}
 

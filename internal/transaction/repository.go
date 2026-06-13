@@ -3,25 +3,10 @@ package transaction
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type Transaction struct {
-	ID            string          `json:"id"`
-	UserID        string          `json:"user_id"`
-	Type          TransactionType `json:"type"`
-	WalletID      string          `json:"wallet_id"`
-	ToWalletID    string          `json:"to_wallet_id,omitempty"`
-	CategoryID    string          `json:"category_id,omitempty"`
-	AmountMinor   int64           `json:"amount_minor"`
-	TransactionAt time.Time       `json:"transaction_at"`
-	Note          string          `json:"note"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
-}
 
 type Repository struct {
 	pool *pgxpool.Pool
@@ -50,14 +35,14 @@ func (r *Repository) Create(ctx context.Context, userID string, input Transactio
 
 func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, input TransactionInput) (Transaction, error) {
 	if err := r.ensureRefs(ctx, tx, userID, input); err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 	deltas, err := BalanceDeltas(input)
 	if err != nil {
 		return Transaction{}, err
 	}
 	if err := applyDeltas(ctx, tx, userID, deltas); err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 	return insertTransaction(ctx, tx, userID, input)
 }
@@ -88,7 +73,8 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Transaction, er
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Transaction, error) {
-	return r.get(ctx, r.pool, userID, id, false)
+	transaction, err := r.get(ctx, r.pool, userID, id, false)
+	return transaction, translateNotFound(err)
 }
 
 func (r *Repository) Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error) {
@@ -100,30 +86,30 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 
 	oldTransaction, err := r.get(ctx, tx, userID, id, true)
 	if err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 	oldDeltas, err := BalanceDeltas(oldTransaction.Input())
 	if err != nil {
 		return Transaction{}, err
 	}
 	if err := applyDeltas(ctx, tx, userID, reverseDeltas(oldDeltas)); err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 
 	if err := r.ensureRefs(ctx, tx, userID, input); err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 	newDeltas, err := BalanceDeltas(input)
 	if err != nil {
 		return Transaction{}, err
 	}
 	if err := applyDeltas(ctx, tx, userID, newDeltas); err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 
 	transaction, err := updateTransaction(ctx, tx, userID, id, input)
 	if err != nil {
-		return Transaction{}, err
+		return Transaction{}, translateNotFound(err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Transaction{}, err
@@ -140,14 +126,14 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 
 	oldTransaction, err := r.get(ctx, tx, userID, id, true)
 	if err != nil {
-		return err
+		return translateNotFound(err)
 	}
 	oldDeltas, err := BalanceDeltas(oldTransaction.Input())
 	if err != nil {
 		return err
 	}
 	if err := applyDeltas(ctx, tx, userID, reverseDeltas(oldDeltas)); err != nil {
-		return err
+		return translateNotFound(err)
 	}
 
 	tag, err := tx.Exec(ctx, `DELETE FROM transactions WHERE user_id = $1 AND id = $2`, userID, id)
@@ -155,21 +141,9 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return tx.Commit(ctx)
-}
-
-func (t Transaction) Input() TransactionInput {
-	return TransactionInput{
-		Type:           t.Type,
-		WalletID:       t.WalletID,
-		ToWalletID:     t.ToWalletID,
-		CategoryID:     t.CategoryID,
-		AmountMinor:    t.AmountMinor,
-		TransactionUTC: t.TransactionAt,
-		Note:           t.Note,
-	}
 }
 
 type queryer interface {
@@ -266,7 +240,7 @@ func ensureWallet(ctx context.Context, tx pgx.Tx, userID string, walletID string
 		return err
 	}
 	if !exists {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -287,7 +261,7 @@ func ensureCategory(ctx context.Context, tx pgx.Tx, userID string, categoryID st
 		return err
 	}
 	if !exists {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -317,6 +291,9 @@ func nullableUUID(value string) any {
 	return value
 }
 
-func NotFound(err error) bool {
-	return errors.Is(err, pgx.ErrNoRows)
+func translateNotFound(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }

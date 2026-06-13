@@ -9,23 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Budget struct {
-	ID         string    `json:"id"`
-	UserID     string    `json:"user_id"`
-	CategoryID string    `json:"category_id"`
-	Month      time.Time `json:"month"`
-	LimitMinor int64     `json:"limit_minor"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-}
-
-type BudgetSummary struct {
-	Budget
-	SpentMinor     int64   `json:"spent_minor"`
-	RemainingMinor int64   `json:"remaining_minor"`
-	UsagePercent   float64 `json:"usage_percent"`
-}
-
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -34,16 +17,17 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) Create(ctx context.Context, userID string, categoryID string, month time.Time, limitMinor int64) (Budget, error) {
-	if err := r.ensureExpenseCategory(ctx, userID, categoryID); err != nil {
+func (r *Repository) Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error) {
+	if err := r.ensureExpenseCategory(ctx, userID, input.CategoryID); err != nil {
 		return Budget{}, err
 	}
 
-	return scanBudget(r.pool.QueryRow(ctx, `
+	budget, err := scanBudget(r.pool.QueryRow(ctx, `
 		INSERT INTO category_budgets (user_id, category_id, month, limit_minor)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
-	`, userID, categoryID, month, limitMinor))
+	`, userID, input.CategoryID, input.MonthDate, input.LimitMinor))
+	return budget, translateNotFound(err)
 }
 
 func (r *Repository) List(ctx context.Context, userID string, month time.Time) ([]BudgetSummary, error) {
@@ -78,24 +62,26 @@ func (r *Repository) List(ctx context.Context, userID string, month time.Time) (
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Budget, error) {
-	return scanBudget(r.pool.QueryRow(ctx, `
+	budget, err := scanBudget(r.pool.QueryRow(ctx, `
 		SELECT id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
 		FROM category_budgets
 		WHERE user_id = $1 AND id = $2
 	`, userID, id))
+	return budget, translateNotFound(err)
 }
 
-func (r *Repository) Update(ctx context.Context, userID string, id string, categoryID string, month time.Time, limitMinor int64) (Budget, error) {
-	if err := r.ensureExpenseCategory(ctx, userID, categoryID); err != nil {
+func (r *Repository) Update(ctx context.Context, userID string, id string, input UpdateBudgetInput) (Budget, error) {
+	if err := r.ensureExpenseCategory(ctx, userID, input.CategoryID); err != nil {
 		return Budget{}, err
 	}
 
-	return scanBudget(r.pool.QueryRow(ctx, `
+	budget, err := scanBudget(r.pool.QueryRow(ctx, `
 		UPDATE category_budgets
 		SET category_id = $3, month = $4, limit_minor = $5, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
-	`, userID, id, categoryID, month, limitMinor))
+	`, userID, id, input.CategoryID, input.MonthDate, input.LimitMinor))
+	return budget, translateNotFound(err)
 }
 
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
@@ -104,7 +90,7 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -120,7 +106,7 @@ func (r *Repository) ensureExpenseCategory(ctx context.Context, userID string, c
 		return err
 	}
 	if !exists {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -158,6 +144,9 @@ func scanBudgetSummary(row rowScanner) (BudgetSummary, error) {
 	return summary, nil
 }
 
-func NotFound(err error) bool {
-	return errors.Is(err, pgx.ErrNoRows)
+func translateNotFound(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }

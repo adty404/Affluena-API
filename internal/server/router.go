@@ -31,18 +31,18 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	authService := auth.NewService(authRepo, tokenManager)
 	authHandler := auth.NewHandler(authService)
 
-	walletHandler := wallet.NewHandler(wallet.NewRepository(pool))
-	categoryHandler := category.NewHandler(category.NewRepository(pool))
+	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool)))
+	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool)))
 	transactionRepo := transaction.NewRepository(pool)
-	transactionHandler := transaction.NewHandler(transactionRepo)
-	quickEntryHandler := quickentry.NewHandler(quickentry.NewRepository(pool), transactionRepo)
-	budgetHandler := budget.NewHandler(budget.NewRepository(pool))
-	debtHandler := debt.NewHandler(debt.NewRepository(pool, transactionRepo))
-	recurringHandler := recurring.NewHandler(recurring.NewRepository(pool, transactionRepo))
-	trackerHandler := tracker.NewHandler(
+	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo))
+	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo)))
+	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool)))
+	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo)))
+	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo)))
+	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
 		tracker.NewInstallmentRepository(pool, transactionRepo),
 		tracker.NewSubscriptionRepository(pool, transactionRepo),
-	)
+	))
 
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

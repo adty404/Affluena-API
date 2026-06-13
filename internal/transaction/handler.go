@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,11 +11,19 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	usecase transactionUseCase
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+type transactionUseCase interface {
+	Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error)
+	List(ctx context.Context, userID string) ([]Transaction, error)
+	Get(ctx context.Context, userID string, id string) (Transaction, error)
+	Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error)
+	Delete(ctx context.Context, userID string, id string) error
+}
+
+func NewHandler(usecase transactionUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type transactionRequest struct {
@@ -37,7 +46,7 @@ func (h *Handler) Create(c *gin.Context) {
 	if !ok {
 		return
 	}
-	transaction, err := h.repo.Create(c.Request.Context(), userID, input)
+	transaction, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -51,7 +60,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	transactions, err := h.repo.List(c.Request.Context(), userID)
+	transactions, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list transactions failed")
 		return
@@ -65,7 +74,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	transaction, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeError(c, err)
 		return
@@ -83,7 +92,7 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
-	transaction, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), input)
+	transaction, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -97,7 +106,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -129,10 +138,6 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		AmountMinor:    req.AmountMinor,
 		TransactionUTC: transactionAt,
 		Note:           req.Note,
-	}
-	if _, err := BalanceDeltas(input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return TransactionInput{}, false
 	}
 	return input, true
 }

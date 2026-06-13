@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -10,10 +11,17 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service authUseCase
 }
 
-func NewHandler(service *Service) *Handler {
+type authUseCase interface {
+	Register(ctx context.Context, email string, password string) (User, TokenPair, error)
+	Login(ctx context.Context, email string, password string) (User, TokenPair, error)
+	Refresh(ctx context.Context, refreshToken string) (User, TokenPair, error)
+	User(ctx context.Context, userID string) (User, error)
+}
+
+func NewHandler(service authUseCase) *Handler {
 	return &Handler{service: service}
 }
 

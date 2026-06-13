@@ -3,25 +3,10 @@ package quickentry
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type Template struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Name        string    `json:"name"`
-	Type        string    `json:"type"`
-	WalletID    string    `json:"wallet_id"`
-	ToWalletID  string    `json:"to_wallet_id,omitempty"`
-	CategoryID  string    `json:"category_id,omitempty"`
-	AmountMinor int64     `json:"amount_minor"`
-	Note        string    `json:"note"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
 
 type Repository struct {
 	pool *pgxpool.Pool
@@ -33,15 +18,16 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 func (r *Repository) Create(ctx context.Context, userID string, template Template) (Template, error) {
 	if err := r.ensureRefs(ctx, userID, template); err != nil {
-		return Template{}, err
+		return Template{}, translateNotFound(err)
 	}
 
-	return scanTemplate(r.pool.QueryRow(ctx, `
+	created, err := scanTemplate(r.pool.QueryRow(ctx, `
 		INSERT INTO quick_entry_templates (user_id, name, type, wallet_id, to_wallet_id, category_id, amount_minor, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, note, created_at, updated_at
 	`, userID, template.Name, template.Type, template.WalletID, nullableUUID(template.ToWalletID), nullableUUID(template.CategoryID), template.AmountMinor, template.Note))
+	return created, translateNotFound(err)
 }
 
 func (r *Repository) List(ctx context.Context, userID string) ([]Template, error) {
@@ -69,20 +55,21 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Template, error
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Template, error) {
-	return scanTemplate(r.pool.QueryRow(ctx, `
+	template, err := scanTemplate(r.pool.QueryRow(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, note, created_at, updated_at
 		FROM quick_entry_templates
 		WHERE user_id = $1 AND id = $2
 	`, userID, id))
+	return template, translateNotFound(err)
 }
 
 func (r *Repository) Update(ctx context.Context, userID string, id string, template Template) (Template, error) {
 	if err := r.ensureRefs(ctx, userID, template); err != nil {
-		return Template{}, err
+		return Template{}, translateNotFound(err)
 	}
 
-	return scanTemplate(r.pool.QueryRow(ctx, `
+	updated, err := scanTemplate(r.pool.QueryRow(ctx, `
 		UPDATE quick_entry_templates
 		SET name = $3, type = $4, wallet_id = $5, to_wallet_id = $6, category_id = $7,
 			amount_minor = $8, note = $9, updated_at = now()
@@ -90,6 +77,7 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, templ
 		RETURNING id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, note, created_at, updated_at
 	`, userID, id, template.Name, template.Type, template.WalletID, nullableUUID(template.ToWalletID), nullableUUID(template.CategoryID), template.AmountMinor, template.Note))
+	return updated, translateNotFound(err)
 }
 
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
@@ -98,7 +86,7 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -124,7 +112,7 @@ func (r *Repository) ensureWallet(ctx context.Context, userID string, walletID s
 		return err
 	}
 	if !exists {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -145,7 +133,7 @@ func (r *Repository) ensureCategory(ctx context.Context, userID string, category
 		return err
 	}
 	if !exists {
-		return pgx.ErrNoRows
+		return ErrNotFound
 	}
 	return nil
 }
@@ -179,6 +167,9 @@ func nullableUUID(value string) any {
 	return value
 }
 
-func NotFound(err error) bool {
-	return errors.Is(err, pgx.ErrNoRows)
+func translateNotFound(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }

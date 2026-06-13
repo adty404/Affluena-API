@@ -1,6 +1,7 @@
 package debt
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -11,11 +12,20 @@ import (
 )
 
 type Handler struct {
-	repository *Repository
+	usecase debtUseCase
 }
 
-func NewHandler(repository *Repository) *Handler {
-	return &Handler{repository: repository}
+type debtUseCase interface {
+	Create(ctx context.Context, userID string, input DebtInput) (Debt, error)
+	List(ctx context.Context, userID string) ([]Debt, error)
+	Get(ctx context.Context, userID string, id string) (Debt, error)
+	Update(ctx context.Context, userID string, id string, update DebtUpdate) (Debt, error)
+	Delete(ctx context.Context, userID string, id string) error
+	Pay(ctx context.Context, userID string, id string, amountMinor int64, paidAt time.Time, note string) (DebtPayment, error)
+}
+
+func NewHandler(usecase debtUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type createRequest struct {
@@ -52,7 +62,7 @@ func (h *Handler) Create(c *gin.Context) {
 	if !ok {
 		return
 	}
-	created, err := h.repository.Create(c.Request.Context(), userID, input)
+	created, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
 		writeError(c, err, "debt not found")
 		return
@@ -65,7 +75,7 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	debts, err := h.repository.List(c.Request.Context(), userID)
+	debts, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list debts failed")
 		return
@@ -78,7 +88,7 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	debt, err := h.repository.Get(c.Request.Context(), userID, c.Param("id"))
+	debt, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeError(c, err, "debt not found")
 		return
@@ -95,7 +105,7 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
-	updated, err := h.repository.Update(c.Request.Context(), userID, c.Param("id"), update)
+	updated, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), update)
 	if err != nil {
 		writeError(c, err, "debt not found")
 		return
@@ -108,7 +118,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.repository.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeError(c, err, "debt not found")
 		return
 	}
@@ -124,7 +134,7 @@ func (h *Handler) Pay(c *gin.Context) {
 	if !ok {
 		return
 	}
-	payment, err := h.repository.Pay(c.Request.Context(), userID, c.Param("id"), amountMinor, paidAt, note)
+	payment, err := h.usecase.Pay(c.Request.Context(), userID, c.Param("id"), amountMinor, paidAt, note)
 	if err != nil {
 		writeError(c, err, "debt not found")
 		return

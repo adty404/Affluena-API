@@ -10,26 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Subscription struct {
-	ID           string             `json:"id"`
-	UserID       string             `json:"user_id"`
-	Name         string             `json:"name"`
-	WalletID     string             `json:"wallet_id"`
-	CategoryID   string             `json:"category_id"`
-	AmountMinor  int64              `json:"amount_minor"`
-	BillingCycle BillingCycle       `json:"billing_cycle"`
-	NextDueDate  time.Time          `json:"next_due_date"`
-	Status       SubscriptionStatus `json:"status"`
-	Note         string             `json:"note"`
-	CreatedAt    time.Time          `json:"created_at"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-}
-
-type SubscriptionPayment struct {
-	Subscription Subscription            `json:"subscription"`
-	Transaction  transaction.Transaction `json:"transaction"`
-}
-
 type SubscriptionRepository struct {
 	pool            *pgxpool.Pool
 	transactionRepo *transaction.Repository
