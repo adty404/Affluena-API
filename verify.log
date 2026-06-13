@@ -1,0 +1,588 @@
+
+==> Check Go formatting
+
+==> Run unit tests
+?   	affluena-api/cmd/api	[no test files]
+ok  	affluena-api/internal/apilog	0.384s
+ok  	affluena-api/internal/auth	1.238s
+ok  	affluena-api/internal/budget	1.224s
+ok  	affluena-api/internal/caldate	1.604s
+ok  	affluena-api/internal/category	2.121s
+ok  	affluena-api/internal/config	2.541s
+?   	affluena-api/internal/dashboard	[no test files]
+ok  	affluena-api/internal/db	2.977s
+ok  	affluena-api/internal/debt	3.352s
+?   	affluena-api/internal/export	[no test files]
+ok  	affluena-api/internal/goal	3.851s
+ok  	affluena-api/internal/httpx	4.500s
+?   	affluena-api/internal/page	[no test files]
+ok  	affluena-api/internal/quickentry	4.968s
+ok  	affluena-api/internal/recurring	4.608s
+ok  	affluena-api/internal/server	4.938s
+?   	affluena-api/internal/tag	[no test files]
+ok  	affluena-api/internal/tracker	4.989s
+ok  	affluena-api/internal/transaction	5.013s
+ok  	affluena-api/internal/wallet	4.822s
+
+==> Run go vet
+
+==> Build API
+
+==> Validate Postman collection JSON
+
+==> Rebuild and start Docker Compose
+ Image affluena-api-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 522B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 338B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/alpine:3.22
+#3 DONE 2.9s
+
+#4 [internal] load metadata for docker.io/library/golang:1.26-alpine
+#4 DONE 2.9s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [build 1/6] FROM docker.io/library/golang:1.26-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c
+#6 resolve docker.io/library/golang:1.26-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c 0.0s done
+#6 DONE 0.0s
+
+#7 [stage-1 1/4] FROM docker.io/library/alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601
+#7 resolve docker.io/library/alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 102.02kB 0.1s done
+#8 DONE 0.1s
+
+#9 [build 2/6] WORKDIR /src
+#9 CACHED
+
+#10 [build 3/6] COPY go.mod go.sum ./
+#10 CACHED
+
+#11 [build 4/6] RUN go mod download
+#11 CACHED
+
+#12 [build 5/6] COPY . .
+#12 DONE 0.1s
+
+#13 [build 6/6] RUN go build -o /bin/affluena-api ./cmd/api
+#13 DONE 11.2s
+
+#14 [stage-1 2/4] WORKDIR /app
+#14 CACHED
+
+#15 [stage-1 3/4] COPY --from=build /bin/affluena-api /app/affluena-api
+#15 CACHED
+
+#16 [stage-1 4/4] COPY migrations /app/migrations
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 exporting manifest sha256:e27324a3546d17c96b02159a6ea11f58ac53a2792764330736e2e87e90794c15 done
+#17 exporting config sha256:bb919b055633f5ea912e303cf55f925b6b4b3e0ee2c23e588c79fef99d740948 done
+#17 exporting attestation manifest sha256:b442d80ddcb075e438d0f7bfe435d6d4f6a188b40f734e58bb16dc215e34da11 done
+#17 exporting manifest list sha256:c9fe39c4b736a66da48308111361ad8bf0aa528916aa2242093e1be0e38590fc done
+#17 naming to docker.io/library/affluena-api-api:latest done
+#17 unpacking to docker.io/library/affluena-api-api:latest done
+#17 DONE 0.0s
+
+#18 resolving provenance for metadata file
+#18 DONE 0.0s
+ Image affluena-api-api Built 
+ Container affluena-api-postgres-1 Running 
+ Container affluena-api-api-1 Recreate 
+ Container affluena-api-api-1 Recreated 
+ Container affluena-api-postgres-1 Waiting 
+ Container affluena-api-postgres-1 Healthy 
+ Container affluena-api-api-1 Starting 
+ Container affluena-api-api-1 Started 
+
+==> Run integration tests
+ok  	affluena-api/internal/db	0.348s
+ok  	affluena-api/internal/debt	0.428s
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> affluena-api/internal/server.NewRouter.func1 (3 handlers)
+[GIN-debug] POST   /api/v1/auth/register     --> affluena-api/internal/auth.(*Handler).Register-fm (3 handlers)
+[GIN-debug] POST   /api/v1/auth/login        --> affluena-api/internal/auth.(*Handler).Login-fm (3 handlers)
+[GIN-debug] POST   /api/v1/auth/refresh      --> affluena-api/internal/auth.(*Handler).Refresh-fm (3 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> affluena-api/internal/auth.(*Handler).Me-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/summary --> affluena-api/internal/dashboard.(*Handler).Summary-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/cashflow-trend --> affluena-api/internal/dashboard.(*Handler).CashflowTrend-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/expense-distribution --> affluena-api/internal/dashboard.(*Handler).ExpenseDistribution-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/forecast --> affluena-api/internal/dashboard.(*Handler).Forecast-fm (4 handlers)
+[GIN-debug] GET    /api/v1/export/csv        --> affluena-api/internal/export.(*Handler).ExportCSV-fm (4 handlers)
+[GIN-debug] POST   /api/v1/wallets           --> affluena-api/internal/wallet.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/wallets           --> affluena-api/internal/wallet.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/wallets/:id/invites --> affluena-api/internal/wallet.(*Handler).InviteMember-fm (4 handlers)
+[GIN-debug] PATCH  /api/v1/wallets/:id/members/:member_id --> affluena-api/internal/wallet.(*Handler).RespondInvite-fm (4 handlers)
+[GIN-debug] POST   /api/v1/categories        --> affluena-api/internal/category.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/categories        --> affluena-api/internal/category.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/tags              --> affluena-api/internal/tag.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/tags              --> affluena-api/internal/tag.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/transactions      --> affluena-api/internal/transaction.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/transactions      --> affluena-api/internal/transaction.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/quick-entry-templates --> affluena-api/internal/quickentry.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/quick-entry-templates --> affluena-api/internal/quickentry.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/quick-entry-templates/:id/execute --> affluena-api/internal/quickentry.(*Handler).Execute-fm (4 handlers)
+[GIN-debug] POST   /api/v1/category-budgets  --> affluena-api/internal/budget.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/category-budgets  --> affluena-api/internal/budget.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/debts             --> affluena-api/internal/debt.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/debts             --> affluena-api/internal/debt.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/debts/:id/pay     --> affluena-api/internal/debt.(*Handler).Pay-fm (4 handlers)
+[GIN-debug] POST   /api/v1/goals             --> affluena-api/internal/goal.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/goals             --> affluena-api/internal/goal.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/goals/:id         --> affluena-api/internal/goal.(*Handler).Get-fm (4 handlers)
+[GIN-debug] POST   /api/v1/goals/:id/members --> affluena-api/internal/goal.(*Handler).InviteMember-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/goals/:id/members/:user_id/respond --> affluena-api/internal/goal.(*Handler).RespondInvite-fm (4 handlers)
+[GIN-debug] POST   /api/v1/installments      --> affluena-api/internal/tracker.(*Handler).CreateInstallment-fm (4 handlers)
+[GIN-debug] GET    /api/v1/installments      --> affluena-api/internal/tracker.(*Handler).ListInstallments-fm (4 handlers)
+[GIN-debug] GET    /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).GetInstallment-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).UpdateInstallment-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).DeleteInstallment-fm (4 handlers)
+[GIN-debug] POST   /api/v1/installments/:id/pay --> affluena-api/internal/tracker.(*Handler).PayInstallment-fm (4 handlers)
+[GIN-debug] POST   /api/v1/subscriptions     --> affluena-api/internal/tracker.(*Handler).CreateSubscription-fm (4 handlers)
+[GIN-debug] GET    /api/v1/subscriptions     --> affluena-api/internal/tracker.(*Handler).ListSubscriptions-fm (4 handlers)
+[GIN-debug] GET    /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).GetSubscription-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).UpdateSubscription-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).DeleteSubscription-fm (4 handlers)
+[GIN-debug] POST   /api/v1/subscriptions/:id/pay --> affluena-api/internal/tracker.(*Handler).PaySubscription-fm (4 handlers)
+[GIN-debug] POST   /api/v1/recurring-transactions --> affluena-api/internal/recurring.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/recurring-transactions --> affluena-api/internal/recurring.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/recurring-transactions/:id/run --> affluena-api/internal/recurring.(*Handler).RunManual-fm (4 handlers)
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=82 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:07 INFO HTTP Request method=GET path=/api/v1/auth/me status=200 latency_ms=0 ip="" user_id=0x8c16d3000a0
+--- FAIL: TestAPILogsAreSaved (0.18s)
+    apilog_integration_test.go:51: query api_logs: can't scan into dest[4] (col: max): cannot scan NULL into *string
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> affluena-api/internal/server.NewRouter.func1 (3 handlers)
+[GIN-debug] POST   /api/v1/auth/register     --> affluena-api/internal/auth.(*Handler).Register-fm (3 handlers)
+[GIN-debug] POST   /api/v1/auth/login        --> affluena-api/internal/auth.(*Handler).Login-fm (3 handlers)
+[GIN-debug] POST   /api/v1/auth/refresh      --> affluena-api/internal/auth.(*Handler).Refresh-fm (3 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> affluena-api/internal/auth.(*Handler).Me-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/summary --> affluena-api/internal/dashboard.(*Handler).Summary-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/cashflow-trend --> affluena-api/internal/dashboard.(*Handler).CashflowTrend-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/expense-distribution --> affluena-api/internal/dashboard.(*Handler).ExpenseDistribution-fm (4 handlers)
+[GIN-debug] GET    /api/v1/dashboard/forecast --> affluena-api/internal/dashboard.(*Handler).Forecast-fm (4 handlers)
+[GIN-debug] GET    /api/v1/export/csv        --> affluena-api/internal/export.(*Handler).ExportCSV-fm (4 handlers)
+[GIN-debug] POST   /api/v1/wallets           --> affluena-api/internal/wallet.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/wallets           --> affluena-api/internal/wallet.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/wallets/:id       --> affluena-api/internal/wallet.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/wallets/:id/invites --> affluena-api/internal/wallet.(*Handler).InviteMember-fm (4 handlers)
+[GIN-debug] PATCH  /api/v1/wallets/:id/members/:member_id --> affluena-api/internal/wallet.(*Handler).RespondInvite-fm (4 handlers)
+[GIN-debug] POST   /api/v1/categories        --> affluena-api/internal/category.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/categories        --> affluena-api/internal/category.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/categories/:id    --> affluena-api/internal/category.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/tags              --> affluena-api/internal/tag.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/tags              --> affluena-api/internal/tag.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/tags/:id          --> affluena-api/internal/tag.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/transactions      --> affluena-api/internal/transaction.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/transactions      --> affluena-api/internal/transaction.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/transactions/:id  --> affluena-api/internal/transaction.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/quick-entry-templates --> affluena-api/internal/quickentry.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/quick-entry-templates --> affluena-api/internal/quickentry.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/quick-entry-templates/:id --> affluena-api/internal/quickentry.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/quick-entry-templates/:id/execute --> affluena-api/internal/quickentry.(*Handler).Execute-fm (4 handlers)
+[GIN-debug] POST   /api/v1/category-budgets  --> affluena-api/internal/budget.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/category-budgets  --> affluena-api/internal/budget.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/category-budgets/:id --> affluena-api/internal/budget.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/debts             --> affluena-api/internal/debt.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/debts             --> affluena-api/internal/debt.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/debts/:id         --> affluena-api/internal/debt.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/debts/:id/pay     --> affluena-api/internal/debt.(*Handler).Pay-fm (4 handlers)
+[GIN-debug] POST   /api/v1/goals             --> affluena-api/internal/goal.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/goals             --> affluena-api/internal/goal.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/goals/:id         --> affluena-api/internal/goal.(*Handler).Get-fm (4 handlers)
+[GIN-debug] POST   /api/v1/goals/:id/members --> affluena-api/internal/goal.(*Handler).InviteMember-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/goals/:id/members/:user_id/respond --> affluena-api/internal/goal.(*Handler).RespondInvite-fm (4 handlers)
+[GIN-debug] POST   /api/v1/installments      --> affluena-api/internal/tracker.(*Handler).CreateInstallment-fm (4 handlers)
+[GIN-debug] GET    /api/v1/installments      --> affluena-api/internal/tracker.(*Handler).ListInstallments-fm (4 handlers)
+[GIN-debug] GET    /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).GetInstallment-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).UpdateInstallment-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/installments/:id  --> affluena-api/internal/tracker.(*Handler).DeleteInstallment-fm (4 handlers)
+[GIN-debug] POST   /api/v1/installments/:id/pay --> affluena-api/internal/tracker.(*Handler).PayInstallment-fm (4 handlers)
+[GIN-debug] POST   /api/v1/subscriptions     --> affluena-api/internal/tracker.(*Handler).CreateSubscription-fm (4 handlers)
+[GIN-debug] GET    /api/v1/subscriptions     --> affluena-api/internal/tracker.(*Handler).ListSubscriptions-fm (4 handlers)
+[GIN-debug] GET    /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).GetSubscription-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).UpdateSubscription-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/subscriptions/:id --> affluena-api/internal/tracker.(*Handler).DeleteSubscription-fm (4 handlers)
+[GIN-debug] POST   /api/v1/subscriptions/:id/pay --> affluena-api/internal/tracker.(*Handler).PaySubscription-fm (4 handlers)
+[GIN-debug] POST   /api/v1/recurring-transactions --> affluena-api/internal/recurring.(*Handler).Create-fm (4 handlers)
+[GIN-debug] GET    /api/v1/recurring-transactions --> affluena-api/internal/recurring.(*Handler).List-fm (4 handlers)
+[GIN-debug] GET    /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Get-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Update-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/recurring-transactions/:id --> affluena-api/internal/recurring.(*Handler).Delete-fm (4 handlers)
+[GIN-debug] POST   /api/v1/recurring-transactions/:id/run --> affluena-api/internal/recurring.(*Handler).RunManual-fm (4 handlers)
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=74 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d5cda20
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d682220
+2026/06/13 23:20:07 INFO HTTP Request method=GET path=/api/v1/categories status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cdd60
+2026/06/13 23:20:07 INFO HTTP Request method=GET path="/api/v1/categories?type=income" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5ea0b0
+2026/06/13 23:20:07 INFO HTTP Request method=GET path="/api/v1/categories?type=expense" status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea270
+2026/06/13 23:20:07 INFO HTTP Request method=GET path="/api/v1/categories?type=transfer" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea3c0
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=68 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d7064c0
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5021c0
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d502460
+2026/06/13 23:20:07 INFO HTTP Request method=POST path=/api/v1/categories status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502640
+2026/06/13 23:20:07 INFO HTTP Request method=PUT path=/api/v1/categories/451f1919-f6ce-4cb9-94b5-12937d89b260 status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5027f0
+2026/06/13 23:20:07 INFO HTTP Request method=GET path=/api/v1/categories status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d706ae0
+2026/06/13 23:20:07 INFO HTTP Request method=DELETE path=/api/v1/categories/451f1919-f6ce-4cb9-94b5-12937d89b260 status=400 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d5029a0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d5ea070
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea220
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502eb0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503070
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503230
+2026/06/13 23:20:08 INFO HTTP Request method=PUT path=/api/v1/categories/2ca4b705-c241-4170-963c-71567173f8c3 status=400 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503440
+2026/06/13 23:20:08 INFO HTTP Request method=GET path=/api/v1/categories status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea6b0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d5039d0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d683100
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503c00
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503db0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/category-budgets status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8190
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d4f86c0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d391710
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d391c50
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/cashflow-trend?months=4" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cc050
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/expense-distribution?month=2026-06" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8c20
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/forecast?month=2026-06" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8eb0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/cashflow-trend?months=0" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d682270
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/cashflow-trend?months=13" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d6823a0
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/cashflow-trend?months=abc" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d6824d0
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/cashflow-trend?months=3" status=200 latency_ms=7 ip=192.0.2.1 user_id=0x8c16d4f8310
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/expense-distribution?month=2026-06" status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d300220
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/forecast?month=2026-06" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300410
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d3005b0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300760
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d3009f0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/category-budgets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300bf0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d300ea0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d301060
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8930
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d4f8c00
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/expense-distribution?month=2026-06" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d301380
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/forecast?month=2026-06" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8e50
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=69 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5eac50
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cc510
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=9 ip=192.0.2.1 user_id=0x8c16d5cc270
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/forecast?month=2026-06" status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d90c1d0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=72 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=65 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d5eba60
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90c660
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ebcc0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c890
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=8 ip=192.0.2.1 user_id=0x8c16d90cb50
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d90ce00
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/category-budgets status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d90d010
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/subscriptions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300310
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/installments status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cc7f0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/debts status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d4f8340
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ccb20
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f85a0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd270
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/summary?month=2026-06" status=200 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d5cd980
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/summary?month=2026-06" status=200 latency_ms=7 ip=192.0.2.1 user_id=0x8c16d4f8930
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/dashboard/summary?month=2026/06" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8a80
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d300380
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d300540
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300730
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d502780
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502940
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d3009e0
+2026/06/13 23:20:08 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300ca0
+2026/06/13 23:20:08 INFO HTTP Request method=GET path=/api/v1/export/csv status=200 latency_ms=2 ip="" user_id=0x8c16d300df0
+2026/06/13 23:20:08 INFO HTTP Request method=GET path="/api/v1/export/csv?from=2025-02-01T00:00:00Z" status=200 latency_ms=1 ip="" user_id=0x8c16d502c50
+2026/06/13 23:20:08 INFO HTTP Request method=GET path=/api/v1/export/csv status=200 latency_ms=0 ip="" user_id=0x8c16d502d70
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=68 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f80b0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503e90
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d3014d0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea040
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d4f8430
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/e752641f-7d40-4338-bbfb-88bad6366cae status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cc210
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d7060e0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d4f80b0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8350
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8530
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8800
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f89a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/e752641f-7d40-4338-bbfb-88bad6366cae status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8ae0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/transactions/c9b84dae-3a9e-45ab-9bea-e2ccd08809b2 status=200 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d4f8e50
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f9ab0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/e752641f-7d40-4338-bbfb-88bad6366cae status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d7067b0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f9d60
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f9ee0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/e752641f-7d40-4338-bbfb-88bad6366cae status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300150
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/transactions/7b1fea92-e4f1-4b58-9e1e-8f687dd0bc99 status=204 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d706af0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/195fbdbe-ea04-4df9-b9bf-d6f76c629476 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300340
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/e752641f-7d40-4338-bbfb-88bad6366cae status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d3004a0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=75 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/auth/me status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d390920
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d391260
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals status=201 latency_ms=15 ip=192.0.2.1 user_id=0x8c16d300260
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d706290
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300530
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members status=400 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea210
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members status=200 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d5ea530
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members/c7e243de-6d11-4ba4-9d9c-5a4288b15652/respond status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea760
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members/c7e243de-6d11-4ba4-9d9c-5a4288b15652/respond status=200 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d5ea980
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624/members/c7e243de-6d11-4ba4-9d9c-5a4288b15652/respond status=400 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d7066a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d502170
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d706870
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502480
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d706c10
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d706ed0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/goals/46b5dc44-42cb-4eb6-814b-347e76d51624 status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d502800
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/7e089010-0521-4726-81f7-5398464017cc status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d7070e0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/29950307-6f49-41ec-b8eb-2f7929e6f6e9 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d707260
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=68 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/auth/me status=200 latency_ms=7 ip=192.0.2.1 user_id=0x8c16d5ebd40
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals status=201 latency_ms=7 ip=192.0.2.1 user_id=0x8c16d5cc160
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals status=201 latency_ms=7 ip=192.0.2.1 user_id=0x8c16d5cc270
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90c1f0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d90c4e0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cc8c0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members/7fb5ed1e-1191-4711-8044-55851128e8c4/respond status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cce80
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5020e0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members/e427f6d9-06cc-487e-af04-6615d2d2560f/respond status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cd040
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d706100
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/goals status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd250
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cd470
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d706290
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members/e427f6d9-06cc-487e-af04-6615d2d2560f/respond status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cd690
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d502860
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/goals/08474351-3484-4c40-9206-5eece54cb395/members/7fb5ed1e-1191-4711-8044-55851128e8c4/respond status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502af0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d5cdcc0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d3000a0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300270
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d7076a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300530
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/d453a832-c127-483f-878e-61a6394a8a7a status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300680
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/wallets/d453a832-c127-483f-878e-61a6394a8a7a status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300880
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/wallets/d453a832-c127-483f-878e-61a6394a8a7a status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d3009d0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/wallets/d453a832-c127-483f-878e-61a6394a8a7a status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d707a00
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/categories status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d707bb0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/categories/4f25451c-7f39-439d-b364-0b6b626b0170 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502eb0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/categories/4f25451c-7f39-439d-b364-0b6b626b0170 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503030
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/categories/4f25451c-7f39-439d-b364-0b6b626b0170 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d503180
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/categories/4f25451c-7f39-439d-b364-0b6b626b0170 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5032d0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503440
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d3000d0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/transactions status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d502160
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/transactions/3a45ab76-562a-4862-8beb-034ece66ef45 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5022a0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/transactions/3a45ab76-562a-4862-8beb-034ece66ef45 status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5023e0
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/transactions/3a45ab76-562a-4862-8beb-034ece66ef45 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea030
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/transactions/3a45ab76-562a-4862-8beb-034ece66ef45 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5025e0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/quick-entry-templates status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea2f0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/quick-entry-templates status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea500
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/quick-entry-templates/66ae5c32-4598-45dc-b265-d3a3eaa12ab8 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ea640
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/quick-entry-templates/66ae5c32-4598-45dc-b265-d3a3eaa12ab8 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5029a0
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/quick-entry-templates/66ae5c32-4598-45dc-b265-d3a3eaa12ab8 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502b00
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/quick-entry-templates/66ae5c32-4598-45dc-b265-d3a3eaa12ab8 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502c50
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/quick-entry-templates/66ae5c32-4598-45dc-b265-d3a3eaa12ab8/execute status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d3004d0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/quick-entry-templates status=400 latency_ms=29 ip=192.0.2.1 user_id=0x8c16d5ea910
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/category-budgets status=201 latency_ms=34 ip=192.0.2.1 user_id=0x8c16d5cc200
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/category-budgets?month=2026-06" status=200 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d3007a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/category-budgets/e0d868fa-b7fa-4276-80be-47c13d99fd9d status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cc4e0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/category-budgets/e0d868fa-b7fa-4276-80be-47c13d99fd9d status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5eaab0
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/category-budgets/e0d868fa-b7fa-4276-80be-47c13d99fd9d status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5eac50
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/category-budgets/e0d868fa-b7fa-4276-80be-47c13d99fd9d status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300a60
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/category-budgets status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5eae30
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/debts status=201 latency_ms=17 ip=192.0.2.1 user_id=0x8c16d5eb910
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/debts status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5ebb20
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/debts/9f246fa6-a425-40d3-a1f3-84f5e2350240 status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cc7f0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/debts/9f246fa6-a425-40d3-a1f3-84f5e2350240 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cc980
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/debts/9f246fa6-a425-40d3-a1f3-84f5e2350240 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ccad0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/debts/9f246fa6-a425-40d3-a1f3-84f5e2350240 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ebde0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/debts/9f246fa6-a425-40d3-a1f3-84f5e2350240/pay status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300bc0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/debts status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d300d80
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/installments status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cce70
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/installments status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd080
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/installments/2aa03507-002b-468b-96a2-9474d252c393 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cd1c0
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/installments/2aa03507-002b-468b-96a2-9474d252c393 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cd370
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/installments/2aa03507-002b-468b-96a2-9474d252c393 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d7060d0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/installments/2aa03507-002b-468b-96a2-9474d252c393 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cd550
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/installments/2aa03507-002b-468b-96a2-9474d252c393/pay status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cd690
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/installments status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d706390
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/subscriptions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd9c0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/subscriptions status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90c230
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/subscriptions/a08dd237-dca3-4d6b-a637-210c9e09b5ed status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c030
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/subscriptions/a08dd237-dca3-4d6b-a637-210c9e09b5ed status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c1d0
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/subscriptions/a08dd237-dca3-4d6b-a637-210c9e09b5ed status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c410
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/subscriptions/a08dd237-dca3-4d6b-a637-210c9e09b5ed status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5021e0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/subscriptions/a08dd237-dca3-4d6b-a637-210c9e09b5ed/pay status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c5e0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/subscriptions status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c780
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/recurring-transactions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90cad0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/recurring-transactions status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d7061c0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/recurring-transactions/b614abff-9382-459b-a234-eb187e7b5971 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d706340
+2026/06/13 23:20:09 INFO HTTP Request method=PUT path=/api/v1/recurring-transactions/b614abff-9382-459b-a234-eb187e7b5971 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502520
+2026/06/13 23:20:09 INFO HTTP Request method=DELETE path=/api/v1/recurring-transactions/b614abff-9382-459b-a234-eb187e7b5971 status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d7065d0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path=/api/v1/recurring-transactions/b614abff-9382-459b-a234-eb187e7b5971 status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d502720
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/recurring-transactions/b614abff-9382-459b-a234-eb187e7b5971/run status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d706780
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/recurring-transactions status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502940
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=69 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d502da0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d707260
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d7074e0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d7076a0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d707850
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d707b40
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/quick-entry-templates status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d707dc0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/category-budgets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503420
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/debts status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d5037f0
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/installments status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d503a40
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/subscriptions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503c90
+2026/06/13 23:20:09 INFO HTTP Request method=POST path=/api/v1/recurring-transactions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300460
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/wallets?limit=2&offset=1&sort=name_asc" status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d5ea0a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/categories?limit=1&offset=0&sort=name_asc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd210
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/transactions?limit=1&offset=0&sort=transaction_at_desc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd4a0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/quick-entry-templates?limit=1&offset=0&sort=name_asc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cd700
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/category-budgets?month=2026-06&limit=1&offset=0&sort=created_at_desc" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5cda70
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/debts?limit=1&offset=0&sort=opened_at_desc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cdd90
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/installments?limit=1&offset=0&sort=created_at_desc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea5b0
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/subscriptions?limit=1&offset=0&sort=next_due_date_asc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea860
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/recurring-transactions?limit=1&offset=0&sort=next_run_at_asc" status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5eab00
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/wallets?limit=0" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5eac60
+2026/06/13 23:20:09 INFO HTTP Request method=GET path="/api/v1/wallets?sort=unknown" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5ead90
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d5eb400
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90c380
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/subscriptions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d90c640
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/subscriptions/bee5b72e-603d-449c-bd8f-0f990ef93a48 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5eb6f0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/subscriptions status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5eb8f0
+2026/06/13 23:20:10 INFO HTTP Request method=PUT path=/api/v1/subscriptions/bee5b72e-603d-449c-bd8f-0f990ef93a48 status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d90c9d0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/subscriptions/bee5b72e-603d-449c-bd8f-0f990ef93a48 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90cb40
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/subscriptions/bee5b72e-603d-449c-bd8f-0f990ef93a48/pay status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d90cea0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d90d120
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90d380
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/tags status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d706180
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5021b0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d706430
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d7069d0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/transactions/d8e74a62-b1ff-4c76-835a-e265cee2a605 status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d90d640
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?tag_id=5f6ae67c-19de-4363-a22f-506f6eed2727" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d90d880
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?tag_id=00000000-0000-0000-0000-000000000000" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d90da80
+2026/06/13 23:20:10 INFO HTTP Request method=PUT path=/api/v1/transactions/d8e74a62-b1ff-4c76-835a-e265cee2a605 status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d90def0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/transactions/d8e74a62-b1ff-4c76-835a-e265cee2a605 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d5cc260
+2026/06/13 23:20:10 INFO HTTP Request method=DELETE path=/api/v1/tags/c33e3e7d-1283-4330-a8c7-89859e7ab42c status=204 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5cc380
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/transactions/d8e74a62-b1ff-4c76-835a-e265cee2a605 status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d7075e0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=68 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d502370
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d502550
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300260
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d502830
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=404 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300630
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets/88012a64-f6e9-445c-b265-1696d8b571dd status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d502a80
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d502e80
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets/88012a64-f6e9-445c-b265-1696d8b571dd status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d3008e0
+2026/06/13 23:20:10 INFO HTTP Request method=PUT path=/api/v1/transactions/f2c953f9-2a03-45dc-bb27-7915f283ea54 status=404 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d300c60
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets/88012a64-f6e9-445c-b265-1696d8b571dd status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d503130
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/transactions/f2c953f9-2a03-45dc-bb27-7915f283ea54 status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5032d0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=404 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d301020
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets/88012a64-f6e9-445c-b265-1696d8b571dd status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d301160
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d707210
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f81d0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/tags status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f83a0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d707760
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/transactions/fccd386e-2923-49e7-8143-794a8bd89f4d status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f8610
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?tag_id=not-a-uuid" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8760
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=67 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f89a0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d707cd0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f8ba0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f8da0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=6 ip=192.0.2.1 user_id=0x8c16d4f8160
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d4f8510
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d4f8830
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f8b50
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?type=expense" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d5ea480
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?wallet_id=57258811-6dfb-416a-a7b8-e24d5bb03d4c" status=200 latency_ms=2 ip=192.0.2.1 user_id=0x8c16d4f9a40
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?category_id=2e72bd8b-bd0a-43c3-91a7-dd7e3d0908a3" status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f9c90
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?from=2026-06-02&to=2026-06-03" status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d4f9ec0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?type=payday" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c180
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/transactions?from=2026/06/01" status=400 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c2d0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/auth/register status=201 latency_ms=66 ip=192.0.2.1 user_id=<nil>
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/auth/me status=200 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d391820
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300210
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets/71e0d8b9-2f71-4be0-a191-cecf936cf5fb/invites status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d90c0d0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=3 ip=192.0.2.1 user_id=0x8c16d300170
+2026/06/13 23:20:10 INFO HTTP Request method=PATCH path=/api/v1/wallets/71e0d8b9-2f71-4be0-a191-cecf936cf5fb/members/9734462f-01c5-494d-9a64-735327bdfaac status=200 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d300420
+2026/06/13 23:20:10 INFO HTTP Request method=GET path=/api/v1/wallets status=200 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c3f0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/wallets/71e0d8b9-2f71-4be0-a191-cecf936cf5fb/invites status=404 latency_ms=0 ip=192.0.2.1 user_id=0x8c16d90c590
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/categories status=201 latency_ms=1 ip=192.0.2.1 user_id=0x8c16d5ea0c0
+2026/06/13 23:20:10 INFO HTTP Request method=POST path=/api/v1/transactions status=201 latency_ms=4 ip=192.0.2.1 user_id=0x8c16d90c8e0
+2026/06/13 23:20:10 INFO HTTP Request method=GET path="/api/v1/dashboard/summary?month=2026-06" status=200 latency_ms=5 ip=192.0.2.1 user_id=0x8c16d90cb80
+FAIL
+FAIL	affluena-api/internal/server	4.020s
+FAIL

@@ -1,12 +1,26 @@
 package apilog
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+type responseBodyWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w responseBodyWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
 
 // APILogMiddleware provides structured logging to stdout using slog
 // and saves the HTTP request logs into the database asynchronously.
@@ -14,22 +28,35 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		raw := c.Request.URL.RawQuery
-
-		// Process request
-		c.Next()
+		rawQuery := c.Request.URL.RawQuery
 
 		// Do not log health checks to avoid spamming the logs
 		if path == "/healthz" {
+			c.Next()
 			return
 		}
+
+		// 1. Intercept Request Body
+		var reqBodyBytes []byte
+		if c.Request.Body != nil {
+			reqBodyBytes, _ = io.ReadAll(c.Request.Body)
+			// Restore the io.ReadCloser to its original state
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(reqBodyBytes))
+		}
+
+		// 2. Intercept Response Body
+		w := &responseBodyWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
+		c.Writer = w
+
+		// Process request
+		c.Next()
 
 		end := time.Now()
 		latency := end.Sub(start)
 		latencyMs := int(latency.Milliseconds())
 
-		if raw != "" {
-			path = path + "?" + raw
+		if rawQuery != "" {
+			path = path + "?" + rawQuery
 		}
 
 		clientIP := c.ClientIP()
@@ -42,6 +69,37 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			if uidStr, ok := uid.(string); ok && uidStr != "" {
 				userID = &uidStr
 			}
+		}
+
+		// 3. Process Payloads & Mask Passwords
+		var requestPayload *string
+		if len(reqBodyBytes) > 0 {
+			reqStr := string(reqBodyBytes)
+			if strings.Contains(path, "/auth/login") || strings.Contains(path, "/auth/register") {
+				// Simple masking for auth endpoints
+				reqStr = `{"masked": true}`
+			} else {
+				// Optionally format JSON if it's JSON
+				if json.Valid(reqBodyBytes) {
+					var compacted bytes.Buffer
+					if err := json.Compact(&compacted, reqBodyBytes); err == nil {
+						reqStr = compacted.String()
+					}
+				}
+			}
+			requestPayload = &reqStr
+		}
+
+		var responsePayload *string
+		if w.body.Len() > 0 {
+			respStr := w.body.String()
+			if json.Valid(w.body.Bytes()) {
+				var compacted bytes.Buffer
+				if err := json.Compact(&compacted, w.body.Bytes()); err == nil {
+					respStr = compacted.String()
+				}
+			}
+			responsePayload = &respStr
 		}
 
 		// 1. Structured Logging (Stdout)
@@ -62,13 +120,15 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 
 			_ = repo.SaveLog(ctx, entry)
 		}(APILog{
-			Method:     method,
-			Path:       path,
-			StatusCode: statusCode,
-			LatencyMs:  latencyMs,
-			ClientIP:   clientIP,
-			UserAgent:  userAgent,
-			UserID:     userID,
+			Method:          method,
+			Path:            path,
+			StatusCode:      statusCode,
+			LatencyMs:       latencyMs,
+			ClientIP:        clientIP,
+			UserAgent:       userAgent,
+			UserID:          userID,
+			RequestPayload:  requestPayload,
+			ResponsePayload: responsePayload,
 		})
 	}
 }
