@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"affluena/internal/page"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,7 +32,7 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateBudg
 	return budget, translateNotFound(err)
 }
 
-func (r *Repository) List(ctx context.Context, userID string, month time.Time) ([]BudgetSummary, error) {
+func (r *Repository) List(ctx context.Context, userID string, month time.Time, pagination page.Params) (page.Result[BudgetSummary], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor,
 			b.created_at, b.updated_at,
@@ -43,10 +45,11 @@ func (r *Repository) List(ctx context.Context, userID string, month time.Time) (
 		LEFT JOIN transactions t ON t.user_id = b.user_id AND t.category_id = b.category_id
 		WHERE b.user_id = $1 AND b.month = $2
 		GROUP BY b.id
-		ORDER BY b.created_at DESC
-	`, userID, month)
+		ORDER BY `+budgetOrderBy(pagination.Sort)+`
+		LIMIT $3 OFFSET $4
+	`, userID, month, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[BudgetSummary]{}, err
 	}
 	defer rows.Close()
 
@@ -54,11 +57,35 @@ func (r *Repository) List(ctx context.Context, userID string, month time.Time) (
 	for rows.Next() {
 		summary, err := scanBudgetSummary(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[BudgetSummary]{}, err
 		}
 		summaries = append(summaries, summary)
 	}
-	return summaries, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[BudgetSummary]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM category_budgets WHERE user_id = $1 AND month = $2`, userID, month).Scan(&total); err != nil {
+		return page.Result[BudgetSummary]{}, err
+	}
+	return page.NewResult(summaries, pagination, total), nil
+}
+
+func budgetOrderBy(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "b.created_at ASC"
+	case "limit_desc":
+		return "b.limit_minor DESC, b.created_at DESC"
+	case "limit_asc":
+		return "b.limit_minor ASC, b.created_at DESC"
+	case "spent_desc":
+		return "spent_minor DESC, b.created_at DESC"
+	case "spent_asc":
+		return "spent_minor ASC, b.created_at DESC"
+	default:
+		return "b.created_at DESC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Budget, error) {

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"affluena/internal/page"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -48,7 +50,8 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 	return insertTransaction(ctx, tx, userID, input)
 }
 
-func (r *Repository) List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error) {
+func (r *Repository) List(ctx context.Context, userID string, filter TransactionFilter, pagination page.Params) (page.Result[Transaction], error) {
+	orderBy := transactionOrderBy(pagination.Sort)
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, transaction_at, note, created_at, updated_at
@@ -59,11 +62,11 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-		ORDER BY transaction_at DESC, created_at DESC
-		LIMIT 100
-	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To))
+		ORDER BY `+orderBy+`
+		LIMIT $7 OFFSET $8
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Transaction]{}, err
 	}
 	defer rows.Close()
 
@@ -71,11 +74,28 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 	for rows.Next() {
 		transaction, err := scanTransaction(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Transaction]{}, err
 		}
 		transactions = append(transactions, transaction)
 	}
-	return transactions, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Transaction]{}, err
+	}
+
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM transactions
+		WHERE user_id = $1
+			AND ($2 = '' OR type = $2)
+			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
+			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
+			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
+			AND ($6::timestamptz IS NULL OR transaction_at < $6)
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To)).Scan(&total); err != nil {
+		return page.Result[Transaction]{}, err
+	}
+	return page.NewResult(transactions, pagination, total), nil
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Transaction, error) {
@@ -302,6 +322,23 @@ func nullableTime(value time.Time) any {
 		return nil
 	}
 	return value
+}
+
+func transactionOrderBy(sort string) string {
+	switch sort {
+	case "transaction_at_asc":
+		return "transaction_at ASC, created_at ASC"
+	case "created_at_desc":
+		return "created_at DESC"
+	case "created_at_asc":
+		return "created_at ASC"
+	case "amount_desc":
+		return "amount_minor DESC, transaction_at DESC"
+	case "amount_asc":
+		return "amount_minor ASC, transaction_at DESC"
+	default:
+		return "transaction_at DESC, created_at DESC"
+	}
 }
 
 func translateNotFound(err error) error {

@@ -5,10 +5,13 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeWalletRepository struct {
 	createInput CreateWalletInput
+	listPage    page.Params
 	created     Wallet
 	listed      []Wallet
 	got         Wallet
@@ -25,11 +28,12 @@ func (f *fakeWalletRepository) Create(ctx context.Context, userID string, input 
 	return f.created, nil
 }
 
-func (f *fakeWalletRepository) List(ctx context.Context, userID string) ([]Wallet, error) {
+func (f *fakeWalletRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error) {
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[Wallet]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeWalletRepository) Get(ctx context.Context, userID string, id string) (Wallet, error) {
@@ -123,7 +127,7 @@ func TestWalletUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", CreateWalletInput{Name: "Cash", Type: "cash"}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+	if _, err := uc.List(context.Background(), "user-1", page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected list repo error, got %v", err)
 	}
 	if _, err := uc.Get(context.Background(), "user-1", "wallet-1"); !errors.Is(err, repoErr) {
@@ -142,9 +146,12 @@ func TestWalletUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1")
-	if err != nil || len(listed) != 1 || listed[0].ID != "wallet-1" {
+	listed, err := uc.List(context.Background(), "user-1", page.Params{Limit: 10, Sort: "created_at_desc"})
+	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "wallet-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
+	}
+	if repo.listPage.Limit != 10 {
+		t.Fatalf("expected pagination to be delegated, got %+v", repo.listPage)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "wallet-1")
 	if err != nil || got.ID != "wallet-1" {

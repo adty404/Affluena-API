@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
@@ -52,17 +53,18 @@ func (r *Repository) Create(ctx context.Context, userID string, input RuleInput)
 		input.AmountMinor, input.Frequency, input.IntervalCount, input.NextRunAt.UTC(), input.EndAt, input.Status, input.Note))
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]Rule, error) {
+func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
 			end_at, last_run_at, status, note, created_at, updated_at
 		FROM recurring_transaction_rules
 		WHERE user_id = $1
-		ORDER BY next_run_at ASC, created_at DESC
-	`, userID)
+		ORDER BY `+recurringOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Rule]{}, err
 	}
 	defer rows.Close()
 
@@ -70,11 +72,35 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Rule, error) {
 	for rows.Next() {
 		rule, err := scanRule(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Rule]{}, err
 		}
 		rules = append(rules, rule)
 	}
-	return rules, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Rule]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM recurring_transaction_rules WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Rule]{}, err
+	}
+	return page.NewResult(rules, pagination, total), nil
+}
+
+func recurringOrderBy(sort string) string {
+	switch sort {
+	case "next_run_at_desc":
+		return "next_run_at DESC, created_at DESC"
+	case "created_at_desc":
+		return "created_at DESC"
+	case "created_at_asc":
+		return "created_at ASC"
+	case "name_asc":
+		return "name ASC"
+	case "name_desc":
+		return "name DESC"
+	default:
+		return "next_run_at ASC, created_at DESC"
+	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Rule, error) {

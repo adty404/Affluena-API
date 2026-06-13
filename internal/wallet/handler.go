@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,7 @@ type Handler struct {
 
 type walletUseCase interface {
 	Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error)
-	List(ctx context.Context, userID string) ([]Wallet, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error)
 	Get(ctx context.Context, userID string, id string) (Wallet, error)
 	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -68,12 +69,25 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	wallets, err := h.usecase.List(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "created_at_desc", walletSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list wallets failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"wallets": wallets})
+	httpx.JSON(c, http.StatusOK, gin.H{"wallets": result.Items, "pagination": result.Pagination})
+}
+
+var walletSorts = map[string]struct{}{
+	"created_at_desc": {},
+	"created_at_asc":  {},
+	"name_asc":        {},
+	"name_desc":       {},
+	"balance_desc":    {},
+	"balance_asc":     {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

@@ -400,7 +400,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/wallets",
+              "raw": "{{base_url}}/api/v1/wallets?limit=100&offset=0&sort=created_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -408,6 +408,20 @@
                 "api",
                 "v1",
                 "wallets"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at_desc"
+                }
               ]
             }
           }
@@ -570,7 +584,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/categories",
+              "raw": "{{base_url}}/api/v1/categories?limit=100&offset=0&sort=type_name_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -578,6 +592,20 @@
                 "api",
                 "v1",
                 "categories"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "type_name_asc"
+                }
               ]
             }
           }
@@ -588,7 +616,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/categories?type=income",
+              "raw": "{{base_url}}/api/v1/categories?type=income&limit=100&offset=0&sort=type_name_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -601,6 +629,18 @@
                 {
                   "key": "type",
                   "value": "income"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "type_name_asc"
                 }
               ]
             }
@@ -612,7 +652,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/categories?type=expense",
+              "raw": "{{base_url}}/api/v1/categories?type=expense&limit=100&offset=0&sort=type_name_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -625,6 +665,18 @@
                 {
                   "key": "type",
                   "value": "expense"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "type_name_asc"
                 }
               ]
             }
@@ -802,7 +854,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/transactions",
+              "raw": "{{base_url}}/api/v1/transactions?limit=100&offset=0&sort=transaction_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -810,6 +862,20 @@
                 "api",
                 "v1",
                 "transactions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "transaction_at_desc"
+                }
               ]
             }
           }
@@ -820,7 +886,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30",
+              "raw": "{{base_url}}/api/v1/transactions?type=expense&from=2026-06-01&to=2026-06-30&limit=100&offset=0&sort=transaction_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -841,6 +907,18 @@
                 {
                   "key": "to",
                   "value": "2026-06-30"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "transaction_at_desc"
                 }
               ]
             }
@@ -852,7 +930,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/transactions?wallet_id={{wallet_id}}",
+              "raw": "{{base_url}}/api/v1/transactions?wallet_id={{wallet_id}}&limit=100&offset=0&sort=transaction_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -865,6 +943,18 @@
                 {
                   "key": "wallet_id",
                   "value": "{{wallet_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "transaction_at_desc"
                 }
               ]
             }
@@ -988,7 +1078,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/quick-entry-templates",
+              "raw": "{{base_url}}/api/v1/quick-entry-templates?limit=100&offset=0&sort=name_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -996,6 +1086,20 @@
                 "api",
                 "v1",
                 "quick-entry-templates"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "name_asc"
+                }
               ]
             }
           }
@@ -1147,7 +1251,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/category-budgets?month=2026-06",
+              "raw": "{{base_url}}/api/v1/category-budgets?month=2026-06&limit=100&offset=0&sort=created_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -1160,6 +1264,18 @@
                 {
                   "key": "month",
                   "value": "2026-06"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at_desc"
                 }
               ]
             }
@@ -1283,7 +1399,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/debts",
+              "raw": "{{base_url}}/api/v1/debts?limit=100&offset=0&sort=opened_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -1291,6 +1407,20 @@
                 "api",
                 "v1",
                 "debts"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "opened_at_desc"
+                }
               ]
             }
           }
@@ -1442,7 +1572,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/installments",
+              "raw": "{{base_url}}/api/v1/installments?limit=100&offset=0&sort=created_at_desc",
               "host": [
                 "{{base_url}}"
               ],
@@ -1450,6 +1580,20 @@
                 "api",
                 "v1",
                 "installments"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at_desc"
+                }
               ]
             }
           }
@@ -1601,7 +1745,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/subscriptions",
+              "raw": "{{base_url}}/api/v1/subscriptions?limit=100&offset=0&sort=next_due_date_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -1609,6 +1753,20 @@
                 "api",
                 "v1",
                 "subscriptions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "next_due_date_asc"
+                }
               ]
             }
           }
@@ -1760,7 +1918,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/recurring-transactions",
+              "raw": "{{base_url}}/api/v1/recurring-transactions?limit=100&offset=0&sort=next_run_at_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -1768,6 +1926,20 @@
                 "api",
                 "v1",
                 "recurring-transactions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "next_run_at_asc"
+                }
               ]
             }
           }

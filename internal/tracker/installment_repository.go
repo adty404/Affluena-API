@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
@@ -45,17 +46,18 @@ func (r *InstallmentRepository) Create(ctx context.Context, userID string, insta
 		installment.StartDate, installment.DueDay, installment.Status, installment.Note))
 }
 
-func (r *InstallmentRepository) List(ctx context.Context, userID string) ([]Installment, error) {
+func (r *InstallmentRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
 			start_date, due_day, status, note, created_at, updated_at
 		FROM installments
 		WHERE user_id = $1
-		ORDER BY created_at DESC
-	`, userID)
+		ORDER BY `+installmentOrderBy(pagination.Sort)+`
+		LIMIT $2 OFFSET $3
+	`, userID, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return page.Result[Installment]{}, err
 	}
 	defer rows.Close()
 
@@ -63,11 +65,35 @@ func (r *InstallmentRepository) List(ctx context.Context, userID string) ([]Inst
 	for rows.Next() {
 		installment, err := scanInstallment(rows)
 		if err != nil {
-			return nil, err
+			return page.Result[Installment]{}, err
 		}
 		installments = append(installments, installment)
 	}
-	return installments, rows.Err()
+	if err := rows.Err(); err != nil {
+		return page.Result[Installment]{}, err
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM installments WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return page.Result[Installment]{}, err
+	}
+	return page.NewResult(installments, pagination, total), nil
+}
+
+func installmentOrderBy(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "created_at ASC"
+	case "name_asc":
+		return "name ASC"
+	case "name_desc":
+		return "name DESC"
+	case "due_day_asc":
+		return "due_day ASC, created_at DESC"
+	case "due_day_desc":
+		return "due_day DESC, created_at DESC"
+	default:
+		return "created_at DESC"
+	}
 }
 
 func (r *InstallmentRepository) Get(ctx context.Context, userID string, id string) (Installment, error) {

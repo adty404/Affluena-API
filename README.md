@@ -50,55 +50,75 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/auth/me`
 - `GET /api/v1/dashboard/summary?month=YYYY-MM`
 - `POST /api/v1/wallets`
-- `GET /api/v1/wallets`
+- `GET /api/v1/wallets[?limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
 - `POST /api/v1/categories`
-- `GET /api/v1/categories[?type=income|expense]`
+- `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=type_name_asc]`
 - `GET /api/v1/categories/:id`
 - `PUT /api/v1/categories/:id`
 - `DELETE /api/v1/categories/:id`
 - `POST /api/v1/transactions`
-- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD]`
+- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`
 - `POST /api/v1/quick-entry-templates`
-- `GET /api/v1/quick-entry-templates`
+- `GET /api/v1/quick-entry-templates[?limit=100&offset=0&sort=name_asc]`
 - `GET /api/v1/quick-entry-templates/:id`
 - `PUT /api/v1/quick-entry-templates/:id`
 - `DELETE /api/v1/quick-entry-templates/:id`
 - `POST /api/v1/quick-entry-templates/:id/execute`
 - `POST /api/v1/category-budgets`
-- `GET /api/v1/category-budgets?month=YYYY-MM`
+- `GET /api/v1/category-budgets?month=YYYY-MM[&limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/category-budgets/:id`
 - `PUT /api/v1/category-budgets/:id`
 - `DELETE /api/v1/category-budgets/:id`
 - `POST /api/v1/debts`
-- `GET /api/v1/debts`
+- `GET /api/v1/debts[?limit=100&offset=0&sort=opened_at_desc]`
 - `GET /api/v1/debts/:id`
 - `PUT /api/v1/debts/:id`
 - `DELETE /api/v1/debts/:id`
 - `POST /api/v1/debts/:id/pay`
 - `POST /api/v1/installments`
-- `GET /api/v1/installments`
+- `GET /api/v1/installments[?limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/installments/:id`
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
 - `POST /api/v1/installments/:id/pay`
 - `POST /api/v1/subscriptions`
-- `GET /api/v1/subscriptions`
+- `GET /api/v1/subscriptions[?limit=100&offset=0&sort=next_due_date_asc]`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
 - `DELETE /api/v1/subscriptions/:id`
 - `POST /api/v1/subscriptions/:id/pay`
 - `POST /api/v1/recurring-transactions`
-- `GET /api/v1/recurring-transactions`
+- `GET /api/v1/recurring-transactions[?limit=100&offset=0&sort=next_run_at_asc]`
 - `GET /api/v1/recurring-transactions/:id`
 - `PUT /api/v1/recurring-transactions/:id`
 - `DELETE /api/v1/recurring-transactions/:id`
 - `POST /api/v1/recurring-transactions/:id/run`
+
+## Pagination And Sorting
+
+List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, and recurring transactions support `limit`, `offset`, and `sort`.
+
+- `limit` defaults to `100`, must be positive, and is capped at `200`.
+- `offset` defaults to `0`.
+- Responses include the collection plus `pagination`: `{"limit":100,"offset":0,"total":123}`.
+
+Supported `sort` values:
+
+- Wallets: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `balance_desc`, `balance_asc`.
+- Categories: `type_name_asc`, `type_name_desc`, `name_asc`, `name_desc`, `created_at_desc`, `created_at_asc`.
+- Transactions: `transaction_at_desc`, `transaction_at_asc`, `created_at_desc`, `created_at_asc`, `amount_desc`, `amount_asc`.
+- Quick entry templates: `name_asc`, `name_desc`, `created_at_desc`, `created_at_asc`.
+- Category budgets: `created_at_desc`, `created_at_asc`, `limit_desc`, `limit_asc`, `spent_desc`, `spent_asc`.
+- Debts: `opened_at_desc`, `opened_at_asc`, `due_date_asc`, `due_date_desc`, `amount_desc`, `amount_asc`.
+- Installments: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `due_day_asc`, `due_day_desc`.
+- Subscriptions: `next_due_date_asc`, `next_due_date_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
+- Recurring transactions: `next_run_at_asc`, `next_run_at_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 
 ## Example Flow
 

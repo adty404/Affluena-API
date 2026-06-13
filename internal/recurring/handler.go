@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 	"affluena/internal/transaction"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ type Handler struct {
 
 type recurringUseCase interface {
 	Create(ctx context.Context, userID string, input RuleInput) (Rule, error)
-	List(ctx context.Context, userID string) ([]Rule, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error)
 	Get(ctx context.Context, userID string, id string) (Rule, error)
 	Update(ctx context.Context, userID string, id string, input RuleInput) (Rule, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -71,12 +72,25 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rules, err := h.usecase.List(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "next_run_at_asc", recurringSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list recurring transactions failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"recurring_transactions": rules})
+	httpx.JSON(c, http.StatusOK, gin.H{"recurring_transactions": result.Items, "pagination": result.Pagination})
+}
+
+var recurringSorts = map[string]struct{}{
+	"next_run_at_asc":  {},
+	"next_run_at_desc": {},
+	"created_at_desc":  {},
+	"created_at_asc":   {},
+	"name_asc":         {},
+	"name_desc":        {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

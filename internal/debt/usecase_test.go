@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeDebtRepository struct {
@@ -14,6 +16,7 @@ type fakeDebtRepository struct {
 	paidAt      time.Time
 	payNote     string
 	created     Debt
+	listPage    page.Params
 	listed      []Debt
 	got         Debt
 	updated     Debt
@@ -29,11 +32,12 @@ func (f *fakeDebtRepository) Create(ctx context.Context, userID string, input De
 	return f.created, nil
 }
 
-func (f *fakeDebtRepository) List(ctx context.Context, userID string) ([]Debt, error) {
+func (f *fakeDebtRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error) {
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[Debt]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeDebtRepository) Get(ctx context.Context, userID string, id string) (Debt, error) {
@@ -138,9 +142,12 @@ func TestDebtUseCaseDelegatesReadUpdateDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1")
-	if err != nil || len(listed) != 1 || listed[0].ID != "debt-1" {
+	listed, err := uc.List(context.Background(), "user-1", page.Params{Limit: 10, Sort: "opened_at_desc"})
+	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "debt-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
+	}
+	if repo.listPage.Limit != 10 || repo.listPage.Sort != "opened_at_desc" {
+		t.Fatalf("expected repository to receive pagination, got %+v", repo.listPage)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "debt-1")
 	if err != nil || got.ID != "debt-1" {
@@ -162,7 +169,7 @@ func TestDebtUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", DebtInput{Type: DebtTypeReceivable, PrincipalAmountMinor: 100_000}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1"); !errors.Is(err, repoErr) {
+	if _, err := uc.List(context.Background(), "user-1", page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected list repo error, got %v", err)
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "debt-1", DebtUpdate{Status: DebtStatusOpen}); !errors.Is(err, repoErr) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +17,7 @@ type Handler struct {
 
 type transactionUseCase interface {
 	Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error)
-	List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error)
+	List(ctx context.Context, userID string, filter TransactionFilter, pagination page.Params) (page.Result[Transaction], error)
 	Get(ctx context.Context, userID string, id string) (Transaction, error)
 	Update(ctx context.Context, userID string, id string, input TransactionInput) (Transaction, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -65,12 +66,26 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	transactions, err := h.usecase.List(c.Request.Context(), userID, filter)
+	pagination, ok := httpx.ParsePage(c, "transaction_at_desc", transactionSorts)
+	if !ok {
+		return
+	}
+
+	result, err := h.usecase.List(c.Request.Context(), userID, filter, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list transactions failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"transactions": transactions})
+	httpx.JSON(c, http.StatusOK, gin.H{"transactions": result.Items, "pagination": result.Pagination})
+}
+
+var transactionSorts = map[string]struct{}{
+	"transaction_at_desc": {},
+	"transaction_at_asc":  {},
+	"created_at_desc":     {},
+	"created_at_asc":      {},
+	"amount_desc":         {},
+	"amount_asc":          {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

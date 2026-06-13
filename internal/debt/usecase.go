@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input DebtInput) (Debt, error)
-	List(ctx context.Context, userID string) ([]Debt, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error)
 	Get(ctx context.Context, userID string, id string) (Debt, error)
 	Update(ctx context.Context, userID string, id string, update DebtUpdate) (Debt, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -33,8 +35,8 @@ func (u *UseCase) Create(ctx context.Context, userID string, input DebtInput) (D
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string) ([]Debt, error) {
-	return u.repo.List(ctx, userID)
+func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error) {
+	return u.repo.List(ctx, userID, pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Debt, error) {

@@ -3,11 +3,13 @@ package wallet
 import (
 	"context"
 	"errors"
+
+	"affluena/internal/page"
 )
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error)
-	List(ctx context.Context, userID string) ([]Wallet, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error)
 	Get(ctx context.Context, userID string, id string) (Wallet, error)
 	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -31,8 +33,8 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateWalletI
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string) ([]Wallet, error) {
-	return u.repo.List(ctx, userID)
+func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error) {
+	return u.repo.List(ctx, userID, pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Wallet, error) {

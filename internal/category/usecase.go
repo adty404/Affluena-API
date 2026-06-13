@@ -1,10 +1,14 @@
 package category
 
-import "context"
+import (
+	"context"
+
+	"affluena/internal/page"
+)
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error)
-	List(ctx context.Context, userID string, categoryType string) ([]Category, error)
+	List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error)
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -25,11 +29,11 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateCategor
 	return u.repo.Create(ctx, userID, input)
 }
 
-func (u *UseCase) List(ctx context.Context, userID string, categoryType string) ([]Category, error) {
+func (u *UseCase) List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error) {
 	if categoryType != "" && !IsValidType(categoryType) {
-		return nil, ErrInvalidCategoryType
+		return page.Result[Category]{}, ErrInvalidCategoryType
 	}
-	return u.repo.List(ctx, userID, categoryType)
+	return u.repo.List(ctx, userID, categoryType, pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Category, error) {

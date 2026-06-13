@@ -5,12 +5,15 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"affluena/internal/page"
 )
 
 type fakeTransactionRepository struct {
 	createInput TransactionInput
 	updateInput TransactionInput
 	listFilter  TransactionFilter
+	listPage    page.Params
 	created     Transaction
 	listed      []Transaction
 	got         Transaction
@@ -27,12 +30,13 @@ func (f *fakeTransactionRepository) Create(ctx context.Context, userID string, i
 	return f.created, nil
 }
 
-func (f *fakeTransactionRepository) List(ctx context.Context, userID string, filter TransactionFilter) ([]Transaction, error) {
+func (f *fakeTransactionRepository) List(ctx context.Context, userID string, filter TransactionFilter, pagination page.Params) (page.Result[Transaction], error) {
 	f.listFilter = filter
+	f.listPage = pagination
 	if f.err != nil {
-		return nil, f.err
+		return page.Result[Transaction]{}, f.err
 	}
-	return f.listed, nil
+	return page.NewResult(f.listed, pagination, len(f.listed)), nil
 }
 
 func (f *fakeTransactionRepository) Get(ctx context.Context, userID string, id string) (Transaction, error) {
@@ -119,12 +123,15 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	uc := NewUseCase(repo)
 
-	listed, err := uc.List(context.Background(), "user-1", TransactionFilter{Type: TransactionTypeExpense})
-	if err != nil || len(listed) != 1 || listed[0].ID != "tx-1" {
+	listed, err := uc.List(context.Background(), "user-1", TransactionFilter{Type: TransactionTypeExpense}, page.Params{Limit: 10, Sort: "transaction_at_desc"})
+	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "tx-1" {
 		t.Fatalf("unexpected List result %+v err=%v", listed, err)
 	}
 	if repo.listFilter.Type != TransactionTypeExpense {
 		t.Fatalf("expected list filter to be delegated, got %+v", repo.listFilter)
+	}
+	if repo.listPage.Limit != 10 {
+		t.Fatalf("expected list pagination to be delegated, got %+v", repo.listPage)
 	}
 	got, err := uc.Get(context.Background(), "user-1", "tx-1")
 	if err != nil || got.ID != "tx-1" {
@@ -152,7 +159,7 @@ func TestTransactionUseCasePropagatesRepositoryErrors(t *testing.T) {
 	if _, err := uc.Create(context.Background(), "user-1", valid); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
 	}
-	if _, err := uc.List(context.Background(), "user-1", TransactionFilter{}); !errors.Is(err, repoErr) {
+	if _, err := uc.List(context.Background(), "user-1", TransactionFilter{}, page.Params{Limit: 100}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected list repo error, got %v", err)
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "tx-1", valid); !errors.Is(err, repoErr) {

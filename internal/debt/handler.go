@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,7 @@ type Handler struct {
 
 type debtUseCase interface {
 	Create(ctx context.Context, userID string, input DebtInput) (Debt, error)
-	List(ctx context.Context, userID string) ([]Debt, error)
+	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error)
 	Get(ctx context.Context, userID string, id string) (Debt, error)
 	Update(ctx context.Context, userID string, id string, update DebtUpdate) (Debt, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -75,12 +76,25 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	debts, err := h.usecase.List(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "opened_at_desc", debtSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list debts failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"debts": debts})
+	httpx.JSON(c, http.StatusOK, gin.H{"debts": result.Items, "pagination": result.Pagination})
+}
+
+var debtSorts = map[string]struct{}{
+	"opened_at_desc": {},
+	"opened_at_asc":  {},
+	"due_date_asc":   {},
+	"due_date_desc":  {},
+	"amount_desc":    {},
+	"amount_asc":     {},
 }
 
 func (h *Handler) Get(c *gin.Context) {

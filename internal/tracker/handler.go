@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena/internal/httpx"
+	"affluena/internal/page"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,13 +18,13 @@ type Handler struct {
 
 type trackerUseCase interface {
 	CreateInstallment(ctx context.Context, userID string, installment Installment) (Installment, error)
-	ListInstallments(ctx context.Context, userID string) ([]Installment, error)
+	ListInstallments(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error)
 	GetInstallment(ctx context.Context, userID string, id string) (Installment, error)
 	UpdateInstallment(ctx context.Context, userID string, id string, installment Installment) (Installment, error)
 	DeleteInstallment(ctx context.Context, userID string, id string) error
 	PayInstallment(ctx context.Context, userID string, id string, paidAt time.Time, note string) (InstallmentPayment, error)
 	CreateSubscription(ctx context.Context, userID string, subscription Subscription) (Subscription, error)
-	ListSubscriptions(ctx context.Context, userID string) ([]Subscription, error)
+	ListSubscriptions(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error)
 	GetSubscription(ctx context.Context, userID string, id string) (Subscription, error)
 	UpdateSubscription(ctx context.Context, userID string, id string, subscription Subscription) (Subscription, error)
 	DeleteSubscription(ctx context.Context, userID string, id string) error
@@ -88,12 +89,25 @@ func (h *Handler) ListInstallments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	installments, err := h.usecase.ListInstallments(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "created_at_desc", installmentSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.ListInstallments(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list installments failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"installments": installments})
+	httpx.JSON(c, http.StatusOK, gin.H{"installments": result.Items, "pagination": result.Pagination})
+}
+
+var installmentSorts = map[string]struct{}{
+	"created_at_desc": {},
+	"created_at_asc":  {},
+	"name_asc":        {},
+	"name_desc":       {},
+	"due_day_asc":     {},
+	"due_day_desc":    {},
 }
 
 func (h *Handler) GetInstallment(c *gin.Context) {
@@ -177,12 +191,25 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	subscriptions, err := h.usecase.ListSubscriptions(c.Request.Context(), userID)
+	pagination, ok := httpx.ParsePage(c, "next_due_date_asc", subscriptionSorts)
+	if !ok {
+		return
+	}
+	result, err := h.usecase.ListSubscriptions(c.Request.Context(), userID, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list subscriptions failed")
 		return
 	}
-	httpx.JSON(c, http.StatusOK, gin.H{"subscriptions": subscriptions})
+	httpx.JSON(c, http.StatusOK, gin.H{"subscriptions": result.Items, "pagination": result.Pagination})
+}
+
+var subscriptionSorts = map[string]struct{}{
+	"next_due_date_asc":  {},
+	"next_due_date_desc": {},
+	"created_at_desc":    {},
+	"created_at_asc":     {},
+	"name_asc":           {},
+	"name_desc":          {},
 }
 
 func (h *Handler) GetSubscription(c *gin.Context) {
