@@ -1494,7 +1494,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Meal Plan {{$timestamp}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\"\n}"
+              "raw": "{\n  \"name\": \"Google One {{$timestamp}}\",\n  \"account_detail\": \"personal@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/subscriptions",
@@ -1587,7 +1587,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Meal Plan Updated\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\"\n}"
+              "raw": "{\n  \"name\": \"Google One Updated\",\n  \"account_detail\": \"work@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
