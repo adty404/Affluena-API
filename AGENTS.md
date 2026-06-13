@@ -1,10 +1,10 @@
-# Affluena Agent Handoff
+# Affluena-API Agent Handoff
 
-This file gives future AI coding agents the project context and the expected workflow for continuing Affluena. Keep it current when the workflow, architecture, API surface, or verification gate changes.
+This file gives future AI coding agents the project context and the expected workflow for continuing Affluena-API. Keep it current when the workflow, architecture, API surface, or verification gate changes.
 
 ## Project Context
 
-Affluena is an API-first personal finance backend written in Go. It uses Gin, PostgreSQL via pgx, native JWT auth, Docker Compose, and a native Go recurring scheduler. There is no frontend in this repository.
+Affluena-API is an API-first personal finance backend written in Go. It uses Gin, PostgreSQL via pgx, native JWT auth, Docker Compose, and a native Go recurring scheduler. There is no frontend in this repository.
 
 Core domains:
 
@@ -20,7 +20,7 @@ Core domains:
 - Recurring transactions: native scheduled transaction generation.
 - Debts: payable/receivable tracking with payment lifecycle.
 
-The PRD is in `affluena-lean-prd.md`. The API overview and examples are in `README.md`. The runnable Postman collection is `postman/Affluena.postman_collection.json`.
+The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `README.md`. The runnable Postman collection is `postman/Affluena-API.postman_collection.json`.
 
 ## Repository Shape
 
@@ -87,7 +87,7 @@ Use `make verify` as the authoritative pre-commit/pre-push gate. It runs:
 - Integration tests against PostgreSQL:
 
   ```bash
-  AFFLUENA_TEST_DATABASE_URL=postgres://affluena:affluena@localhost:5432/affluena?sslmode=disable \
+  AFFLUENA_API_TEST_DATABASE_URL=postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable \
     go test ./internal/db ./internal/debt ./internal/server -count=1
   ```
 
@@ -96,10 +96,10 @@ Use `make verify` as the authoritative pre-commit/pre-push gate. It runs:
 Docker must be running for the full gate. The local database defaults to:
 
 ```text
-postgres://affluena:affluena@localhost:5432/affluena?sslmode=disable
+postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
 ```
 
-For targeted integration tests, use the same `AFFLUENA_TEST_DATABASE_URL`.
+For targeted integration tests, use the same `AFFLUENA_API_TEST_DATABASE_URL`.
 
 ## Test Expectations
 
@@ -125,9 +125,9 @@ If an endpoint, payload, response field, or example changes:
 
 - Update `README.md`.
 - Update any other related `.md` files, including this `AGENTS.md` when workflow, architecture, or handoff context changes.
-- Update `postman/Affluena.postman_collection.json`.
+- Update `postman/Affluena-API.postman_collection.json`.
 - Update examples, notes, and handoff context so they match the implemented behavior.
-- Keep Postman JSON valid. `make verify` validates it, but `jq empty postman/Affluena.postman_collection.json` is useful for a quick check.
+- Keep Postman JSON valid. `make verify` validates it, but `jq empty postman/Affluena-API.postman_collection.json` is useful for a quick check.
 - Keep Postman request names aligned with real API contracts. Avoid labels that imply nonexistent backend routes.
 
 Current notable API decisions:

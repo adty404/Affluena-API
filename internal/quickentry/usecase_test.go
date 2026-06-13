@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"affluena/internal/page"
-	"affluena/internal/transaction"
+	"affluena-api/internal/page"
+	"affluena-api/internal/transaction"
 )
 
 type fakeTemplateRepository struct {

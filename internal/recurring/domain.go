@@ -3,7 +3,7 @@ package recurring
 import (
 	"time"
 
-	"affluena/internal/transaction"
+	"affluena-api/internal/transaction"
 )
 
 type Rule struct {

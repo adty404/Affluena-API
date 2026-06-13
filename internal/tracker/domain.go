@@ -3,7 +3,7 @@ package tracker
 import (
 	"time"
 
-	"affluena/internal/transaction"
+	"affluena-api/internal/transaction"
 )
 
 type Installment struct {

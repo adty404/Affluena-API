@@ -1,4 +1,4 @@
-module affluena
+module affluena-api
 
 go 1.26
 

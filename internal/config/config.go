@@ -23,7 +23,7 @@ func Load() Config {
 	return Config{
 		Env:                         getEnv("APP_ENV", "development"),
 		HTTPAddr:                    getEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL:                 getEnv("DATABASE_URL", "postgres://affluena:affluena@localhost:5432/affluena?sslmode=disable"),
+		DatabaseURL:                 getEnv("DATABASE_URL", "postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable"),
 		JWTSecret:                   getEnv("JWT_SECRET", "change-me-in-production"),
 		AccessTokenDuration:         getDurationEnv("ACCESS_TOKEN_TTL", 15*time.Minute),
 		RefreshTokenDuration:        getDurationEnv("REFRESH_TOKEN_TTL", 30*24*time.Hour),

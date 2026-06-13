@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"affluena/internal/config"
-	"affluena/internal/db"
-	"affluena/internal/recurring"
-	"affluena/internal/server"
-	"affluena/internal/transaction"
+	"affluena-api/internal/config"
+	"affluena-api/internal/db"
+	"affluena-api/internal/recurring"
+	"affluena-api/internal/server"
+	"affluena-api/internal/transaction"
 )
 
 func main() {

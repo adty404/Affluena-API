@@ -1,8 +1,8 @@
-# Affluena Core API Implementation Plan
+# Affluena-API Core API Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first usable Affluena backend slice: auth, wallet, category, transaction, and quick entry APIs.
+**Goal:** Build the first usable Affluena-API backend slice: auth, wallet, category, transaction, and quick entry APIs.
 
 **Architecture:** Use a Gin HTTP API with pgx PostgreSQL access. Keep handlers thin, repositories explicit, and all balance-changing writes inside database transactions.
 
@@ -21,7 +21,7 @@
 - Create: `docker-compose.yml`
 - Create: `Dockerfile`
 
-- [ ] Initialize module `affluena`.
+- [ ] Initialize module `affluena-api`.
 - [ ] Add runtime config from environment.
 - [ ] Add Gin router with `/healthz`.
 - [ ] Add Docker setup for API and PostgreSQL.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"affluena/internal/httpx"
+	"affluena-api/internal/httpx"
 
 	"github.com/gin-gonic/gin"
 )

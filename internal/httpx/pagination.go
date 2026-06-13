@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"affluena/internal/page"
+	"affluena-api/internal/page"
 
 	"github.com/gin-gonic/gin"
 )

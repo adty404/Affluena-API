@@ -4,13 +4,13 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o /bin/affluena ./cmd/api
+RUN go build -o /bin/affluena-api ./cmd/api
 
 FROM alpine:3.22
 
 WORKDIR /app
-COPY --from=build /bin/affluena /app/affluena
+COPY --from=build /bin/affluena-api /app/affluena-api
 COPY migrations /app/migrations
 
 EXPOSE 8080
-CMD ["/app/affluena"]
+CMD ["/app/affluena-api"]

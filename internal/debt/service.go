@@ -3,7 +3,7 @@ package debt
 import (
 	"errors"
 
-	"affluena/internal/transaction"
+	"affluena-api/internal/transaction"
 )
 
 type DebtType string

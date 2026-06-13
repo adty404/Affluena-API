@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "7f7c2866-85cc-4c17-96b6-affluena0001",
-    "name": "Affluena Backend API",
-    "description": "Postman collection for Affluena API. Run Auth/Register or Auth/Login first to populate access_token and refresh_token. Create wallets and categories before running dependent finance flows.",
+    "_postman_id": "7f7c2866-85cc-4c17-96b6-000000000001",
+    "name": "Affluena-API",
+    "description": "Postman collection for Affluena-API. Run Auth/Register or Auth/Login first to populate access_token and refresh_token. Create wallets and categories before running dependent finance flows.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

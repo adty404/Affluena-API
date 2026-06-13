@@ -4,7 +4,7 @@ set -eu
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-TEST_DATABASE_URL="${AFFLUENA_TEST_DATABASE_URL:-postgres://affluena:affluena@localhost:5432/affluena?sslmode=disable}"
+TEST_DATABASE_URL="${AFFLUENA_API_TEST_DATABASE_URL:-postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable}"
 API_HEALTH_URL="${AFFLUENA_API_HEALTH_URL:-http://localhost:8080/healthz}"
 
 step() {
@@ -29,19 +29,19 @@ step "Build API"
 go build -o /tmp/affluena-api ./cmd/api
 
 step "Validate Postman collection JSON"
-python3 -m json.tool postman/Affluena.postman_collection.json >/tmp/affluena_postman_validated.json
+python3 -m json.tool postman/Affluena-API.postman_collection.json >/tmp/affluena-api-postman-validated.json
 
 step "Rebuild and start Docker Compose"
 docker compose up -d --build
 
 step "Run integration tests"
-AFFLUENA_TEST_DATABASE_URL="$TEST_DATABASE_URL" go test ./internal/db ./internal/debt ./internal/server -count=1
+AFFLUENA_API_TEST_DATABASE_URL="$TEST_DATABASE_URL" go test ./internal/db ./internal/debt ./internal/server -count=1
 
 step "Check API health"
 attempt=1
 while [ "$attempt" -le 30 ]; do
-	if curl -fsS "$API_HEALTH_URL" >/tmp/affluena_health.json; then
-		cat /tmp/affluena_health.json
+	if curl -fsS "$API_HEALTH_URL" >/tmp/affluena-api-health.json; then
+		cat /tmp/affluena-api-health.json
 		printf '\n'
 		exit 0
 	fi

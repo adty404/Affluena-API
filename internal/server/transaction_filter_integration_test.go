@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"affluena/internal/config"
+	"affluena-api/internal/config"
 )
 
 func TestListTransactionsSupportsFilters(t *testing.T) {

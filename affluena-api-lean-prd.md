@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-**Project Name:** Affluena (Backend API)
+**Project Name:** Affluena-API
 **Phase:** Minimum Viable Product (MVP)
 **Tech Stack:** Go (Fiber/Gin), PostgreSQL, Docker.
 **Auth:** Native JWT Authentication (Golang).
@@ -8,7 +8,7 @@
 
 ## 1. Product Overview
 
-**Affluena** adalah sistem pencatatan keuangan API-first yang dirancang untuk kecepatan pencatatan harian dan manajemen portofolio aset yang komprehensif. Aplikasi ini memiliki kapabilitas _native_ untuk melacak cicilan berjangka, manajemen _subscription_, pemisahan dompet fiat dan instrumen _trading_, serta memfasilitasi transaksi otomatis berulang tanpa bergantung pada _message broker_ eksternal.
+**Affluena-API** adalah sistem pencatatan keuangan API-first yang dirancang untuk kecepatan pencatatan harian dan manajemen portofolio aset yang komprehensif. Aplikasi ini memiliki kapabilitas _native_ untuk melacak cicilan berjangka, manajemen _subscription_, pemisahan dompet fiat dan instrumen _trading_, serta memfasilitasi transaksi otomatis berulang tanpa bergantung pada _message broker_ eksternal.
 
 ## 2. Objectives
 
@@ -21,7 +21,7 @@
 
 ### 3.1. Authentication & Security (Native)
 
-Autentikasi dikelola secara independen di dalam _backend_ Affluena.
+Autentikasi dikelola secara independen di dalam _backend_ Affluena-API.
 
 - **Fitur:** _Register_, _Login_, dan pelindungan _endpoint_ menggunakan JWT (JSON Web Tokens).
 - **Use Case:** Pengguna melakukan _login_ dengan _email_ dan _password_. Server memvalidasi _hash_ (menggunakan _bcrypt_), lalu menerbitkan _Access Token_ dan _Refresh Token_ untuk menjaga sesi tetap aktif di PWA.

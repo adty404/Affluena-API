@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"affluena/internal/page"
-	"affluena/internal/transaction"
+	"affluena-api/internal/page"
+	"affluena-api/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
