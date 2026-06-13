@@ -1,6 +1,7 @@
 package quickentry
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -11,12 +12,20 @@ import (
 )
 
 type Handler struct {
-	repo            *Repository
-	transactionRepo *transaction.Repository
+	usecase quickEntryUseCase
 }
 
-func NewHandler(repo *Repository, transactionRepo *transaction.Repository) *Handler {
-	return &Handler{repo: repo, transactionRepo: transactionRepo}
+type quickEntryUseCase interface {
+	Create(ctx context.Context, userID string, template Template) (Template, error)
+	List(ctx context.Context, userID string) ([]Template, error)
+	Get(ctx context.Context, userID string, id string) (Template, error)
+	Update(ctx context.Context, userID string, id string, template Template) (Template, error)
+	Delete(ctx context.Context, userID string, id string) error
+	Execute(ctx context.Context, userID string, id string, input ExecuteInput) (ExecuteResult, error)
+}
+
+func NewHandler(usecase quickEntryUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type templateRequest struct {
@@ -44,7 +53,7 @@ func (h *Handler) Create(c *gin.Context) {
 	if !ok {
 		return
 	}
-	created, err := h.repo.Create(c.Request.Context(), userID, template)
+	created, err := h.usecase.Create(c.Request.Context(), userID, template)
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -58,7 +67,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	templates, err := h.repo.List(c.Request.Context(), userID)
+	templates, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list quick entry templates failed")
 		return
@@ -72,7 +81,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	template, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	template, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeError(c, err)
 		return
@@ -90,7 +99,7 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
-	updated, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), template)
+	updated, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), template)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -104,7 +113,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -114,12 +123,6 @@ func (h *Handler) Delete(c *gin.Context) {
 func (h *Handler) Execute(c *gin.Context) {
 	userID, ok := httpx.MustUserID(c)
 	if !ok {
-		return
-	}
-
-	template, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
-	if err != nil {
-		writeError(c, err)
 		return
 	}
 
@@ -138,46 +141,22 @@ func (h *Handler) Execute(c *gin.Context) {
 		transactionAt = parsed.UTC()
 	}
 
-	note := template.Note
-	if req.Note != "" {
-		note = req.Note
-	}
-
-	created, err := h.transactionRepo.Create(c.Request.Context(), userID, transaction.TransactionInput{
-		Type:           transaction.TransactionType(template.Type),
-		WalletID:       template.WalletID,
-		ToWalletID:     template.ToWalletID,
-		CategoryID:     template.CategoryID,
-		AmountMinor:    template.AmountMinor,
-		TransactionUTC: transactionAt,
-		Note:           note,
+	result, err := h.usecase.Execute(c.Request.Context(), userID, c.Param("id"), ExecuteInput{
+		TransactionAt: transactionAt,
+		Note:          req.Note,
 	})
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		writeError(c, err)
 		return
 	}
 
-	httpx.JSON(c, http.StatusCreated, gin.H{"transaction": created})
+	httpx.JSON(c, http.StatusCreated, gin.H{"transaction": result.Transaction})
 }
 
 func bindTemplate(c *gin.Context) (Template, bool) {
 	var req templateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
-		return Template{}, false
-	}
-
-	input := transaction.TransactionInput{
-		Type:           req.Type,
-		WalletID:       req.WalletID,
-		ToWalletID:     req.ToWalletID,
-		CategoryID:     req.CategoryID,
-		AmountMinor:    req.AmountMinor,
-		TransactionUTC: time.Now().UTC(),
-		Note:           req.Note,
-	}
-	if _, err := transaction.BalanceDeltas(input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return Template{}, false
 	}
 

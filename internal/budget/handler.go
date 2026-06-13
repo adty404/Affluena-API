@@ -1,8 +1,8 @@
 package budget
 
 import (
+	"context"
 	"net/http"
-	"time"
 
 	"affluena/internal/httpx"
 
@@ -10,11 +10,19 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	usecase budgetUseCase
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+type budgetUseCase interface {
+	Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error)
+	List(ctx context.Context, userID string, monthValue string) ([]BudgetSummary, error)
+	Get(ctx context.Context, userID string, id string) (Budget, error)
+	Update(ctx context.Context, userID string, id string, input UpdateBudgetInput) (Budget, error)
+	Delete(ctx context.Context, userID string, id string) error
+}
+
+func NewHandler(usecase budgetUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type budgetRequest struct {
@@ -29,12 +37,16 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	req, month, ok := bindBudgetRequest(c)
+	req, ok := bindBudgetRequest(c)
 	if !ok {
 		return
 	}
 
-	budget, err := h.repo.Create(c.Request.Context(), userID, req.CategoryID, month, req.LimitMinor)
+	budget, err := h.usecase.Create(c.Request.Context(), userID, CreateBudgetInput{
+		CategoryID: req.CategoryID,
+		Month:      req.Month,
+		LimitMinor: req.LimitMinor,
+	})
 	if err != nil {
 		writeError(c, err)
 		return
@@ -48,13 +60,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	month, err := ParseBudgetMonth(c.Query("month"))
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	budgets, err := h.repo.List(c.Request.Context(), userID, month)
+	budgets, err := h.usecase.List(c.Request.Context(), userID, c.Query("month"))
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list category budgets failed")
 		return
@@ -68,7 +74,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	budget, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	budget, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeError(c, err)
 		return
@@ -82,12 +88,16 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	req, month, ok := bindBudgetRequest(c)
+	req, ok := bindBudgetRequest(c)
 	if !ok {
 		return
 	}
 
-	budget, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), req.CategoryID, month, req.LimitMinor)
+	budget, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateBudgetInput{
+		CategoryID: req.CategoryID,
+		Month:      req.Month,
+		LimitMinor: req.LimitMinor,
+	})
 	if err != nil {
 		writeError(c, err)
 		return
@@ -101,29 +111,20 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func bindBudgetRequest(c *gin.Context) (budgetRequest, time.Time, bool) {
+func bindBudgetRequest(c *gin.Context) (budgetRequest, bool) {
 	var req budgetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
-		return budgetRequest{}, time.Time{}, false
+		return budgetRequest{}, false
 	}
-	if req.LimitMinor <= 0 {
-		httpx.Error(c, http.StatusBadRequest, "limit_minor must be positive")
-		return budgetRequest{}, time.Time{}, false
-	}
-	month, err := ParseBudgetMonth(req.Month)
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return budgetRequest{}, time.Time{}, false
-	}
-	return req, month, true
+	return req, true
 }
 
 func writeError(c *gin.Context, err error) {

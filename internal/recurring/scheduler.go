@@ -7,19 +7,23 @@ import (
 )
 
 type Scheduler struct {
-	repo      *Repository
+	usecase   recurringSchedulerUseCase
 	interval  time.Duration
 	batchSize int
 }
 
-func NewScheduler(repo *Repository, interval time.Duration, batchSize int) *Scheduler {
+type recurringSchedulerUseCase interface {
+	RunDue(ctx context.Context, now time.Time, limit int) ([]Run, error)
+}
+
+func NewScheduler(usecase recurringSchedulerUseCase, interval time.Duration, batchSize int) *Scheduler {
 	if interval <= 0 {
 		interval = time.Minute
 	}
 	if batchSize <= 0 {
 		batchSize = 20
 	}
-	return &Scheduler{repo: repo, interval: interval, batchSize: batchSize}
+	return &Scheduler{usecase: usecase, interval: interval, batchSize: batchSize}
 }
 
 func (s *Scheduler) Start(ctx context.Context) {
@@ -42,7 +46,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 }
 
 func (s *Scheduler) run(ctx context.Context) {
-	runs, err := s.repo.RunDue(ctx, time.Now().UTC(), s.batchSize)
+	runs, err := s.usecase.RunDue(ctx, time.Now().UTC(), s.batchSize)
 	if err != nil {
 		slog.Error("recurring scheduler run failed", "error", err)
 		return

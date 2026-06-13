@@ -15,11 +15,20 @@ var (
 )
 
 type Service struct {
-	repo   *Repository
+	repo   RepositoryPort
 	tokens *TokenManager
 }
 
-func NewService(repo *Repository, tokens *TokenManager) *Service {
+type RepositoryPort interface {
+	CreateUser(ctx context.Context, email string, passwordHash string) (User, error)
+	UserByEmail(ctx context.Context, email string) (User, error)
+	UserByID(ctx context.Context, userID string) (User, error)
+	StoreRefreshToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error
+	RefreshTokenUser(ctx context.Context, tokenHash string, now time.Time) (User, error)
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+}
+
+func NewService(repo RepositoryPort, tokens *TokenManager) *Service {
 	return &Service{repo: repo, tokens: tokens}
 }
 

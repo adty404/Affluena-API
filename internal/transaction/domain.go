@@ -1,0 +1,38 @@
+package transaction
+
+import (
+	"errors"
+	"time"
+)
+
+var ErrNotFound = errors.New("resource not found")
+
+type Transaction struct {
+	ID            string          `json:"id"`
+	UserID        string          `json:"user_id"`
+	Type          TransactionType `json:"type"`
+	WalletID      string          `json:"wallet_id"`
+	ToWalletID    string          `json:"to_wallet_id,omitempty"`
+	CategoryID    string          `json:"category_id,omitempty"`
+	AmountMinor   int64           `json:"amount_minor"`
+	TransactionAt time.Time       `json:"transaction_at"`
+	Note          string          `json:"note"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+}
+
+func (t Transaction) Input() TransactionInput {
+	return TransactionInput{
+		Type:           t.Type,
+		WalletID:       t.WalletID,
+		ToWalletID:     t.ToWalletID,
+		CategoryID:     t.CategoryID,
+		AmountMinor:    t.AmountMinor,
+		TransactionUTC: t.TransactionAt,
+		Note:           t.Note,
+	}
+}
+
+func NotFound(err error) bool {
+	return errors.Is(err, ErrNotFound)
+}

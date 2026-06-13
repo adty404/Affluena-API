@@ -1,6 +1,7 @@
 package category
 
 import (
+	"context"
 	"net/http"
 
 	"affluena/internal/httpx"
@@ -9,11 +10,19 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	usecase categoryUseCase
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+type categoryUseCase interface {
+	Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error)
+	List(ctx context.Context, userID string) ([]Category, error)
+	Get(ctx context.Context, userID string, id string) (Category, error)
+	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
+	Delete(ctx context.Context, userID string, id string) error
+}
+
+func NewHandler(usecase categoryUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type categoryRequest struct {
@@ -32,12 +41,7 @@ func (h *Handler) Create(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !IsValidType(req.Type) {
-		httpx.Error(c, http.StatusBadRequest, "invalid category type")
-		return
-	}
-
-	category, err := h.repo.Create(c.Request.Context(), userID, req.Name, req.Type)
+	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type})
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -51,7 +55,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.repo.List(c.Request.Context(), userID)
+	categories, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list categories failed")
 		return
@@ -65,7 +69,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	category, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	category, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "category not found")
@@ -88,12 +92,7 @@ func (h *Handler) Update(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !IsValidType(req.Type) {
-		httpx.Error(c, http.StatusBadRequest, "invalid category type")
-		return
-	}
-
-	category, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), req.Name, req.Type)
+	category, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateCategoryInput{Name: req.Name, Type: req.Type})
 	if err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "category not found")
@@ -111,7 +110,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "category not found")
 			return

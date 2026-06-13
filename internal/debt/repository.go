@@ -12,60 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var errMissingDebt = pgx.ErrNoRows
-
-type Debt struct {
-	ID                       string     `json:"id"`
-	UserID                   string     `json:"user_id"`
-	Type                     DebtType   `json:"type"`
-	CounterpartyName         string     `json:"counterparty_name"`
-	WalletID                 string     `json:"wallet_id"`
-	DisbursementCategoryID   string     `json:"disbursement_category_id"`
-	PaymentCategoryID        string     `json:"payment_category_id"`
-	OriginationTransactionID string     `json:"origination_transaction_id"`
-	PrincipalAmountMinor     int64      `json:"principal_amount_minor"`
-	PaidAmountMinor          int64      `json:"paid_amount_minor"`
-	RemainingAmountMinor     int64      `json:"remaining_amount_minor"`
-	OpenedAt                 time.Time  `json:"opened_at"`
-	DueDate                  *time.Time `json:"due_date,omitempty"`
-	Status                   DebtStatus `json:"status"`
-	Note                     string     `json:"note"`
-	CreatedAt                time.Time  `json:"created_at"`
-	UpdatedAt                time.Time  `json:"updated_at"`
-}
-
-type DebtInput struct {
-	Type                   DebtType
-	CounterpartyName       string
-	WalletID               string
-	DisbursementCategoryID string
-	PaymentCategoryID      string
-	PrincipalAmountMinor   int64
-	OpenedAt               time.Time
-	DueDate                *time.Time
-	Note                   string
-}
-
-type DebtUpdate struct {
-	CounterpartyName string
-	DueDate          *time.Time
-	Status           DebtStatus
-	Note             string
-}
-
-type DebtPayment struct {
-	ID            string                  `json:"id"`
-	UserID        string                  `json:"user_id"`
-	DebtID        string                  `json:"debt_id"`
-	TransactionID string                  `json:"transaction_id"`
-	AmountMinor   int64                   `json:"amount_minor"`
-	PaidAt        time.Time               `json:"paid_at"`
-	Note          string                  `json:"note"`
-	CreatedAt     time.Time               `json:"created_at"`
-	Debt          Debt                    `json:"debt"`
-	Transaction   transaction.Transaction `json:"transaction"`
-}
-
 type Repository struct {
 	pool            *pgxpool.Pool
 	transactionRepo *transaction.Repository
@@ -123,7 +69,7 @@ func (r *Repository) Create(ctx context.Context, userID string, input DebtInput)
 		input.PaymentCategoryID, origination.ID, input.PrincipalAmountMinor, input.OpenedAt.UTC(),
 		nullableDate(input.DueDate), DebtStatusOpen, input.Note))
 	if err != nil {
-		return Debt{}, err
+		return Debt{}, translateNotFound(err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Debt{}, err
@@ -159,13 +105,14 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Debt, error) {
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Debt, error) {
-	return r.get(ctx, r.pool, userID, id, false)
+	debt, err := r.get(ctx, r.pool, userID, id, false)
+	return debt, translateNotFound(err)
 }
 
 func (r *Repository) Update(ctx context.Context, userID string, id string, update DebtUpdate) (Debt, error) {
 	current, err := r.get(ctx, r.pool, userID, id, false)
 	if err != nil {
-		return Debt{}, err
+		return Debt{}, translateNotFound(err)
 	}
 	if update.Status == "" {
 		update.Status = current.Status
@@ -178,7 +125,7 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, updat
 			return Debt{}, err
 		}
 	}
-	return scanDebt(r.pool.QueryRow(ctx, `
+	debt, err := scanDebt(r.pool.QueryRow(ctx, `
 		UPDATE debts
 		SET counterparty_name = $3, due_date = $4, status = $5, note = $6, updated_at = now()
 		WHERE user_id = $1 AND id = $2
@@ -188,6 +135,7 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, updat
 			(principal_amount_minor - paid_amount_minor), opened_at, due_date, status, note,
 			created_at, updated_at
 	`, userID, id, update.CounterpartyName, nullableDate(update.DueDate), update.Status, update.Note))
+	return debt, translateNotFound(err)
 }
 
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
@@ -200,7 +148,7 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errMissingDebt
+		return ErrNotFound
 	}
 	return nil
 }
@@ -217,7 +165,7 @@ func (r *Repository) Pay(ctx context.Context, userID string, id string, amountMi
 
 	current, err := r.get(ctx, tx, userID, id, true)
 	if err != nil {
-		return DebtPayment{}, err
+		return DebtPayment{}, translateNotFound(err)
 	}
 	next, err := ApplyPayment(PaymentState{
 		PrincipalAmountMinor: current.PrincipalAmountMinor,
@@ -265,7 +213,7 @@ func (r *Repository) Pay(ctx context.Context, userID string, id string, amountMi
 			created_at, updated_at
 	`, userID, id, next.PaidAmountMinor, next.Status))
 	if err != nil {
-		return DebtPayment{}, err
+		return DebtPayment{}, translateNotFound(err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return DebtPayment{}, err
@@ -371,6 +319,9 @@ func paymentNote(debtType DebtType, counterpartyName string, note string) string
 	return "Loan repayment to " + counterpartyName
 }
 
-func NotFound(err error) bool {
-	return errors.Is(err, errMissingDebt)
+func translateNotFound(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"context"
 	"net/http"
 
 	"affluena/internal/httpx"
@@ -9,11 +10,19 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	usecase walletUseCase
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+type walletUseCase interface {
+	Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error)
+	List(ctx context.Context, userID string) ([]Wallet, error)
+	Get(ctx context.Context, userID string, id string) (Wallet, error)
+	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
+	Delete(ctx context.Context, userID string, id string) error
+}
+
+func NewHandler(usecase walletUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type createWalletRequest struct {
@@ -40,12 +49,12 @@ func (h *Handler) Create(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !IsValidType(req.Type) {
-		httpx.Error(c, http.StatusBadRequest, "invalid wallet type")
-		return
-	}
-
-	wallet, err := h.repo.Create(c.Request.Context(), userID, req.Name, req.Type, req.CurrencyCode, req.BalanceMinor)
+	wallet, err := h.usecase.Create(c.Request.Context(), userID, CreateWalletInput{
+		Name:         req.Name,
+		Type:         req.Type,
+		CurrencyCode: req.CurrencyCode,
+		BalanceMinor: req.BalanceMinor,
+	})
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -59,7 +68,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	wallets, err := h.repo.List(c.Request.Context(), userID)
+	wallets, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list wallets failed")
 		return
@@ -73,7 +82,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	wallet, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	wallet, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "wallet not found")
@@ -96,12 +105,11 @@ func (h *Handler) Update(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !IsValidType(req.Type) {
-		httpx.Error(c, http.StatusBadRequest, "invalid wallet type")
-		return
-	}
-
-	wallet, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), req.Name, req.Type, req.CurrencyCode)
+	wallet, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateWalletInput{
+		Name:         req.Name,
+		Type:         req.Type,
+		CurrencyCode: req.CurrencyCode,
+	})
 	if err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "wallet not found")
@@ -119,7 +127,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		if NotFound(err) {
 			httpx.Error(c, http.StatusNotFound, "wallet not found")
 			return

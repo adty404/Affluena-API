@@ -11,29 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Installment struct {
-	ID                 string            `json:"id"`
-	UserID             string            `json:"user_id"`
-	Name               string            `json:"name"`
-	WalletID           string            `json:"wallet_id"`
-	CategoryID         string            `json:"category_id"`
-	TotalAmountMinor   int64             `json:"total_amount_minor"`
-	MonthlyAmountMinor int64             `json:"monthly_amount_minor"`
-	TenorMonths        int               `json:"tenor_months"`
-	RemainingMonths    int               `json:"remaining_months"`
-	StartDate          time.Time         `json:"start_date"`
-	DueDay             int               `json:"due_day"`
-	Status             InstallmentStatus `json:"status"`
-	Note               string            `json:"note"`
-	CreatedAt          time.Time         `json:"created_at"`
-	UpdatedAt          time.Time         `json:"updated_at"`
-}
-
-type InstallmentPayment struct {
-	Installment Installment             `json:"installment"`
-	Transaction transaction.Transaction `json:"transaction"`
-}
-
 type InstallmentRepository struct {
 	pool            *pgxpool.Pool
 	transactionRepo *transaction.Repository

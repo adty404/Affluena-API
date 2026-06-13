@@ -1,6 +1,7 @@
 package recurring
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -12,11 +13,20 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	usecase recurringUseCase
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+type recurringUseCase interface {
+	Create(ctx context.Context, userID string, input RuleInput) (Rule, error)
+	List(ctx context.Context, userID string) ([]Rule, error)
+	Get(ctx context.Context, userID string, id string) (Rule, error)
+	Update(ctx context.Context, userID string, id string, input RuleInput) (Rule, error)
+	Delete(ctx context.Context, userID string, id string) error
+	RunManual(ctx context.Context, userID string, id string, now time.Time) (Run, error)
+}
+
+func NewHandler(usecase recurringUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type ruleRequest struct {
@@ -48,7 +58,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	rule, err := h.repo.Create(c.Request.Context(), userID, input)
+	rule, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -61,7 +71,7 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rules, err := h.repo.List(c.Request.Context(), userID)
+	rules, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list recurring transactions failed")
 		return
@@ -74,7 +84,7 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rule, err := h.repo.Get(c.Request.Context(), userID, c.Param("id"))
+	rule, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeError(c, err)
 		return
@@ -91,7 +101,7 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rule, err := h.repo.Update(c.Request.Context(), userID, c.Param("id"), input)
+	rule, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -104,7 +114,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.repo.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -121,7 +131,7 @@ func (h *Handler) RunManual(c *gin.Context) {
 		return
 	}
 
-	run, err := h.repo.RunManual(c.Request.Context(), userID, c.Param("id"), now)
+	run, err := h.usecase.RunManual(c.Request.Context(), userID, c.Param("id"), now)
 	if err != nil {
 		writeError(c, err)
 		return

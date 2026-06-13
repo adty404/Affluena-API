@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -11,12 +12,26 @@ import (
 )
 
 type Handler struct {
-	installments  *InstallmentRepository
-	subscriptions *SubscriptionRepository
+	usecase trackerUseCase
 }
 
-func NewHandler(installments *InstallmentRepository, subscriptions *SubscriptionRepository) *Handler {
-	return &Handler{installments: installments, subscriptions: subscriptions}
+type trackerUseCase interface {
+	CreateInstallment(ctx context.Context, userID string, installment Installment) (Installment, error)
+	ListInstallments(ctx context.Context, userID string) ([]Installment, error)
+	GetInstallment(ctx context.Context, userID string, id string) (Installment, error)
+	UpdateInstallment(ctx context.Context, userID string, id string, installment Installment) (Installment, error)
+	DeleteInstallment(ctx context.Context, userID string, id string) error
+	PayInstallment(ctx context.Context, userID string, id string, paidAt time.Time, note string) (InstallmentPayment, error)
+	CreateSubscription(ctx context.Context, userID string, subscription Subscription) (Subscription, error)
+	ListSubscriptions(ctx context.Context, userID string) ([]Subscription, error)
+	GetSubscription(ctx context.Context, userID string, id string) (Subscription, error)
+	UpdateSubscription(ctx context.Context, userID string, id string, subscription Subscription) (Subscription, error)
+	DeleteSubscription(ctx context.Context, userID string, id string) error
+	PaySubscription(ctx context.Context, userID string, id string, paidAt time.Time, note string) (SubscriptionPayment, error)
+}
+
+func NewHandler(usecase trackerUseCase) *Handler {
+	return &Handler{usecase: usecase}
 }
 
 type installmentRequest struct {
@@ -59,7 +74,7 @@ func (h *Handler) CreateInstallment(c *gin.Context) {
 		return
 	}
 
-	created, err := h.installments.Create(c.Request.Context(), userID, installment)
+	created, err := h.usecase.CreateInstallment(c.Request.Context(), userID, installment)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -72,7 +87,7 @@ func (h *Handler) ListInstallments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	installments, err := h.installments.List(c.Request.Context(), userID)
+	installments, err := h.usecase.ListInstallments(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list installments failed")
 		return
@@ -85,7 +100,7 @@ func (h *Handler) GetInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	installment, err := h.installments.Get(c.Request.Context(), userID, c.Param("id"))
+	installment, err := h.usecase.GetInstallment(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -102,7 +117,7 @@ func (h *Handler) UpdateInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	updated, err := h.installments.Update(c.Request.Context(), userID, c.Param("id"), installment)
+	updated, err := h.usecase.UpdateInstallment(c.Request.Context(), userID, c.Param("id"), installment)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -115,7 +130,7 @@ func (h *Handler) DeleteInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.installments.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.DeleteInstallment(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
 	}
@@ -131,7 +146,7 @@ func (h *Handler) PayInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	payment, err := h.installments.Pay(c.Request.Context(), userID, c.Param("id"), paidAt, note)
+	payment, err := h.usecase.PayInstallment(c.Request.Context(), userID, c.Param("id"), paidAt, note)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -148,7 +163,7 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	created, err := h.subscriptions.Create(c.Request.Context(), userID, subscription)
+	created, err := h.usecase.CreateSubscription(c.Request.Context(), userID, subscription)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -161,7 +176,7 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	subscriptions, err := h.subscriptions.List(c.Request.Context(), userID)
+	subscriptions, err := h.usecase.ListSubscriptions(c.Request.Context(), userID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list subscriptions failed")
 		return
@@ -174,7 +189,7 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	subscription, err := h.subscriptions.Get(c.Request.Context(), userID, c.Param("id"))
+	subscription, err := h.usecase.GetSubscription(c.Request.Context(), userID, c.Param("id"))
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -191,7 +206,7 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	updated, err := h.subscriptions.Update(c.Request.Context(), userID, c.Param("id"), subscription)
+	updated, err := h.usecase.UpdateSubscription(c.Request.Context(), userID, c.Param("id"), subscription)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -204,7 +219,7 @@ func (h *Handler) DeleteSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.subscriptions.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.DeleteSubscription(c.Request.Context(), userID, c.Param("id")); err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
 	}
@@ -220,7 +235,7 @@ func (h *Handler) PaySubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	payment, err := h.subscriptions.Pay(c.Request.Context(), userID, c.Param("id"), paidAt, note)
+	payment, err := h.usecase.PaySubscription(c.Request.Context(), userID, c.Param("id"), paidAt, note)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
