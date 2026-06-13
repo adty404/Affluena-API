@@ -58,7 +58,7 @@ The expected loop for code changes is:
 1. Understand the current implementation with `rg`, file reads, and existing tests.
 2. Add or update tests first for behavior changes. Watch the new test fail for the right reason before implementing.
 3. Implement the smallest scoped change that satisfies the requirement.
-4. Update API docs and Postman whenever request/response shape or endpoint behavior changes.
+4. Audit and update every related documentation artifact whenever code behavior changes: `README.md`, other relevant `.md` files, Postman, examples, workflow docs, and migration notes if applicable.
 5. Run targeted tests while developing.
 6. Run the full gate before commit:
 
@@ -70,7 +70,7 @@ The expected loop for code changes is:
 8. Commit with a concise Conventional Commit message.
 9. Push to GitHub.
 
-The user expects Docker rebuild, full tests, Postman update, commit, and push after each meaningful project change unless they explicitly say otherwise.
+The user expects Docker rebuild, full tests, Postman update, related `.md`/documentation updates, commit, and push after each meaningful project change unless they explicitly say otherwise.
 
 ## Verification Gate
 
@@ -114,12 +114,14 @@ Existing high-value integration tests:
 
 When adding a new API behavior, prefer an HTTP integration test if the behavior is visible from Postman/client usage.
 
-## API And Postman Rules
+## Documentation, API, And Postman Rules
 
 If an endpoint, payload, response field, or example changes:
 
 - Update `README.md`.
+- Update any other related `.md` files, including this `AGENTS.md` when workflow, architecture, or handoff context changes.
 - Update `postman/Affluena.postman_collection.json`.
+- Update examples, notes, and handoff context so they match the implemented behavior.
 - Keep Postman JSON valid. `make verify` validates it, but `jq empty postman/Affluena.postman_collection.json` is useful for a quick check.
 - Keep Postman request names aligned with real API contracts. Avoid labels that imply nonexistent backend routes.
 
