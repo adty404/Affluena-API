@@ -82,7 +82,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 ### 3.10. API Observability & Audit Trail
 
 - **Fitur:** Mencatat riwayat akses ke server API secara transparan ke dalam _database_, mencakup IP, User Agent, durasi latency, payload request, hingga payload response.
-- **Use Case:** Developer menggunakan histori ini untuk memantau keamanan (serangan ke sistem), melakukan proses _debugging_ jika terjadi masalah _request_ (_payload_ tidak masuk akal), dan memastikan SLA (_Service Level Agreement_) API terjaga dari anomali _latency_. Keamanan password pada *endpoint authentication* tetap disensor (masked).
+- **Use Case:** Developer menggunakan histori ini untuk memantau keamanan (serangan ke sistem), melakukan proses _debugging_ jika terjadi masalah _request_ (_payload_ tidak masuk akal), dan memastikan SLA (_Service Level Agreement_) API terjaga dari anomali _latency_. Keamanan password dan token pada *endpoint authentication* tetap disensor (masked), termasuk payload response yang berisi access/refresh token.
 
 ## 4. Non-Functional Requirements
 

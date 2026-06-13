@@ -49,6 +49,7 @@ Important invariants:
 
 - Every user-owned resource must be scoped by `user_id`.
 - Users must not see or mutate another user's wallets, categories, tags, transactions, budgets, debts, goals, installments, subscriptions, quick entries, or recurring rules.
+- API logs must not persist authentication secrets; auth request payloads and auth responses containing access/refresh tokens must be masked.
 - Money is stored as integer minor units, usually `amount_minor`.
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,5 +104,52 @@ func TestHealthCheckIsNotLogged(t *testing.T) {
 
 	if finalCount != initialCount {
 		t.Fatalf("expected healthz logs to remain %d, got %d", initialCount, finalCount)
+	}
+}
+
+func TestAuthResponsesAreMaskedInAPILogs(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "test",
+		JWTSecret:            "secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userID, _ := registerIntegrationAPIUser(t, router, "apilog-mask")
+	defer cleanupServerIntegrationUsers(t, pool, userID)
+
+	time.Sleep(50 * time.Millisecond)
+
+	rows, err := pool.Query(context.Background(), `
+		SELECT COALESCE(request_payload, ''), COALESCE(response_payload, '')
+		FROM api_logs
+		WHERE path = '/api/v1/auth/register'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`)
+	if err != nil {
+		t.Fatalf("query auth api log: %v", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("expected auth register api log")
+	}
+	var requestPayload string
+	var responsePayload string
+	if err := rows.Scan(&requestPayload, &responsePayload); err != nil {
+		t.Fatalf("scan auth api log: %v", err)
+	}
+	for _, payload := range []string{requestPayload, responsePayload} {
+		if payload != `{"masked": true}` {
+			t.Fatalf("expected auth payload to be masked, got %s", payload)
+		}
+		if strings.Contains(payload, "access_token") || strings.Contains(payload, "refresh_token") || strings.Contains(payload, "password") {
+			t.Fatalf("expected auth payload to avoid secrets, got %s", payload)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate auth api log: %v", err)
 	}
 }

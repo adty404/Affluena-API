@@ -71,34 +71,16 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			}
 		}
 
-		// 3. Process Payloads & Mask Passwords
+		// 3. Process Payloads & Mask Sensitive Auth Data
 		var requestPayload *string
 		if len(reqBodyBytes) > 0 {
-			reqStr := string(reqBodyBytes)
-			if strings.Contains(path, "/auth/login") || strings.Contains(path, "/auth/register") {
-				// Simple masking for auth endpoints
-				reqStr = `{"masked": true}`
-			} else {
-				// Optionally format JSON if it's JSON
-				if json.Valid(reqBodyBytes) {
-					var compacted bytes.Buffer
-					if err := json.Compact(&compacted, reqBodyBytes); err == nil {
-						reqStr = compacted.String()
-					}
-				}
-			}
+			reqStr := logPayload(path, reqBodyBytes)
 			requestPayload = &reqStr
 		}
 
 		var responsePayload *string
 		if w.body.Len() > 0 {
-			respStr := w.body.String()
-			if json.Valid(w.body.Bytes()) {
-				var compacted bytes.Buffer
-				if err := json.Compact(&compacted, w.body.Bytes()); err == nil {
-					respStr = compacted.String()
-				}
-			}
+			respStr := logPayload(path, w.body.Bytes())
 			responsePayload = &respStr
 		}
 
@@ -131,4 +113,24 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			ResponsePayload: responsePayload,
 		})
 	}
+}
+
+func logPayload(path string, payload []byte) string {
+	if isSensitiveAuthPath(path) {
+		return `{"masked": true}`
+	}
+	payloadStr := string(payload)
+	if json.Valid(payload) {
+		var compacted bytes.Buffer
+		if err := json.Compact(&compacted, payload); err == nil {
+			payloadStr = compacted.String()
+		}
+	}
+	return payloadStr
+}
+
+func isSensitiveAuthPath(path string) bool {
+	return strings.Contains(path, "/auth/login") ||
+		strings.Contains(path, "/auth/register") ||
+		strings.Contains(path, "/auth/refresh")
 }
