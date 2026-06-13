@@ -1,8 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -87,5 +89,93 @@ func TestSplitBillIntegration(t *testing.T) {
 	json.Unmarshal([]byte(wBody), &walletResp)
 	if walletResp.BalanceMinor != 9700000 {
 		t.Errorf("expected wallet balance 9,700,000, got %d", walletResp.BalanceMinor)
+	}
+}
+
+func TestSplitBillRollsBackAllWritesWhenDebtCreationFails(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "split-rollback-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	user, token := registerIntegrationAPIUser(t, router, "split-rollback")
+	defer cleanupServerIntegrationUsers(t, pool, user)
+
+	walletID := createAPIResource(t, router, token, "/api/v1/wallets", `{
+		"name": "Split rollback wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 1000000
+	}`)
+	foodCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Split rollback food",
+		"type": "expense"
+	}`)
+	piutangDisbCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Split rollback disbursement",
+		"type": "expense"
+	}`)
+	piutangPayCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Split rollback payment",
+		"type": "income"
+	}`)
+
+	payload := `{
+		"wallet_id": "` + walletID + `",
+		"category_id": "` + foodCat + `",
+		"total_amount_minor": 300000,
+		"transaction_at": "2026-06-13T12:00:00Z",
+		"note": "Rollback dinner",
+		"splits": [
+			{
+				"counterparty_name": "Budi",
+				"amount_minor": 100000,
+				"disbursement_category_id": "` + piutangDisbCat + `",
+				"payment_category_id": "` + piutangPayCat + `"
+			},
+			{
+				"counterparty_name": "Citra",
+				"amount_minor": 100000,
+				"disbursement_category_id": "` + piutangDisbCat + `",
+				"payment_category_id": "00000000-0000-0000-0000-000000000000"
+			}
+		]
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/transactions/split", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+	if recorder.Code != http.StatusNotFound {
+		t.Errorf("expected missing split debt reference to return 404, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	assertWalletBalance(t, router, token, walletID, 1000000)
+	assertListCount(t, router, token, "/api/v1/transactions", "transactions", 0)
+	assertListCount(t, router, token, "/api/v1/debts", "debts", 0)
+}
+
+func assertListCount(t *testing.T, router http.Handler, token string, path string, key string, wantCount int) {
+	t.Helper()
+
+	body := performAPIRequest(t, router, token, http.MethodGet, path, "", http.StatusOK)
+	var parsed map[string]json.RawMessage
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("parse list response for %s: %v", path, err)
+	}
+	items, ok := parsed[key]
+	if !ok {
+		t.Fatalf("list response for %s missing %q: %s", path, key, string(body))
+	}
+	var collection []json.RawMessage
+	if err := json.Unmarshal(items, &collection); err != nil {
+		t.Fatalf("parse %s collection for %s: %v", key, path, err)
+	}
+	if len(collection) != wantCount {
+		t.Fatalf("expected %s count %d, got %d: %s", key, wantCount, len(collection), string(items))
 	}
 }

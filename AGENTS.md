@@ -122,6 +122,8 @@ Existing high-value integration tests:
 - `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
 - `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
 - `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
+- `internal/server/splitbill_integration_test.go`: proves split bill success behavior and rollback when debt creation fails.
+- `internal/server/recurring_integration_test.go`: proves manual recurring execution creates a transaction and updates wallet balance.
 - `internal/server/subscription_account_detail_integration_test.go`: proves subscription `account_detail` lifecycle.
 - `internal/db/migration_integration_test.go`: proves database constraints and migrations.
 - `internal/debt/repository_integration_test.go`: proves debt repository lifecycle.
