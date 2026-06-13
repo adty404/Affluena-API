@@ -66,6 +66,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/tags/:id`
 - `DELETE /api/v1/tags/:id`
 - `POST /api/v1/transactions`
+- `POST /api/v1/transactions/split` (Macro endpoint for Split Bill)
 - `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&tag_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
