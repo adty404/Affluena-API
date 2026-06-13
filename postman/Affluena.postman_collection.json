@@ -553,7 +553,55 @@
           }
         },
         {
-          "name": "Get Expense Category",
+          "name": "List Income Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?type=income",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "income"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Expense Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?type=expense",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "expense"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category",
           "request": {
             "method": "GET",
             "header": [],
@@ -572,7 +620,7 @@
           }
         },
         {
-          "name": "Update Expense Category",
+          "name": "Update Category",
           "request": {
             "method": "PUT",
             "header": [
@@ -600,7 +648,7 @@
           }
         },
         {
-          "name": "Delete Expense Category (Optional / Run Last)",
+          "name": "Delete Category (Optional / Run Last)",
           "disabled": true,
           "request": {
             "method": "DELETE",

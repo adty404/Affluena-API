@@ -54,7 +54,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
 - `POST /api/v1/categories`
-- `GET /api/v1/categories`
+- `GET /api/v1/categories[?type=income|expense]`
 - `GET /api/v1/categories/:id`
 - `PUT /api/v1/categories/:id`
 - `DELETE /api/v1/categories/:id`
@@ -125,6 +125,13 @@ curl -s http://localhost:8080/api/v1/categories \
   -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
   -d '{"name":"Lunch","type":"expense"}'
+```
+
+List expense categories:
+
+```bash
+curl -s 'http://localhost:8080/api/v1/categories?type=expense' \
+  -H "authorization: Bearer $ACCESS_TOKEN"
 ```
 
 Create expense transaction:

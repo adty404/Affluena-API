@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("category not found")
+var (
+	ErrNotFound            = errors.New("category not found")
+	ErrInvalidCategoryType = errors.New("invalid category type")
+)
 
 type Category struct {
 	ID        string    `json:"id"`
