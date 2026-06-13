@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/apilog"
 	"affluena-api/internal/auth"
 	"affluena-api/internal/budget"
@@ -35,23 +36,29 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	tokenManager := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration)
 	authRepo := auth.NewRepository(pool)
-	authService := auth.NewService(authRepo, tokenManager)
+
+	activityRepo := activity.NewRepository(pool)
+	activityUC := activity.NewUseCase(activityRepo)
+	activityHandler := activity.NewHandler(activityUC)
+
+	authService := auth.NewService(authRepo, tokenManager, activityUC)
 	authHandler := auth.NewHandler(authService)
 
-	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool)))
-	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool)))
-	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool)))
+	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool), activityUC))
+	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool), activityUC))
+	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool), activityUC))
 	transactionRepo := transaction.NewRepository(pool)
-	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo))
-	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo)))
-	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool)))
+	transactionHandler := transaction.NewHandler(transaction.NewUseCase(transactionRepo, activityUC))
+	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transaction.NewUseCase(transactionRepo, nil), activityUC))
+	budgetHandler := budget.NewHandler(budget.NewUseCase(budget.NewRepository(pool), activityUC))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))
-	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo)))
-	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool)))
-	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo)))
+	debtHandler := debt.NewHandler(debt.NewUseCase(debt.NewRepository(pool, transactionRepo), activityUC))
+	goalHandler := goal.NewHandler(goal.NewUsecase(goal.NewRepository(pool), activityUC))
+	recurringHandler := recurring.NewHandler(recurring.NewUseCase(recurring.NewRepository(pool, transactionRepo), activityUC))
 	trackerHandler := tracker.NewHandler(tracker.NewUseCase(
 		tracker.NewInstallmentRepository(pool, transactionRepo),
 		tracker.NewSubscriptionRepository(pool, transactionRepo),
+		activityUC,
 	))
 	exportHandler := export.NewHandler(export.NewUseCase(export.NewRepository(pool)))
 
@@ -74,6 +81,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/dashboard/forecast", dashboardHandler.Forecast)
 
 	protected.GET("/export/csv", exportHandler.ExportCSV)
+
+	protected.GET("/activities", activityHandler.ListActivities)
 
 	protected.POST("/wallets", walletHandler.Create)
 	protected.GET("/wallets", walletHandler.List)

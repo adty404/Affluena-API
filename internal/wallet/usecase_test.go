@@ -72,7 +72,7 @@ func (f *fakeWalletRepository) RespondInvite(ctx context.Context, walletID strin
 
 func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	created, err := uc.Create(context.Background(), "user-1", CreateWalletInput{
 		Name:         "Cash",
@@ -92,7 +92,7 @@ func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 
 func TestWalletUseCaseCreatePreservesExplicitCurrency(t *testing.T) {
 	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	_, err := uc.Create(context.Background(), "user-1", CreateWalletInput{
 		Name:         "USD cash",
@@ -108,7 +108,7 @@ func TestWalletUseCaseCreatePreservesExplicitCurrency(t *testing.T) {
 }
 
 func TestWalletUseCaseRejectsInvalidType(t *testing.T) {
-	uc := NewUseCase(&fakeWalletRepository{})
+	uc := NewUseCase(&fakeWalletRepository{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", CreateWalletInput{Name: "Bad", Type: "crypto"}); err == nil {
 		t.Fatal("expected invalid wallet type error")
@@ -120,7 +120,7 @@ func TestWalletUseCaseRejectsInvalidType(t *testing.T) {
 
 func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
 	repo := &fakeWalletRepository{updated: Wallet{ID: "wallet-1", Name: "Updated"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	updated, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{
 		Name:         "Updated",
@@ -137,7 +137,7 @@ func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
 
 func TestWalletUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeWalletRepository{err: repoErr})
+	uc := NewUseCase(&fakeWalletRepository{err: repoErr}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", CreateWalletInput{Name: "Cash", Type: "cash"}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
@@ -159,7 +159,7 @@ func TestWalletUseCaseDelegatesReadAndDelete(t *testing.T) {
 		listed: []Wallet{{ID: "wallet-1", CreatedAt: now}},
 		got:    Wallet{ID: "wallet-1", CreatedAt: now},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", page.Params{Limit: 10, Sort: "created_at_desc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "wallet-1" {

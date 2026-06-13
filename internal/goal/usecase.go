@@ -3,6 +3,8 @@ package goal
 import (
 	"context"
 	"errors"
+
+	"affluena-api/internal/activity"
 )
 
 type RepositoryPort interface {
@@ -15,15 +17,20 @@ type RepositoryPort interface {
 }
 
 type Usecase struct {
-	repo RepositoryPort
+	repo       RepositoryPort
+	activityUC activity.UseCase
 }
 
-func NewUsecase(repo RepositoryPort) *Usecase {
-	return &Usecase{repo: repo}
+func NewUsecase(repo RepositoryPort, activityUC activity.UseCase) *Usecase {
+	return &Usecase{repo: repo, activityUC: activityUC}
 }
 
 func (u *Usecase) Create(ctx context.Context, userID string, input CreateGoalInput) (Goal, error) {
-	return u.repo.CreateWithOwnerWallet(ctx, userID, input)
+	g, err := u.repo.CreateWithOwnerWallet(ctx, userID, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "CREATE", "GOAL", &g.ID, "Membuat tabungan bersama: "+input.Name)
+	}
+	return g, err
 }
 
 func (u *Usecase) List(ctx context.Context, userID string) ([]Goal, error) {
@@ -53,12 +60,20 @@ func (u *Usecase) InviteMember(ctx context.Context, userID string, id string, in
 		return errors.New("cannot invite yourself")
 	}
 
-	return u.repo.AddMember(ctx, id, invitedUserID, "pending")
+	err = u.repo.AddMember(ctx, id, invitedUserID, "pending")
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "INVITE", "GOAL", &id, "Mengundang "+input.Email+" ke tabungan bersama")
+	}
+	return err
 }
 
 func (u *Usecase) RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error {
 	if memberID != userID {
 		return ErrNotFound
 	}
-	return u.repo.RespondInvite(ctx, id, userID, input.Status)
+	err := u.repo.RespondInvite(ctx, id, userID, input.Status)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "GOAL_MEMBER", &id, "Merespons undangan tabungan bersama: "+input.Status)
+	}
+	return err
 }

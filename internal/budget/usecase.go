@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
 )
 
@@ -17,11 +18,12 @@ type RepositoryPort interface {
 }
 
 type UseCase struct {
-	repo RepositoryPort
+	repo       RepositoryPort
+	activityUC activity.UseCase
 }
 
-func NewUseCase(repo RepositoryPort) *UseCase {
-	return &UseCase{repo: repo}
+func NewUseCase(repo RepositoryPort, activityUC activity.UseCase) *UseCase {
+	return &UseCase{repo: repo, activityUC: activityUC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error) {
@@ -33,7 +35,11 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateBudgetI
 		return Budget{}, err
 	}
 	input.MonthDate = month
-	return u.repo.Create(ctx, userID, input)
+	b, err := u.repo.Create(ctx, userID, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "CREATE", "BUDGET", &b.ID, "Menetapkan budget baru")
+	}
+	return b, err
 }
 
 func (u *UseCase) List(ctx context.Context, userID string, monthValue string, pagination page.Params) (page.Result[BudgetSummary], error) {
@@ -57,9 +63,17 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 		return Budget{}, err
 	}
 	input.MonthDate = month
-	return u.repo.Update(ctx, userID, id, input)
+	b, err := u.repo.Update(ctx, userID, id, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "BUDGET", &id, "Mengubah batas budget")
+	}
+	return b, err
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
-	return u.repo.Delete(ctx, userID, id)
+	err := u.repo.Delete(ctx, userID, id)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "DELETE", "BUDGET", &id, "Menghapus budget bulanan")
+	}
+	return err
 }

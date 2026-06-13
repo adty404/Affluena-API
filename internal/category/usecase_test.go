@@ -64,7 +64,7 @@ func (f *fakeCategoryRepository) Delete(ctx context.Context, userID string, id s
 
 func TestCategoryUseCaseCreateDelegatesValidCategory(t *testing.T) {
 	repo := &fakeCategoryRepository{created: Category{ID: "category-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	parentID := "parent-1"
 	created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income", ParentID: &parentID})
@@ -81,7 +81,7 @@ func TestCategoryUseCaseCreateDelegatesValidCategory(t *testing.T) {
 
 func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
 	repo := &fakeCategoryRepository{updated: Category{ID: "category-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	parentID := "parent-2"
 	updated, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Side Hustle", Type: "income", ParentID: &parentID})
@@ -97,7 +97,7 @@ func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
 }
 
 func TestCategoryUseCaseRejectsInvalidType(t *testing.T) {
-	uc := NewUseCase(&fakeCategoryRepository{})
+	uc := NewUseCase(&fakeCategoryRepository{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Bad", Type: "transfer"}); err == nil {
 		t.Fatal("expected invalid category type error")
@@ -113,7 +113,7 @@ func TestCategoryUseCaseAcceptsKnownTypes(t *testing.T) {
 	for _, categoryType := range tests {
 		t.Run(categoryType, func(t *testing.T) {
 			repo := &fakeCategoryRepository{created: Category{ID: "category-1", Type: categoryType}}
-			uc := NewUseCase(repo)
+			uc := NewUseCase(repo, nil)
 
 			created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Category", Type: categoryType})
 			if err != nil {
@@ -128,7 +128,7 @@ func TestCategoryUseCaseAcceptsKnownTypes(t *testing.T) {
 
 func TestCategoryUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeCategoryRepository{err: repoErr})
+	uc := NewUseCase(&fakeCategoryRepository{err: repoErr}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income"}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
@@ -150,7 +150,7 @@ func TestCategoryUseCaseDelegatesReadAndDelete(t *testing.T) {
 		listed: []Category{{ID: "category-1", CreatedAt: now}},
 		got:    Category{ID: "category-1", CreatedAt: now},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", "", page.Params{Limit: 10, Sort: "type_name_asc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "category-1" {
@@ -170,7 +170,7 @@ func TestCategoryUseCaseDelegatesReadAndDelete(t *testing.T) {
 
 func TestCategoryUseCaseListAcceptsOptionalTypeFilter(t *testing.T) {
 	repo := &fakeCategoryRepository{listed: []Category{{ID: "category-1", Type: "income"}}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", "income", page.Params{Limit: 10, Sort: "type_name_asc"})
 	if err != nil {
@@ -189,7 +189,7 @@ func TestCategoryUseCaseListAcceptsOptionalTypeFilter(t *testing.T) {
 
 func TestCategoryUseCaseListRejectsInvalidTypeFilter(t *testing.T) {
 	repo := &fakeCategoryRepository{}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	if _, err := uc.List(context.Background(), "user-1", "transfer", page.Params{Limit: 100}); err == nil {
 		t.Fatal("expected invalid category type error")
@@ -223,7 +223,7 @@ func (m *fakeCategoryRepository) CheckParent(ctx context.Context, userID string,
 func TestCategoryUseCaseRejectsExceededDepth(t *testing.T) {
 	depthErr := errors.New("category depth cannot exceed 3 levels")
 	repo := &fakeCategoryRepository{depthErr: depthErr}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	parentID := "some-parent"
 	_, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Burger", Type: "expense", ParentID: &parentID})
@@ -240,7 +240,7 @@ func TestCategoryUseCaseRejectsExceededDepth(t *testing.T) {
 func TestCategoryUseCaseRejectsCyclicReference(t *testing.T) {
 	cycleErr := errors.New("cyclic category reference detected")
 	repo := &fakeCategoryRepository{cycleErr: cycleErr}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	parentID := "some-parent"
 	_, err := uc.Update(context.Background(), "user-1", "cat-1", UpdateCategoryInput{Name: "Food", Type: "expense", ParentID: &parentID})
@@ -252,7 +252,7 @@ func TestCategoryUseCaseRejectsCyclicReference(t *testing.T) {
 func TestCategoryUseCaseRejectsInvalidParent(t *testing.T) {
 	parentErr := errors.New("category parent must belong to the same user and type")
 	repo := &fakeCategoryRepository{parentErr: parentErr}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	parentID := "some-parent"
 	_, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Burger", Type: "expense", ParentID: &parentID})

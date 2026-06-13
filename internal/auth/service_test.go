@@ -78,7 +78,7 @@ func (f *fakeAuthRepository) RevokeRefreshToken(ctx context.Context, tokenHash s
 }
 
 func TestServiceUsesRepositoryPort(t *testing.T) {
-	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour))
+	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 
 	user, tokens, err := service.Register(context.Background(), "USER@Example.COM", "password123")
 	if err != nil {
@@ -93,7 +93,7 @@ func TestServiceUsesRepositoryPort(t *testing.T) {
 }
 
 func TestRegisterRejectsInvalidCredentialsAndPropagatesStorageError(t *testing.T) {
-	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour))
+	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 
 	if _, _, err := service.Register(context.Background(), "", "password123"); err == nil {
 		t.Fatal("expected blank email to fail")
@@ -103,14 +103,14 @@ func TestRegisterRejectsInvalidCredentialsAndPropagatesStorageError(t *testing.T
 	}
 
 	storeErr := errors.New("store failed")
-	service = NewService(&fakeAuthRepository{storeErr: storeErr}, NewTokenManager("secret", time.Minute, time.Hour))
+	service = NewService(&fakeAuthRepository{storeErr: storeErr}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 	if _, _, err := service.Register(context.Background(), "user@example.com", "password123"); !errors.Is(err, storeErr) {
 		t.Fatalf("expected store error, got %v", err)
 	}
 }
 
 func TestLoginRejectsMissingUserAndWrongPassword(t *testing.T) {
-	service := NewService(&fakeAuthRepository{err: errors.New("not found")}, NewTokenManager("secret", time.Minute, time.Hour))
+	service := NewService(&fakeAuthRepository{err: errors.New("not found")}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 	if _, _, err := service.Login(context.Background(), "user@example.com", "password123"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials for missing user, got %v", err)
 	}
@@ -119,7 +119,7 @@ func TestLoginRejectsMissingUserAndWrongPassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword returned error: %v", err)
 	}
-	service = NewService(&fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com", PasswordHash: hash}}, NewTokenManager("secret", time.Minute, time.Hour))
+	service = NewService(&fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com", PasswordHash: hash}}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 	if _, _, err := service.Login(context.Background(), "user@example.com", "wrong-password"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials for wrong password, got %v", err)
 	}
@@ -127,7 +127,7 @@ func TestLoginRejectsMissingUserAndWrongPassword(t *testing.T) {
 
 func TestRefreshRevokesOldTokenBeforeIssuingNewPair(t *testing.T) {
 	repo := &fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com"}}
-	service := NewService(repo, NewTokenManager("secret", time.Minute, time.Hour))
+	service := NewService(repo, NewTokenManager("secret", time.Minute, time.Hour), nil)
 
 	_, tokens, err := service.Refresh(context.Background(), "refresh-token")
 	if err != nil {
@@ -143,7 +143,7 @@ func TestRefreshRevokesOldTokenBeforeIssuingNewPair(t *testing.T) {
 		t.Fatalf("expected new refresh token hash to be stored, got stored=%q revoked=%q", repo.storedHash, repo.revokedHash)
 	}
 
-	service = NewService(&fakeAuthRepository{err: errors.New("invalid")}, NewTokenManager("secret", time.Minute, time.Hour))
+	service = NewService(&fakeAuthRepository{err: errors.New("invalid")}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 	if _, _, err := service.Refresh(context.Background(), "bad-token"); !errors.Is(err, ErrInvalidRefreshToken) {
 		t.Fatalf("expected invalid refresh token, got %v", err)
 	}

@@ -61,7 +61,7 @@ func (f *fakeTransactionRepository) Delete(ctx context.Context, userID string, i
 
 func TestTransactionUseCaseCreateValidatesAndDelegates(t *testing.T) {
 	repo := &fakeTransactionRepository{created: Transaction{ID: "tx-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 	input := TransactionInput{
 		Type:           TransactionTypeIncome,
 		WalletID:       "wallet-1",
@@ -83,7 +83,7 @@ func TestTransactionUseCaseCreateValidatesAndDelegates(t *testing.T) {
 }
 
 func TestTransactionUseCaseRejectsInvalidInput(t *testing.T) {
-	uc := NewUseCase(&fakeTransactionRepository{})
+	uc := NewUseCase(&fakeTransactionRepository{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", TransactionInput{Type: TransactionTypeIncome}); err == nil {
 		t.Fatal("expected invalid transaction input error")
@@ -95,7 +95,7 @@ func TestTransactionUseCaseRejectsInvalidInput(t *testing.T) {
 
 func TestTransactionUseCaseUpdateValidatesAndDelegates(t *testing.T) {
 	repo := &fakeTransactionRepository{updated: Transaction{ID: "tx-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 	input := TransactionInput{
 		Type:           TransactionTypeTransfer,
 		WalletID:       "wallet-1",
@@ -121,7 +121,7 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 		listed: []Transaction{{ID: "tx-1"}},
 		got:    Transaction{ID: "tx-1"},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", TransactionFilter{Type: TransactionTypeExpense}, page.Params{Limit: 10, Sort: "transaction_at_desc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "tx-1" {
@@ -147,7 +147,7 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 
 func TestTransactionUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeTransactionRepository{err: repoErr})
+	uc := NewUseCase(&fakeTransactionRepository{err: repoErr}, nil)
 	valid := TransactionInput{
 		Type:           TransactionTypeIncome,
 		WalletID:       "wallet-1",

@@ -57,7 +57,7 @@ func (f *fakeBudgetRepository) Delete(ctx context.Context, userID string, id str
 
 func TestBudgetUseCaseCreateParsesMonthAndDelegates(t *testing.T) {
 	repo := &fakeBudgetRepository{created: Budget{ID: "budget-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	created, err := uc.Create(context.Background(), "user-1", CreateBudgetInput{
 		CategoryID: "category-1",
@@ -77,7 +77,7 @@ func TestBudgetUseCaseCreateParsesMonthAndDelegates(t *testing.T) {
 }
 
 func TestBudgetUseCaseRejectsInvalidLimit(t *testing.T) {
-	uc := NewUseCase(&fakeBudgetRepository{})
+	uc := NewUseCase(&fakeBudgetRepository{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", CreateBudgetInput{CategoryID: "category-1", Month: "2026-06"}); err == nil {
 		t.Fatal("expected invalid limit error")
@@ -92,7 +92,7 @@ func TestBudgetUseCaseDelegatesReadAndDelete(t *testing.T) {
 		listed: []BudgetSummary{{Budget: Budget{ID: "budget-1"}}},
 		got:    Budget{ID: "budget-1"},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", "2026-06", page.Params{Limit: 10, Sort: "created_at_desc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "budget-1" {

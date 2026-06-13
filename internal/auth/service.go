@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"affluena-api/internal/activity"
 )
 
 var (
@@ -15,8 +17,9 @@ var (
 )
 
 type Service struct {
-	repo   RepositoryPort
-	tokens *TokenManager
+	repo       RepositoryPort
+	tokens     *TokenManager
+	activityUC activity.UseCase
 }
 
 type RepositoryPort interface {
@@ -28,8 +31,8 @@ type RepositoryPort interface {
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 }
 
-func NewService(repo RepositoryPort, tokens *TokenManager) *Service {
-	return &Service{repo: repo, tokens: tokens}
+func NewService(repo RepositoryPort, tokens *TokenManager, activityUC activity.UseCase) *Service {
+	return &Service{repo: repo, tokens: tokens, activityUC: activityUC}
 }
 
 func (s *Service) Register(ctx context.Context, email string, password string) (User, TokenPair, error) {
@@ -52,6 +55,11 @@ func (s *Service) Register(ctx context.Context, email string, password string) (
 	if err != nil {
 		return User{}, TokenPair{}, err
 	}
+
+	if s.activityUC != nil {
+		s.activityUC.LogActivity(ctx, user.ID, "REGISTER", "AUTH", nil, "Mendaftar akun baru")
+	}
+
 	return user, pair, nil
 }
 
@@ -68,6 +76,11 @@ func (s *Service) Login(ctx context.Context, email string, password string) (Use
 	if err != nil {
 		return User{}, TokenPair{}, err
 	}
+
+	if s.activityUC != nil {
+		s.activityUC.LogActivity(ctx, user.ID, "LOGIN", "AUTH", nil, "Berhasil masuk ke aplikasi")
+	}
+
 	return user, pair, nil
 }
 

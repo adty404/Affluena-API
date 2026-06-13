@@ -70,7 +70,7 @@ func (f *fakeDebtRepository) Pay(ctx context.Context, userID string, id string, 
 }
 
 func TestDebtUseCaseRejectsInvalidCreateInput(t *testing.T) {
-	uc := NewUseCase(&fakeDebtRepository{})
+	uc := NewUseCase(&fakeDebtRepository{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", DebtInput{Type: DebtType("bad"), PrincipalAmountMinor: 100}); err == nil {
 		t.Fatal("expected invalid debt type error")
@@ -82,7 +82,7 @@ func TestDebtUseCaseRejectsInvalidCreateInput(t *testing.T) {
 
 func TestDebtUseCaseCreateDelegatesValidInput(t *testing.T) {
 	repo := &fakeDebtRepository{created: Debt{ID: "debt-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	input := DebtInput{
 		Type:                 DebtTypeReceivable,
@@ -102,7 +102,7 @@ func TestDebtUseCaseCreateDelegatesValidInput(t *testing.T) {
 }
 
 func TestDebtUseCaseRejectsInvalidPayment(t *testing.T) {
-	uc := NewUseCase(&fakeDebtRepository{})
+	uc := NewUseCase(&fakeDebtRepository{}, nil)
 
 	if _, err := uc.Pay(context.Background(), "user-1", "debt-1", 0, time.Now().UTC(), ""); err == nil {
 		t.Fatal("expected invalid payment amount error")
@@ -110,7 +110,7 @@ func TestDebtUseCaseRejectsInvalidPayment(t *testing.T) {
 }
 
 func TestDebtUseCaseRejectsInvalidUpdateStatus(t *testing.T) {
-	uc := NewUseCase(&fakeDebtRepository{})
+	uc := NewUseCase(&fakeDebtRepository{}, nil)
 
 	if _, err := uc.Update(context.Background(), "user-1", "debt-1", DebtUpdate{Status: DebtStatus("lost")}); err == nil {
 		t.Fatal("expected invalid debt status error")
@@ -120,7 +120,7 @@ func TestDebtUseCaseRejectsInvalidUpdateStatus(t *testing.T) {
 func TestDebtUseCasePayDelegatesPositivePayment(t *testing.T) {
 	paidAt := time.Date(2026, 6, 13, 10, 0, 0, 0, time.UTC)
 	repo := &fakeDebtRepository{paid: DebtPayment{ID: "payment-1"}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	payment, err := uc.Pay(context.Background(), "user-1", "debt-1", 50_000, paidAt, "partial")
 	if err != nil {
@@ -140,7 +140,7 @@ func TestDebtUseCaseDelegatesReadUpdateDelete(t *testing.T) {
 		got:     Debt{ID: "debt-1"},
 		updated: Debt{ID: "debt-1", Status: DebtStatusCancelled},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	listed, err := uc.List(context.Background(), "user-1", page.Params{Limit: 10, Sort: "opened_at_desc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "debt-1" {
@@ -164,7 +164,7 @@ func TestDebtUseCaseDelegatesReadUpdateDelete(t *testing.T) {
 
 func TestDebtUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeDebtRepository{err: repoErr})
+	uc := NewUseCase(&fakeDebtRepository{err: repoErr}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", DebtInput{Type: DebtTypeReceivable, PrincipalAmountMinor: 100_000}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected create repo error, got %v", err)
