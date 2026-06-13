@@ -49,14 +49,15 @@ type installmentRequest struct {
 }
 
 type subscriptionRequest struct {
-	Name         string             `json:"name" binding:"required"`
-	WalletID     string             `json:"wallet_id" binding:"required"`
-	CategoryID   string             `json:"category_id" binding:"required"`
-	AmountMinor  int64              `json:"amount_minor" binding:"required"`
-	BillingCycle BillingCycle       `json:"billing_cycle" binding:"required"`
-	NextDueDate  string             `json:"next_due_date" binding:"required"`
-	Status       SubscriptionStatus `json:"status"`
-	Note         string             `json:"note"`
+	Name          string             `json:"name" binding:"required"`
+	AccountDetail string             `json:"account_detail"`
+	WalletID      string             `json:"wallet_id" binding:"required"`
+	CategoryID    string             `json:"category_id" binding:"required"`
+	AmountMinor   int64              `json:"amount_minor" binding:"required"`
+	BillingCycle  BillingCycle       `json:"billing_cycle" binding:"required"`
+	NextDueDate   string             `json:"next_due_date" binding:"required"`
+	Status        SubscriptionStatus `json:"status"`
+	Note          string             `json:"note"`
 }
 
 type payRequest struct {
@@ -311,14 +312,15 @@ func bindSubscription(c *gin.Context) (Subscription, bool) {
 	}
 
 	return Subscription{
-		Name:         req.Name,
-		WalletID:     req.WalletID,
-		CategoryID:   req.CategoryID,
-		AmountMinor:  req.AmountMinor,
-		BillingCycle: req.BillingCycle,
-		NextDueDate:  nextDueDate,
-		Status:       req.Status,
-		Note:         req.Note,
+		Name:          req.Name,
+		AccountDetail: req.AccountDetail,
+		WalletID:      req.WalletID,
+		CategoryID:    req.CategoryID,
+		AmountMinor:   req.AmountMinor,
+		BillingCycle:  req.BillingCycle,
+		NextDueDate:   nextDueDate,
+		Status:        req.Status,
+		Note:          req.Note,
 	}, true
 }
 

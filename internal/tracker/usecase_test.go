@@ -182,19 +182,20 @@ func TestTrackerUseCasePassesSubscriptionInputsThrough(t *testing.T) {
 	subscriptions := &fakeSubscriptionRepository{created: Subscription{ID: "subscription-1"}, updated: Subscription{ID: "subscription-1"}, paid: SubscriptionPayment{Subscription: Subscription{ID: "subscription-1"}}}
 	uc := NewUseCase(&fakeInstallmentRepository{}, subscriptions)
 
-	input := Subscription{Name: "Internet", BillingCycle: BillingCycleMonthly}
+	input := Subscription{Name: "Internet", AccountDetail: "personal@example.com", BillingCycle: BillingCycleMonthly}
 	if _, err := uc.CreateSubscription(context.Background(), "user-1", input); err != nil {
 		t.Fatalf("CreateSubscription returned error: %v", err)
 	}
-	if subscriptions.createInput.Name != "Internet" {
+	if subscriptions.createInput.Name != "Internet" || subscriptions.createInput.AccountDetail != "personal@example.com" {
 		t.Fatalf("expected create input to be captured, got %+v", subscriptions.createInput)
 	}
 
 	input.Name = "Internet updated"
+	input.AccountDetail = "work@example.com"
 	if _, err := uc.UpdateSubscription(context.Background(), "user-1", "subscription-1", input); err != nil {
 		t.Fatalf("UpdateSubscription returned error: %v", err)
 	}
-	if subscriptions.updateInput.Name != "Internet updated" {
+	if subscriptions.updateInput.Name != "Internet updated" || subscriptions.updateInput.AccountDetail != "work@example.com" {
 		t.Fatalf("expected update input to be captured, got %+v", subscriptions.updateInput)
 	}
 

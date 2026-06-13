@@ -214,7 +214,7 @@ Create and pay a subscription:
 curl -s http://localhost:8080/api/v1/subscriptions \
   -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"name":"Meal Plan","wallet_id":"<wallet_id>","category_id":"<expense_category_id>","amount_minor":250000,"billing_cycle":"weekly","next_due_date":"2026-06-12"}'
+  -d '{"name":"Google One","account_detail":"personal@example.com","wallet_id":"<wallet_id>","category_id":"<expense_category_id>","amount_minor":250000,"billing_cycle":"weekly","next_due_date":"2026-06-12"}'
 
 curl -s http://localhost:8080/api/v1/subscriptions/<subscription_id>/pay \
   -H "authorization: Bearer $ACCESS_TOKEN" \
