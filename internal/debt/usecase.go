@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
 )
 
@@ -18,11 +19,12 @@ type RepositoryPort interface {
 }
 
 type UseCase struct {
-	repo RepositoryPort
+	repo       RepositoryPort
+	activityUC activity.UseCase
 }
 
-func NewUseCase(repo RepositoryPort) *UseCase {
-	return &UseCase{repo: repo}
+func NewUseCase(repo RepositoryPort, activityUC activity.UseCase) *UseCase {
+	return &UseCase{repo: repo, activityUC: activityUC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input DebtInput) (Debt, error) {
@@ -32,7 +34,11 @@ func (u *UseCase) Create(ctx context.Context, userID string, input DebtInput) (D
 	if input.PrincipalAmountMinor <= 0 {
 		return Debt{}, errors.New("principal_amount_minor must be positive")
 	}
-	return u.repo.Create(ctx, userID, input)
+	d, err := u.repo.Create(ctx, userID, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "CREATE", "DEBT", &d.ID, "Mencatat hutang/piutang baru: "+input.CounterpartyName)
+	}
+	return d, err
 }
 
 func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Debt], error) {
@@ -47,16 +53,28 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, update D
 	if update.Status != "" && !IsValidDebtStatus(update.Status) {
 		return Debt{}, errInvalidDebtStatus
 	}
-	return u.repo.Update(ctx, userID, id, update)
+	d, err := u.repo.Update(ctx, userID, id, update)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "DEBT", &id, "Mengubah rincian hutang/piutang")
+	}
+	return d, err
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
-	return u.repo.Delete(ctx, userID, id)
+	err := u.repo.Delete(ctx, userID, id)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "DELETE", "DEBT", &id, "Menghapus data hutang/piutang")
+	}
+	return err
 }
 
 func (u *UseCase) Pay(ctx context.Context, userID string, id string, amountMinor int64, paidAt time.Time, note string) (DebtPayment, error) {
 	if amountMinor <= 0 {
 		return DebtPayment{}, errInvalidPayment
 	}
-	return u.repo.Pay(ctx, userID, id, amountMinor, paidAt, note)
+	pay, err := u.repo.Pay(ctx, userID, id, amountMinor, paidAt, note)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "DEBT_PAYMENT", &id, "Membayar/menerima pelunasan hutang")
+	}
+	return pay, err
 }

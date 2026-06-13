@@ -73,7 +73,7 @@ func (f *fakeTransactionCreator) Create(ctx context.Context, userID string, inpu
 }
 
 func TestQuickEntryUseCaseRejectsInvalidTemplate(t *testing.T) {
-	uc := NewUseCase(&fakeTemplateRepository{}, &fakeTransactionCreator{})
+	uc := NewUseCase(&fakeTemplateRepository{}, &fakeTransactionCreator{}, nil)
 
 	_, err := uc.Create(context.Background(), "user-1", Template{
 		Name:        "Bad",
@@ -96,7 +96,7 @@ func TestQuickEntryUseCaseCreateAndUpdateValidateTemplates(t *testing.T) {
 		Note:        "Monthly salary",
 	}
 	repo := &fakeTemplateRepository{created: Template{ID: "template-1"}, updated: Template{ID: "template-1"}}
-	uc := NewUseCase(repo, &fakeTransactionCreator{})
+	uc := NewUseCase(repo, &fakeTransactionCreator{}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", valid); err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -135,7 +135,7 @@ func TestQuickEntryUseCaseExecuteCreatesTransactionFromTemplate(t *testing.T) {
 		Note:        "Default note",
 	}}
 	transactions := &fakeTransactionCreator{created: transaction.Transaction{ID: "tx-1"}}
-	uc := NewUseCase(templates, transactions)
+	uc := NewUseCase(templates, transactions, nil)
 
 	result, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{
 		TransactionAt: executedAt,
@@ -162,7 +162,7 @@ func TestQuickEntryUseCaseExecuteUsesTemplateDefaults(t *testing.T) {
 		Note:        "Template note",
 	}}
 	transactions := &fakeTransactionCreator{created: transaction.Transaction{ID: "tx-1"}}
-	uc := NewUseCase(templates, transactions)
+	uc := NewUseCase(templates, transactions, nil)
 
 	result, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestQuickEntryUseCaseExecuteUsesTemplateDefaults(t *testing.T) {
 
 func TestQuickEntryUseCaseExecutePropagatesRepositoryAndTransactionErrors(t *testing.T) {
 	repoErr := errors.New("template missing")
-	uc := NewUseCase(&fakeTemplateRepository{err: repoErr}, &fakeTransactionCreator{})
+	uc := NewUseCase(&fakeTemplateRepository{err: repoErr}, &fakeTransactionCreator{}, nil)
 	if _, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected template repository error, got %v", err)
 	}
@@ -193,7 +193,7 @@ func TestQuickEntryUseCaseExecutePropagatesRepositoryAndTransactionErrors(t *tes
 		WalletID:    "wallet-1",
 		CategoryID:  "category-1",
 		AmountMinor: 50_000,
-	}}, &fakeTransactionCreator{err: txErr})
+	}}, &fakeTransactionCreator{err: txErr}, nil)
 	if _, err := uc.Execute(context.Background(), "user-1", "template-1", ExecuteInput{}); !errors.Is(err, txErr) {
 		t.Fatalf("expected transaction error, got %v", err)
 	}

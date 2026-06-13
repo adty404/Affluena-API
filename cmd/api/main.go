@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/config"
 	"affluena-api/internal/db"
 	"affluena-api/internal/recurring"
@@ -42,9 +43,11 @@ func main() {
 	defer appCancel()
 
 	if cfg.RecurringSchedulerEnabled {
+		activityRepo := activity.NewRepository(pool)
+		activityUC := activity.NewUseCase(activityRepo)
 		transactionRepo := transaction.NewRepository(pool)
 		recurringRepo := recurring.NewRepository(pool, transactionRepo)
-		recurring.NewScheduler(recurring.NewUseCase(recurringRepo), cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
+		recurring.NewScheduler(recurring.NewUseCase(recurringRepo, activityUC), cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
 		slog.Info("recurring scheduler enabled", "interval", cfg.RecurringSchedulerInterval, "batch_size", cfg.RecurringSchedulerBatchSize)
 	}
 

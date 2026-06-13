@@ -67,7 +67,7 @@ func (f *fakeGoalRepository) RespondInvite(ctx context.Context, goalID string, u
 
 func TestGoalUsecaseCreateUsesAtomicRepositoryWorkflow(t *testing.T) {
 	repo := &fakeGoalRepository{createdGoal: Goal{ID: "goal-1", Name: "Wedding"}}
-	uc := NewUsecase(repo)
+	uc := NewUsecase(repo, nil)
 
 	created, err := uc.Create(context.Background(), "user-1", CreateGoalInput{Name: "Wedding", TargetAmountMinor: 1000})
 	if err != nil {
@@ -87,7 +87,7 @@ func TestGoalUsecaseInviteMemberRules(t *testing.T) {
 			got:        Goal{ID: "goal-1", UserID: "owner-1"},
 			findUserID: "member-1",
 		}
-		uc := NewUsecase(repo)
+		uc := NewUsecase(repo, nil)
 
 		if err := uc.InviteMember(context.Background(), "owner-1", "goal-1", InviteMemberInput{Email: "member@example.test"}); err != nil {
 			t.Fatalf("InviteMember returned error: %v", err)
@@ -99,7 +99,7 @@ func TestGoalUsecaseInviteMemberRules(t *testing.T) {
 
 	t.Run("non-owner cannot invite", func(t *testing.T) {
 		repo := &fakeGoalRepository{got: Goal{ID: "goal-1", UserID: "owner-1"}}
-		uc := NewUsecase(repo)
+		uc := NewUsecase(repo, nil)
 
 		if err := uc.InviteMember(context.Background(), "member-1", "goal-1", InviteMemberInput{Email: "friend@example.test"}); !errors.Is(err, ErrNotAuthorized) {
 			t.Fatalf("expected ErrNotAuthorized, got %v", err)
@@ -114,7 +114,7 @@ func TestGoalUsecaseInviteMemberRules(t *testing.T) {
 			got:        Goal{ID: "goal-1", UserID: "owner-1"},
 			findUserID: "owner-1",
 		}
-		uc := NewUsecase(repo)
+		uc := NewUsecase(repo, nil)
 
 		if err := uc.InviteMember(context.Background(), "owner-1", "goal-1", InviteMemberInput{Email: "owner@example.test"}); err == nil {
 			t.Fatal("expected self invite to fail")
@@ -127,7 +127,7 @@ func TestGoalUsecaseInviteMemberRules(t *testing.T) {
 
 func TestGoalUsecaseRespondInviteRequiresRouteMemberToMatchAuthenticatedUser(t *testing.T) {
 	repo := &fakeGoalRepository{}
-	uc := NewUsecase(repo)
+	uc := NewUsecase(repo, nil)
 
 	err := uc.RespondInvite(context.Background(), "member-1", "goal-1", "other-member", RespondInviteInput{Status: "joined"})
 	if !errors.Is(err, ErrNotFound) {

@@ -109,7 +109,7 @@ func TestTrackerUseCaseDelegatesInstallments(t *testing.T) {
 		updated: Installment{ID: "installment-1", Status: InstallmentStatusActive},
 		paid:    InstallmentPayment{Installment: Installment{ID: "installment-1", RemainingMonths: 1}},
 	}
-	uc := NewUseCase(installments, &fakeSubscriptionRepository{})
+	uc := NewUseCase(installments, &fakeSubscriptionRepository{}, nil)
 
 	if got, err := uc.CreateInstallment(context.Background(), "user-1", Installment{}); err != nil || got.ID != "installment-1" {
 		t.Fatalf("unexpected CreateInstallment result %+v err=%v", got, err)
@@ -133,7 +133,7 @@ func TestTrackerUseCaseDelegatesInstallments(t *testing.T) {
 
 func TestTrackerUseCasePassesInstallmentInputsThrough(t *testing.T) {
 	installments := &fakeInstallmentRepository{created: Installment{ID: "installment-1"}, updated: Installment{ID: "installment-1"}, paid: InstallmentPayment{Installment: Installment{ID: "installment-1"}}}
-	uc := NewUseCase(installments, &fakeSubscriptionRepository{})
+	uc := NewUseCase(installments, &fakeSubscriptionRepository{}, nil)
 
 	input := Installment{Name: "Laptop", RemainingMonths: 6}
 	if _, err := uc.CreateInstallment(context.Background(), "user-1", input); err != nil {
@@ -168,7 +168,7 @@ func TestTrackerUseCaseDelegatesSubscriptions(t *testing.T) {
 		updated: Subscription{ID: "subscription-1", Status: SubscriptionStatusActive},
 		paid:    SubscriptionPayment{Subscription: Subscription{ID: "subscription-1"}},
 	}
-	uc := NewUseCase(&fakeInstallmentRepository{}, subscriptions)
+	uc := NewUseCase(&fakeInstallmentRepository{}, subscriptions, nil)
 
 	if got, err := uc.CreateSubscription(context.Background(), "user-1", Subscription{}); err != nil || got.ID != "subscription-1" {
 		t.Fatalf("unexpected CreateSubscription result %+v err=%v", got, err)
@@ -192,7 +192,7 @@ func TestTrackerUseCaseDelegatesSubscriptions(t *testing.T) {
 
 func TestTrackerUseCasePassesSubscriptionInputsThrough(t *testing.T) {
 	subscriptions := &fakeSubscriptionRepository{created: Subscription{ID: "subscription-1"}, updated: Subscription{ID: "subscription-1"}, paid: SubscriptionPayment{Subscription: Subscription{ID: "subscription-1"}}}
-	uc := NewUseCase(&fakeInstallmentRepository{}, subscriptions)
+	uc := NewUseCase(&fakeInstallmentRepository{}, subscriptions, nil)
 
 	input := Subscription{Name: "Internet", AccountDetail: "personal@example.com", BillingCycle: BillingCycleMonthly}
 	if _, err := uc.CreateSubscription(context.Background(), "user-1", input); err != nil {
@@ -222,7 +222,7 @@ func TestTrackerUseCasePassesSubscriptionInputsThrough(t *testing.T) {
 
 func TestTrackerUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeInstallmentRepository{err: repoErr}, &fakeSubscriptionRepository{err: repoErr})
+	uc := NewUseCase(&fakeInstallmentRepository{err: repoErr}, &fakeSubscriptionRepository{err: repoErr}, nil)
 
 	if _, err := uc.CreateInstallment(context.Background(), "user-1", Installment{}); !errors.Is(err, repoErr) {
 		t.Fatalf("expected installment create error, got %v", err)

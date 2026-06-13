@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
 )
 
@@ -19,11 +20,12 @@ type RepositoryPort interface {
 }
 
 type UseCase struct {
-	repo RepositoryPort
+	repo       RepositoryPort
+	activityUC activity.UseCase
 }
 
-func NewUseCase(repo RepositoryPort) *UseCase {
-	return &UseCase{repo: repo}
+func NewUseCase(repo RepositoryPort, activityUC activity.UseCase) *UseCase {
+	return &UseCase{repo: repo, activityUC: activityUC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error) {
@@ -33,7 +35,11 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateWalletI
 	if input.CurrencyCode == "" {
 		input.CurrencyCode = "IDR"
 	}
-	return u.repo.Create(ctx, userID, input)
+	w, err := u.repo.Create(ctx, userID, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "CREATE", "WALLET", &w.ID, "Membuat dompet baru: "+input.Name)
+	}
+	return w, err
 }
 
 func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error) {
@@ -48,11 +54,19 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 	if !IsValidType(input.Type) {
 		return Wallet{}, errors.New("invalid wallet type")
 	}
-	return u.repo.Update(ctx, userID, id, input)
+	w, err := u.repo.Update(ctx, userID, id, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "WALLET", &id, "Mengubah dompet: "+input.Name)
+	}
+	return w, err
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
-	return u.repo.Delete(ctx, userID, id)
+	err := u.repo.Delete(ctx, userID, id)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "DELETE", "WALLET", &id, "Menghapus dompet")
+	}
+	return err
 }
 
 func (u *UseCase) InviteMember(ctx context.Context, userID string, id string, input InviteMemberInput) error {
@@ -74,12 +88,20 @@ func (u *UseCase) InviteMember(ctx context.Context, userID string, id string, in
 		return errors.New("cannot invite yourself")
 	}
 
-	return u.repo.AddMember(ctx, id, invitedUserID, "pending")
+	err = u.repo.AddMember(ctx, id, invitedUserID, "pending")
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "INVITE", "WALLET", &id, "Mengundang "+input.Email+" ke dompet bersama")
+	}
+	return err
 }
 
 func (u *UseCase) RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error {
 	if memberID != userID {
 		return ErrNotFound
 	}
-	return u.repo.RespondInvite(ctx, id, userID, input.Status)
+	err := u.repo.RespondInvite(ctx, id, userID, input.Status)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "WALLET_MEMBER", &id, "Merespons undangan dompet bersama: "+input.Status)
+	}
+	return err
 }

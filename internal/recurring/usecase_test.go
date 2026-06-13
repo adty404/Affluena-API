@@ -70,7 +70,7 @@ func TestRecurringUseCaseDelegatesRuleActions(t *testing.T) {
 		manual:  Run{ID: "run-1"},
 		due:     []Run{{ID: "run-2"}},
 	}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	if got, err := uc.Create(context.Background(), "user-1", RuleInput{}); err != nil || got.ID != "rule-1" {
 		t.Fatalf("unexpected Create result %+v err=%v", got, err)
@@ -97,7 +97,7 @@ func TestRecurringUseCaseDelegatesRuleActions(t *testing.T) {
 
 func TestRecurringUseCasePassesInputsThrough(t *testing.T) {
 	repo := &fakeRecurringRepository{created: Rule{ID: "rule-1"}, updated: Rule{ID: "rule-1"}, manual: Run{ID: "run-1"}, due: []Run{{ID: "run-2"}}}
-	uc := NewUseCase(repo)
+	uc := NewUseCase(repo, nil)
 
 	input := RuleInput{Name: "Rent", Frequency: FrequencyMonthly, IntervalCount: 1}
 	if _, err := uc.Create(context.Background(), "user-1", input); err != nil {
@@ -133,7 +133,7 @@ func TestRecurringUseCasePassesInputsThrough(t *testing.T) {
 
 func TestRecurringUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := assertRecurringError{}
-	uc := NewUseCase(&fakeRecurringRepository{err: repoErr})
+	uc := NewUseCase(&fakeRecurringRepository{err: repoErr}, nil)
 
 	if _, err := uc.Create(context.Background(), "user-1", RuleInput{}); err != repoErr {
 		t.Fatalf("expected create error, got %v", err)

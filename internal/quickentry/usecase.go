@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
 	"affluena-api/internal/transaction"
 )
@@ -23,17 +24,22 @@ type TransactionCreator interface {
 type UseCase struct {
 	repo         RepositoryPort
 	transactions TransactionCreator
+	activityUC   activity.UseCase
 }
 
-func NewUseCase(repo RepositoryPort, transactions TransactionCreator) *UseCase {
-	return &UseCase{repo: repo, transactions: transactions}
+func NewUseCase(repo RepositoryPort, transactions TransactionCreator, activityUC activity.UseCase) *UseCase {
+	return &UseCase{repo: repo, transactions: transactions, activityUC: activityUC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, template Template) (Template, error) {
 	if err := validateTemplate(template); err != nil {
 		return Template{}, err
 	}
-	return u.repo.Create(ctx, userID, template)
+	t, err := u.repo.Create(ctx, userID, template)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "CREATE", "QUICKENTRY_TEMPLATE", &t.ID, "Membuat template transaksi cepat: "+template.Name)
+	}
+	return t, err
 }
 
 func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
@@ -48,11 +54,19 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, template
 	if err := validateTemplate(template); err != nil {
 		return Template{}, err
 	}
-	return u.repo.Update(ctx, userID, id, template)
+	t, err := u.repo.Update(ctx, userID, id, template)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "QUICKENTRY_TEMPLATE", &id, "Mengubah template transaksi cepat: "+template.Name)
+	}
+	return t, err
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
-	return u.repo.Delete(ctx, userID, id)
+	err := u.repo.Delete(ctx, userID, id)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "DELETE", "QUICKENTRY_TEMPLATE", &id, "Menghapus template transaksi cepat")
+	}
+	return err
 }
 
 func (u *UseCase) Execute(ctx context.Context, userID string, id string, input ExecuteInput) (ExecuteResult, error) {
@@ -78,6 +92,9 @@ func (u *UseCase) Execute(ctx context.Context, userID string, id string, input E
 	})
 	if err != nil {
 		return ExecuteResult{}, err
+	}
+	if u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "EXECUTE", "QUICKENTRY_TEMPLATE", &id, "Mengeksekusi template transaksi cepat: "+template.Name)
 	}
 	return ExecuteResult{Transaction: created}, nil
 }
