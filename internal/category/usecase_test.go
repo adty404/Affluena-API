@@ -17,6 +17,7 @@ type fakeCategoryRepository struct {
 	listed      []Category
 	got         Category
 	updated     Category
+	updateInput UpdateCategoryInput
 	deletedID   string
 	err         error
 	depthErr    error
@@ -48,6 +49,7 @@ func (f *fakeCategoryRepository) Get(ctx context.Context, userID string, id stri
 }
 
 func (f *fakeCategoryRepository) Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error) {
+	f.updateInput = input
 	if f.err != nil {
 		return Category{}, f.err
 	}
@@ -63,15 +65,33 @@ func TestCategoryUseCaseCreateDelegatesValidCategory(t *testing.T) {
 	repo := &fakeCategoryRepository{created: Category{ID: "category-1"}}
 	uc := NewUseCase(repo)
 
-	created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income"})
+	parentID := "parent-1"
+	created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income", ParentID: &parentID})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
 	if created.ID != "category-1" {
 		t.Fatalf("expected created category, got %+v", created)
 	}
-	if repo.createInput.Type != "income" || repo.createInput.Name != "Salary" {
+	if repo.createInput.Type != "income" || repo.createInput.Name != "Salary" || repo.createInput.ParentID == nil || *repo.createInput.ParentID != "parent-1" {
 		t.Fatalf("unexpected create input %+v", repo.createInput)
+	}
+}
+
+func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
+	repo := &fakeCategoryRepository{updated: Category{ID: "category-1"}}
+	uc := NewUseCase(repo)
+
+	parentID := "parent-2"
+	updated, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Side Hustle", Type: "income", ParentID: &parentID})
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.ID != "category-1" {
+		t.Fatalf("expected updated category, got %+v", updated)
+	}
+	if repo.updateInput.Type != "income" || repo.updateInput.Name != "Side Hustle" || repo.updateInput.ParentID == nil || *repo.updateInput.ParentID != "parent-2" {
+		t.Fatalf("unexpected update input %+v", repo.updateInput)
 	}
 }
 
