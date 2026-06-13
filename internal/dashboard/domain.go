@@ -44,3 +44,25 @@ type UpcomingDebt struct {
 	RemainingAmountMinor int64     `json:"remaining_amount_minor"`
 	DueDate              time.Time `json:"due_date"`
 }
+
+type CashflowTrend struct {
+	Month         string `json:"month"`
+	IncomeMinor   int64  `json:"income_minor"`
+	ExpenseMinor  int64  `json:"expense_minor"`
+	CashflowMinor int64  `json:"cashflow_minor"`
+}
+
+type ExpenseDistribution struct {
+	CategoryID   string  `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	AmountMinor  int64   `json:"amount_minor"`
+	Percentage   float64 `json:"percentage"`
+}
+
+type Forecast struct {
+	CurrentExpenseMinor    int64  `json:"current_expense_minor"`
+	DailyAverageMinor      int64  `json:"daily_average_minor"`
+	ForecastedExpenseMinor int64  `json:"forecasted_expense_minor"`
+	BudgetLimitMinor       int64  `json:"budget_limit_minor"`
+	Status                 string `json:"status"` // "safe" or "overbudget"
+}

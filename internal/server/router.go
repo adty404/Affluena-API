@@ -64,6 +64,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/auth/me", authHandler.Me)
 
 	protected.GET("/dashboard/summary", dashboardHandler.Summary)
+	protected.GET("/dashboard/cashflow-trend", dashboardHandler.CashflowTrend)
+	protected.GET("/dashboard/expense-distribution", dashboardHandler.ExpenseDistribution)
+	protected.GET("/dashboard/forecast", dashboardHandler.Forecast)
 
 	protected.POST("/wallets", walletHandler.Create)
 	protected.GET("/wallets", walletHandler.List)

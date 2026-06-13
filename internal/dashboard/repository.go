@@ -180,3 +180,146 @@ func (r *Repository) upcomingDebts(ctx context.Context, userID string, month tim
 	}
 	return debts, rows.Err()
 }
+
+func (r *Repository) CashflowTrend(ctx context.Context, userID string, months int) ([]CashflowTrend, error) {
+	// Generate months from N months ago to current month
+	// Group transactions by month
+	query := `
+		WITH RECURSIVE months AS (
+			SELECT date_trunc('month', CURRENT_DATE - interval '1 month' * ($2 - 1)) AS m
+			UNION ALL
+			SELECT m + interval '1 month'
+			FROM months
+			WHERE m < date_trunc('month', CURRENT_DATE)
+		)
+		SELECT 
+			to_char(m.m, 'YYYY-MM') AS month,
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'income'), 0) AS income_minor,
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'expense'), 0) AS expense_minor
+		FROM months m
+		LEFT JOIN transactions t 
+			ON t.user_id = $1 
+			AND date_trunc('month', t.transaction_at AT TIME ZONE 'UTC') = m.m
+		GROUP BY m.m
+		ORDER BY m.m ASC
+	`
+	rows, err := r.pool.Query(ctx, query, userID, months)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trends []CashflowTrend
+	for rows.Next() {
+		var t CashflowTrend
+		if err := rows.Scan(&t.Month, &t.IncomeMinor, &t.ExpenseMinor); err != nil {
+			return nil, err
+		}
+		t.CashflowMinor = t.IncomeMinor - t.ExpenseMinor
+		trends = append(trends, t)
+	}
+	return trends, rows.Err()
+}
+
+func (r *Repository) ExpenseDistribution(ctx context.Context, userID string, month time.Time) ([]ExpenseDistribution, error) {
+	nextMonth := month.AddDate(0, 1, 0)
+	query := `
+		WITH category_spend AS (
+			SELECT 
+				COALESCE(c.id::text, '') AS category_id,
+				COALESCE(c.name, 'Uncategorized') AS category_name,
+				SUM(t.amount_minor) AS amount_minor
+			FROM transactions t
+			LEFT JOIN categories c ON t.category_id = c.id
+			WHERE t.user_id = $1 
+				AND t.type = 'expense'
+				AND t.transaction_at >= $2 
+				AND t.transaction_at < $3
+			GROUP BY c.id, c.name
+		), total_spend AS (
+			SELECT SUM(amount_minor) AS total FROM category_spend
+		)
+		SELECT 
+			cs.category_id, 
+			cs.category_name, 
+			cs.amount_minor, 
+			CASE WHEN ts.total = 0 THEN 0 ELSE (cs.amount_minor::numeric / ts.total::numeric) * 100 END AS percentage
+		FROM category_spend cs, total_spend ts
+		ORDER BY cs.amount_minor DESC
+	`
+	rows, err := r.pool.Query(ctx, query, userID, month, nextMonth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dist []ExpenseDistribution
+	for rows.Next() {
+		var d ExpenseDistribution
+		if err := rows.Scan(&d.CategoryID, &d.CategoryName, &d.AmountMinor, &d.Percentage); err != nil {
+			return nil, err
+		}
+		dist = append(dist, d)
+	}
+	return dist, rows.Err()
+}
+
+func (r *Repository) Forecast(ctx context.Context, userID string, month time.Time) (Forecast, error) {
+	nextMonth := month.AddDate(0, 1, 0)
+
+	// Get total spent in this month
+	var currentSpent int64
+	err := r.pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(amount_minor), 0)
+		FROM transactions
+		WHERE user_id = $1 AND type = 'expense'
+			AND transaction_at >= $2 AND transaction_at < $3
+	`, userID, month, nextMonth).Scan(&currentSpent)
+	if err != nil {
+		return Forecast{}, err
+	}
+
+	// Get total budget for this month
+	budget, err := r.budgetSummary(ctx, userID, month)
+	if err != nil {
+		return Forecast{}, err
+	}
+
+	// Calculate forecast
+	now := time.Now().UTC()
+	var daysElapsed int
+	var totalDaysInMonth int
+
+	// If calculating for a past month, days elapsed = total days in month
+	if now.Year() > month.Year() || (now.Year() == month.Year() && now.Month() > month.Month()) {
+		daysElapsed = nextMonth.AddDate(0, 0, -1).Day()
+		totalDaysInMonth = daysElapsed
+	} else if now.Year() == month.Year() && now.Month() == month.Month() {
+		daysElapsed = now.Day()
+		totalDaysInMonth = nextMonth.AddDate(0, 0, -1).Day()
+	} else {
+		// Future month
+		daysElapsed = 1
+		totalDaysInMonth = nextMonth.AddDate(0, 0, -1).Day()
+	}
+
+	if daysElapsed == 0 {
+		daysElapsed = 1
+	}
+
+	dailyAverage := currentSpent / int64(daysElapsed)
+	forecastedSpend := dailyAverage * int64(totalDaysInMonth)
+
+	status := "safe"
+	if forecastedSpend > budget.LimitMinor {
+		status = "overbudget"
+	}
+
+	return Forecast{
+		CurrentExpenseMinor:    currentSpent,
+		DailyAverageMinor:      dailyAverage,
+		ForecastedExpenseMinor: forecastedSpend,
+		BudgetLimitMinor:       budget.LimitMinor,
+		Status:                 status,
+	}, nil
+}
