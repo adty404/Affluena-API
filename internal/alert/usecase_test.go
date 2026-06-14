@@ -3,6 +3,7 @@ package alert
 import (
 	"context"
 	"testing"
+	"time"
 
 	"affluena-api/internal/budget"
 	"affluena-api/internal/page"
@@ -23,11 +24,13 @@ func (m *mockRepo) GetCategoryName(ctx context.Context, categoryID string) (stri
 }
 
 type mockBudget struct {
-	result page.Result[budget.BudgetSummary]
-	err    error
+	result     page.Result[budget.BudgetSummary]
+	err        error
+	monthValue string
 }
 
 func (m *mockBudget) List(ctx context.Context, userID string, monthValue string, pagination page.Params) (page.Result[budget.BudgetSummary], error) {
+	m.monthValue = monthValue
 	return m.result, m.err
 }
 
@@ -73,7 +76,7 @@ func TestCheckBudgetAndAlert(t *testing.T) {
 			mailer := &mockMailer{}
 
 			uc := NewUseCase(repo, provider, mailer)
-			uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1")
+			uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", time.Now().UTC())
 
 			if tc.expectSent {
 				if mailer.sentCount != 1 {
@@ -89,5 +92,34 @@ func TestCheckBudgetAndAlert(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCheckBudgetAndAlertUsesTransactionMonth(t *testing.T) {
+	provider := &mockBudget{
+		result: page.Result[budget.BudgetSummary]{
+			Items: []budget.BudgetSummary{
+				{
+					Budget: budget.Budget{
+						CategoryID: "cat-1",
+						LimitMinor: 100_000,
+					},
+					SpentMinor: 90_000,
+				},
+			},
+		},
+	}
+	repo := &mockRepo{email: "test@example.com"}
+	mailer := &mockMailer{}
+	uc := NewUseCase(repo, provider, mailer)
+
+	transactionAt := time.Date(2026, time.May, 20, 15, 30, 0, 0, time.UTC)
+	uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", transactionAt)
+
+	if provider.monthValue != "2026-05" {
+		t.Fatalf("expected alert to check budget month 2026-05, got %q", provider.monthValue)
+	}
+	if mailer.sentCount != 1 {
+		t.Fatalf("expected alert email to be sent for matching transaction month, got %d", mailer.sentCount)
 	}
 }
