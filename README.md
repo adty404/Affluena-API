@@ -49,6 +49,7 @@ Protected with `Authorization: Bearer <access_token>`:
 
 - `GET /api/v1/auth/me`
 - `GET /api/v1/dashboard/summary?month=YYYY-MM`
+- `GET /api/v1/activities[?limit=100&offset=0&sort=created_at_desc]`
 - `POST /api/v1/wallets`
 - `GET /api/v1/wallets[?limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/wallets/:id`
@@ -117,7 +118,7 @@ Protected with `Authorization: Bearer <access_token>`:
 
 ## Pagination And Sorting
 
-List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, and recurring transactions support `limit`, `offset`, and `sort`.
+List endpoints for wallets, categories, tags, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and activities support `limit`, `offset`, and `sort`.
 
 - `limit` defaults to `100`, must be positive, and is capped at `200`.
 - `offset` defaults to `0`.
@@ -135,8 +136,10 @@ Supported `sort` values:
 - Subscriptions: `next_due_date_asc`, `next_due_date_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Recurring transactions: `next_run_at_asc`, `next_run_at_desc`, `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
 - Tags: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`.
+- Activities: `created_at_desc`, `created_at_asc`.
 
 `GET /api/v1/goals` is the current exception: it returns a JSON array of accessible goals ordered by `created_at DESC`, without pagination metadata.
+`GET /api/v1/activities` returns the activity log in `data` plus `pagination`, scoped to the authenticated user.
 
 ## Example Flow
 

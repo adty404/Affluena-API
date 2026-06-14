@@ -22,7 +22,7 @@ func (m *fakeRepository) Create(ctx context.Context, activity Activity) error {
 	return nil
 }
 
-func (m *fakeRepository) List(ctx context.Context, userID string, limit, offset int) ([]Activity, int, error) {
+func (m *fakeRepository) List(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error) {
 	if m.err != nil {
 		return nil, 0, m.err
 	}
@@ -67,7 +67,7 @@ func TestListActivities(t *testing.T) {
 	repo := &fakeRepository{listActivities: expected, listTotal: 1}
 	uc := NewUseCase(repo)
 
-	acts, total, err := uc.ListActivities(context.Background(), "user-1", 10, 0)
+	acts, total, err := uc.ListActivities(context.Background(), "user-1", 10, 0, "created_at_desc")
 	if err != nil {
 		t.Fatalf("ListActivities returned error: %v", err)
 	}
