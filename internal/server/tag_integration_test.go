@@ -227,3 +227,68 @@ func TestTransactionTagsDeduplicateAndValidateFilter(t *testing.T) {
 
 	assertAPIStatus(t, router, token, http.MethodGet, "/api/v1/transactions?tag_id=not-a-uuid", "", http.StatusBadRequest)
 }
+
+func TestSharedWalletTagFilterDoesNotUseOtherUsersTags(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "tag-shared-filter-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "tag-shared-owner")
+	memberID, memberToken := registerIntegrationAPIUser(t, router, "tag-shared-member")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberID)
+
+	sharedWalletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Tagged shared wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	memberEmail := getIntegrationUserEmail(t, router, memberToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+sharedWalletID+"/invites", `{
+		"email": "`+memberEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+sharedWalletID+"/members/"+memberID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	memberTagID := createAPIResource(t, router, memberToken, "/api/v1/tags", `{"name": "MemberPrivateTag"}`)
+	memberCategoryID := createAPIResource(t, router, memberToken, "/api/v1/categories", `{
+		"name": "Member tagged expense",
+		"type": "expense"
+	}`)
+	transactionID := createAPIResource(t, router, memberToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+sharedWalletID+`",
+		"category_id": "`+memberCategoryID+`",
+		"amount_minor": 10000,
+		"tag_ids": ["`+memberTagID+`"],
+		"transaction_at": "2026-06-14T08:00:00Z"
+	}`)
+
+	ownerListBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/transactions?wallet_id="+sharedWalletID, "", http.StatusOK)
+	var ownerList struct {
+		Transactions []transaction.Transaction `json:"transactions"`
+	}
+	if err := json.Unmarshal(ownerListBody, &ownerList); err != nil {
+		t.Fatalf("parse owner shared wallet transactions: %v", err)
+	}
+	if countTransactionID(ownerList.Transactions, transactionID) != 1 {
+		t.Fatalf("expected owner to see shared wallet transaction %s, got %+v", transactionID, ownerList.Transactions)
+	}
+
+	ownerFilteredBody := performAPIRequest(t, router, ownerToken, http.MethodGet, "/api/v1/transactions?tag_id="+memberTagID, "", http.StatusOK)
+	var ownerFiltered struct {
+		Transactions []transaction.Transaction `json:"transactions"`
+	}
+	if err := json.Unmarshal(ownerFilteredBody, &ownerFiltered); err != nil {
+		t.Fatalf("parse owner filtered transactions: %v", err)
+	}
+	if len(ownerFiltered.Transactions) != 0 {
+		t.Fatalf("expected owner filter with member tag to return no transactions, got %+v", ownerFiltered.Transactions)
+	}
+}
