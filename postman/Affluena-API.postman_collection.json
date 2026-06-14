@@ -2011,7 +2011,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Dompet (Wallet)\nMengelola dompet pribadi maupun dompet bersama (Shared Wallets). Pengguna dapat membuat dompet bertipe `cash`, `bank`, `ewallet`, `credit_card`, dan `investment`. Dompet bersama memungkinkan owner dan anggota joined saling melihat dan mencatat transaksi; transaksi dompet bersama juga muncul di export dan dashboard analytics tanpa dihitung ganda saat ada beberapa anggota."
+            "description": "### Modul Dompet (Wallet)\nMengelola dompet pribadi maupun dompet bersama (Shared Wallets). Pengguna dapat membuat dompet bertipe `cash`, `bank`, `e_wallet`, dan `investment`. Dompet bertipe internal `goal` hanya dibuat dan dikelola oleh workflow financial goal, sehingga tidak bisa dibuat, diubah, atau dihapus langsung melalui endpoint wallet umum. Dompet bersama memungkinkan owner dan anggota joined saling melihat dan mencatat transaksi; transaksi dompet bersama juga muncul di export dan dashboard analytics tanpa dihitung ganda saat ada beberapa anggota."
         },
         {
             "name": "Categories",

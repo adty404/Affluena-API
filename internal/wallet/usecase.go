@@ -54,6 +54,13 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 	if !IsPublicType(input.Type) {
 		return Wallet{}, errors.New("invalid wallet type")
 	}
+	current, err := u.repo.Get(ctx, userID, id)
+	if err != nil {
+		return Wallet{}, err
+	}
+	if current.GoalID != nil {
+		return Wallet{}, ErrGoalWalletReadOnly
+	}
 	w, err := u.repo.Update(ctx, userID, id, input)
 	if err == nil && u.activityUC != nil {
 		u.activityUC.LogActivity(ctx, userID, "UPDATE", "WALLET", &id, "Mengubah dompet: "+input.Name)
@@ -62,7 +69,14 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
-	err := u.repo.Delete(ctx, userID, id)
+	current, err := u.repo.Get(ctx, userID, id)
+	if err != nil {
+		return err
+	}
+	if current.GoalID != nil {
+		return ErrGoalWalletReadOnly
+	}
+	err = u.repo.Delete(ctx, userID, id)
 	if err == nil && u.activityUC != nil {
 		u.activityUC.LogActivity(ctx, userID, "DELETE", "WALLET", &id, "Menghapus dompet")
 	}
