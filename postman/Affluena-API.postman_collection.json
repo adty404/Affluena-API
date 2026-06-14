@@ -5664,7 +5664,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Templat Cepat\nMemungkinkan pengguna menyimpan templat transaksi rutin (seperti makan siang, bensin) yang sering terjadi. Pengguna dapat mengeksekusi templat secara langsung untuk mempercepat proses pencatatan pengeluaran harian."
+            "description": "### Modul Templat Cepat\nMemungkinkan pengguna menyimpan templat transaksi rutin (seperti makan siang, bensin) yang sering terjadi. `wallet_id` dan `to_wallet_id` dapat memakai wallet milik sendiri atau wallet bersama dengan status `joined`; kategori tetap harus milik user pembuat template. Pengguna dapat mengeksekusi templat secara langsung untuk mempercepat proses pencatatan pengeluaran harian."
         },
         {
             "name": "Category Budgets",

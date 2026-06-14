@@ -14,7 +14,7 @@ Core domains:
 - Categories: user-owned income/expense categories with optional same-user, same-type `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
 - Tags: user-owned labels attachable to transactions through `tag_ids`, with transaction filtering by `tag_id`.
 - Transactions: income, expense, transfer, adjustment, with wallet balance updates, tag links, and list filters.
-- Quick entry templates: one-click transaction templates.
+- Quick entry templates: one-click transaction templates; `wallet_id` can be an owned wallet or a joined shared wallet.
 - Category budgets: monthly expense category budget summaries.
 - Installments: finite payment tracking.
 - Subscriptions: recurring subscription tracking; includes optional `account_detail` to distinguish multiple accounts for the same service.
@@ -123,7 +123,7 @@ Existing high-value integration tests:
 - `internal/server/pagination_integration_test.go`: proves list endpoint pagination metadata and wallet sorting.
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
 - `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
-- `internal/server/wallet_share_integration_test.go`: proves shared wallet invite lifecycle, member transactions, owner visibility, export, and analytics without duplicate counting.
+- `internal/server/wallet_share_integration_test.go`: proves shared wallet invite lifecycle, member transactions, owner visibility, export, analytics without duplicate counting, and joined member quick entry templates on shared wallets.
 - `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
 - `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
 - `internal/server/splitbill_integration_test.go`: proves split bill success behavior and rollback when debt creation fails.
@@ -156,6 +156,7 @@ Current notable API decisions:
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
 - `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
+- `POST/PUT /api/v1/quick-entry-templates` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the template user.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
 - Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.

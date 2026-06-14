@@ -18,8 +18,6 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		cardinality int
 	}{
 		{name: "transactions_user_category_fk", cardinality: 2},
-		{name: "quick_entry_templates_user_wallet_fk", cardinality: 2},
-		{name: "quick_entry_templates_user_to_wallet_fk", cardinality: 2},
 		{name: "quick_entry_templates_user_category_fk", cardinality: 2},
 		{name: "category_budgets_user_category_fk", cardinality: 2},
 		{name: "installments_user_wallet_fk", cardinality: 2},
@@ -83,9 +81,9 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 			args: []any{fixture.userA, fixture.walletA, fixture.incomeCategoryB},
 		},
 		{
-			name: "quick entry cannot use another user's destination wallet",
-			sql:  `INSERT INTO quick_entry_templates (user_id, name, type, wallet_id, to_wallet_id, amount_minor) VALUES ($1, 'Cross transfer', 'transfer', $2, $3, 1000)`,
-			args: []any{fixture.userA, fixture.walletA, fixture.walletB},
+			name: "quick entry cannot use another user's category",
+			sql:  `INSERT INTO quick_entry_templates (user_id, name, type, wallet_id, category_id, amount_minor) VALUES ($1, 'Cross quick entry', 'income', $2, $3, 1000)`,
+			args: []any{fixture.userA, fixture.walletA, fixture.incomeCategoryB},
 		},
 		{
 			name: "budget cannot use another user's category",

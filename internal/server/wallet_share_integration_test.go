@@ -223,6 +223,62 @@ func TestSharedWalletOwnerSeesMemberTransactionsAndAnalyticsOnce(t *testing.T) {
 	}
 }
 
+func TestSharedWalletMemberCanUseQuickEntryTemplate(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-share-quick-entry-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "share-quick-owner")
+	memberID, memberToken := registerIntegrationAPIUser(t, router, "share-quick-member")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberID)
+
+	sharedWalletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Shared Quick Entry Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	memberEmail := getIntegrationUserEmail(t, router, memberToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+sharedWalletID+"/invites", `{
+		"email": "`+memberEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+sharedWalletID+"/members/"+memberID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	categoryID := createAPIResource(t, router, memberToken, "/api/v1/categories", `{
+		"name": "Shared Quick Groceries",
+		"type": "expense"
+	}`)
+	templateID := createAPIResource(t, router, memberToken, "/api/v1/quick-entry-templates", `{
+		"name": "Shared grocery run",
+		"type": "expense",
+		"wallet_id": "`+sharedWalletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 25000,
+		"note": "Quick shared grocery"
+	}`)
+	executeBody := performAPIRequest(t, router, memberToken, http.MethodPost, "/api/v1/quick-entry-templates/"+templateID+"/execute", `{
+		"transaction_at": "2026-06-14T08:30:00Z"
+	}`, http.StatusCreated)
+	var executed struct {
+		Transaction transaction.Transaction `json:"transaction"`
+	}
+	if err := json.Unmarshal(executeBody, &executed); err != nil {
+		t.Fatalf("parse quick entry execution response: %v", err)
+	}
+	if executed.Transaction.WalletID != sharedWalletID || executed.Transaction.AmountMinor != 25000 {
+		t.Fatalf("expected quick entry to create shared-wallet expense, got %+v", executed.Transaction)
+	}
+
+	assertWalletBalance(t, router, ownerToken, sharedWalletID, 75000)
+}
+
 func TestFormerSharedWalletMemberCannotMutateWalletBalanceThroughOldTransactions(t *testing.T) {
 	pool := openServerIntegrationPool(t)
 	router := NewRouter(config.Config{
