@@ -131,7 +131,14 @@ func (r *Repository) ensureRefs(ctx context.Context, userID string, template Tem
 
 func (r *Repository) ensureWallet(ctx context.Context, userID string, walletID string) error {
 	var exists bool
-	if err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wallets WHERE user_id = $1 AND id = $2)`, userID, walletID).Scan(&exists); err != nil {
+	if err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM wallets w
+			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined'
+			WHERE (w.user_id = $1 OR ws.wallet_id IS NOT NULL) AND w.id = $2
+		)
+	`, userID, walletID).Scan(&exists); err != nil {
 		return err
 	}
 	if !exists {

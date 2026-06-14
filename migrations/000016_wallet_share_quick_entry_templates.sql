@@ -1,0 +1,3 @@
+ALTER TABLE quick_entry_templates
+	DROP CONSTRAINT quick_entry_templates_user_wallet_fk,
+	DROP CONSTRAINT quick_entry_templates_user_to_wallet_fk;
