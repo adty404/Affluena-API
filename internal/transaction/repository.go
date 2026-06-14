@@ -79,7 +79,7 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-			AND ($9 = '' OR transactions.id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = transactions.user_id AND tag_id = NULLIF($9, '')::uuid))
+			AND ($9 = '' OR transactions.id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($9, '')::uuid))
 		ORDER BY `+orderBy+`
 		LIMIT $7 OFFSET $8
 	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset, filter.TagID)
@@ -110,7 +110,7 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
-			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = transactions.user_id AND tag_id = NULLIF($7, '')::uuid))
+			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($7, '')::uuid))
 	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), filter.TagID).Scan(&total); err != nil {
 		return page.Result[Transaction]{}, err
 	}
