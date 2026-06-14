@@ -25,7 +25,6 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		{name: "recurring_rules_user_category_fk", cardinality: 2},
 		{name: "recurring_runs_user_rule_fk", cardinality: 2},
 		{name: "recurring_runs_user_transaction_fk", cardinality: 2},
-		{name: "debts_user_wallet_fk", cardinality: 2},
 		{name: "debts_user_disbursement_category_fk", cardinality: 2},
 		{name: "debts_user_payment_category_fk", cardinality: 2},
 		{name: "debts_user_origination_transaction_fk", cardinality: 2},

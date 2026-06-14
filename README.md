@@ -307,7 +307,7 @@ Create, update, delete, quick entry execution, and split bill execution use data
 
 Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
 
-Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Joined members can create quick entry templates, installment trackers, subscription trackers, and recurring transaction rules for shared wallets; executing those templates, tracker payments, or rules records transactions against the shared wallet. Shared-wallet analytics count each wallet transaction once even when multiple members have joined. Transaction updates and deletes only apply wallet balance deltas when the authenticated user still owns or has joined access to every affected wallet.
+Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Joined members can create quick entry templates, debt records, installment trackers, subscription trackers, and recurring transaction rules for shared wallets; executing those templates, debt payments, tracker payments, or rules records transactions against the shared wallet. Shared-wallet analytics count each wallet transaction once even when multiple members have joined. Transaction updates and deletes only apply wallet balance deltas when the authenticated user still owns or has joined access to every affected wallet.
 
 Category `parent_id` must point to a category owned by the authenticated user with the same category `type`. Category trees are limited to 3 levels and cyclic parent relationships are rejected.
 
@@ -319,6 +319,8 @@ Debt creation and debt payment endpoints also run atomically:
 - `receivable` payment creates an income transaction and increases the wallet.
 - `payable` creation creates an income transaction and increases the wallet.
 - `payable` payment creates an expense transaction and decreases the wallet.
+
+Debt `wallet_id` can point to a wallet owned by the authenticated user or a joined shared wallet. Debt categories remain owned by the authenticated user.
 
 Debt statuses are `open`, `partial`, `paid_off`, and `cancelled`. Payment over the remaining amount is rejected. `DELETE /api/v1/debts/:id` soft-cancels tracking and keeps transaction history intact.
 
