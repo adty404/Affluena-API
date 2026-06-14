@@ -16,6 +16,12 @@ func NewUseCase(repo Repository) UseCase {
 
 // LogActivity executes in a goroutine to avoid blocking the main request
 func (u *useCase) LogActivity(ctx context.Context, userID, actionType, entityType string, entityID *string, description string) {
+	var entityIDCopy *string
+	if entityID != nil {
+		copied := *entityID
+		entityIDCopy = &copied
+	}
+
 	// Create a new context with timeout for the background job
 	go func() {
 		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -25,7 +31,7 @@ func (u *useCase) LogActivity(ctx context.Context, userID, actionType, entityTyp
 			UserID:      userID,
 			ActionType:  actionType,
 			EntityType:  entityType,
-			EntityID:    entityID,
+			EntityID:    entityIDCopy,
 			Description: description,
 		}
 
