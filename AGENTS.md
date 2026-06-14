@@ -19,7 +19,7 @@ Core domains:
 - Installments: finite payment tracking; `wallet_id` can be an owned wallet or a joined shared wallet.
 - Subscriptions: recurring subscription tracking; includes optional `account_detail` to distinguish multiple accounts for the same service; `wallet_id` can be an owned wallet or a joined shared wallet.
 - Recurring transactions: native scheduled transaction generation; `wallet_id` and `to_wallet_id` can be owned wallets or joined shared wallets.
-- Debts: payable/receivable tracking with payment lifecycle.
+- Debts: payable/receivable tracking with payment lifecycle; `wallet_id` can be an owned wallet or a joined shared wallet.
 - Financial goals: collaborative saving goals that create goal wallets and support member invitations.
 
 The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `README.md`. The runnable Postman collection is `postman/Affluena-API.postman_collection.json`.
@@ -130,6 +130,7 @@ Existing high-value integration tests:
 - `internal/server/recurring_integration_test.go`: proves manual recurring execution creates a transaction and updates wallet balance, including joined shared-wallet member rules.
 - `internal/server/subscription_account_detail_integration_test.go`: proves subscription `account_detail` lifecycle.
 - `internal/server/tracker_shared_wallet_integration_test.go`: proves joined shared-wallet members can create and pay installment/subscription trackers on shared wallets.
+- `internal/server/debt_shared_wallet_integration_test.go`: proves joined shared-wallet members can create and pay debt records on shared wallets.
 - `internal/db/migration_integration_test.go`: proves database constraints and migrations.
 - `internal/debt/repository_integration_test.go`: proves debt repository lifecycle.
 
@@ -160,6 +161,7 @@ Current notable API decisions:
 - `POST/PUT /api/v1/quick-entry-templates` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the template user.
 - `POST/PUT /api/v1/recurring-transactions` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the recurring-rule user.
 - `POST/PUT /api/v1/installments` and `POST/PUT /api/v1/subscriptions` accept `wallet_id` for wallets owned by the authenticated user or joined shared wallets; expense categories remain owned by the tracker user.
+- `POST /api/v1/debts` accepts `wallet_id` for wallets owned by the authenticated user or joined shared wallets; disbursement and payment categories remain owned by the debt user.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
 - Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
@@ -175,7 +177,7 @@ Current notable API decisions:
 - Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
-- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), and category parent ownership/type checks (`000011`).
+- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), and shared-wallet compatibility migrations through debt records (`000016`-`000019`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Git Rules

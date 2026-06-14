@@ -6715,7 +6715,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Hutang & Piutang\nMemudahkan pelacakan uang yang dipinjam atau dipinjamkan. Mendukung pembayaran sebagian atau pelunasan secara penuh atas hutang/piutang yang dicatat."
+            "description": "### Modul Hutang & Piutang\nMemudahkan pelacakan uang yang dipinjam atau dipinjamkan. Mendukung pembayaran sebagian atau pelunasan secara penuh atas hutang/piutang yang dicatat. `wallet_id` dapat memakai wallet milik user atau joined shared wallet; kategori pencairan dan pembayaran tetap harus milik user yang mencatat debt."
         },
         {
             "name": "Installments",
