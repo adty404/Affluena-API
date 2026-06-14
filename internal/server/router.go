@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"affluena-api/internal/activity"
 	"affluena-api/internal/alert"
@@ -23,6 +24,7 @@ import (
 	"affluena-api/internal/transaction"
 	"affluena-api/internal/wallet"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -35,6 +37,17 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	apilogRepo := apilog.NewRepository(pool)
 	router := gin.New()
 	router.Use(gin.Recovery())
+
+	// Setup CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	router.Use(apilog.APILogMiddleware(apilogRepo))
 
 	tokenManager := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration)
