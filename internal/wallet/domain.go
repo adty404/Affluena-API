@@ -12,6 +12,7 @@ var (
 	ErrInviteAlreadyJoined    = errors.New("already joined")
 	ErrInviteAlreadyRejected  = errors.New("invite already rejected")
 	ErrInviteMemberIDMismatch = errors.New("invitation member does not match authenticated user")
+	ErrGoalWalletReadOnly     = errors.New("goal wallets are managed by financial goals")
 )
 
 type Wallet struct {

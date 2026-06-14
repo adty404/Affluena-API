@@ -10,14 +10,15 @@ import (
 )
 
 type fakeWalletRepository struct {
-	createInput CreateWalletInput
-	listPage    page.Params
-	created     Wallet
-	listed      []Wallet
-	got         Wallet
-	updated     Wallet
-	deletedID   string
-	err         error
+	createInput  CreateWalletInput
+	listPage     page.Params
+	created      Wallet
+	listed       []Wallet
+	got          Wallet
+	updated      Wallet
+	updateCalled bool
+	deletedID    string
+	err          error
 }
 
 func (f *fakeWalletRepository) Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error) {
@@ -44,6 +45,7 @@ func (f *fakeWalletRepository) Get(ctx context.Context, userID string, id string
 }
 
 func (f *fakeWalletRepository) Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error) {
+	f.updateCalled = true
 	if f.err != nil {
 		return Wallet{}, f.err
 	}
@@ -130,7 +132,10 @@ func TestWalletUseCaseRejectsPublicGoalWalletWrites(t *testing.T) {
 }
 
 func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
-	repo := &fakeWalletRepository{updated: Wallet{ID: "wallet-1", Name: "Updated"}}
+	repo := &fakeWalletRepository{
+		got:     Wallet{ID: "wallet-1"},
+		updated: Wallet{ID: "wallet-1", Name: "Updated"},
+	}
 	uc := NewUseCase(repo, nil)
 
 	updated, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{
@@ -143,6 +148,25 @@ func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
 	}
 	if updated.Name != "Updated" {
 		t.Fatalf("expected updated wallet, got %+v", updated)
+	}
+}
+
+func TestWalletUseCaseRejectsManagedGoalWalletMutation(t *testing.T) {
+	goalID := "goal-1"
+	repo := &fakeWalletRepository{got: Wallet{ID: "wallet-1", GoalID: &goalID}}
+	uc := NewUseCase(repo, nil)
+
+	if _, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{Name: "Goal as bank", Type: "bank", CurrencyCode: "IDR"}); !errors.Is(err, ErrGoalWalletReadOnly) {
+		t.Fatalf("expected ErrGoalWalletReadOnly on update, got %v", err)
+	}
+	if repo.updateCalled {
+		t.Fatal("expected update repository call to be skipped for managed goal wallet")
+	}
+	if err := uc.Delete(context.Background(), "user-1", "wallet-1"); !errors.Is(err, ErrGoalWalletReadOnly) {
+		t.Fatalf("expected ErrGoalWalletReadOnly on delete, got %v", err)
+	}
+	if repo.deletedID != "" {
+		t.Fatalf("expected delete repository call to be skipped for managed goal wallet, got %q", repo.deletedID)
 	}
 }
 

@@ -54,6 +54,7 @@ Important invariants:
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.
 - Transaction balance deltas must only update wallets still accessible to the authenticated user, either as owner or joined shared-wallet member.
+- Goal wallets use internal type `goal`; generic wallet create/update/delete endpoints must not create, convert, or delete goal-managed wallets.
 - Installment plans must keep `total_amount_minor == monthly_amount_minor * tenor_months`; otherwise payments can overcharge or undercharge the declared total.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
 - Financial goal creation and invite acceptance create related goal wallets atomically; treat those as cross-module workflows and test partial-write risks when touching them.
@@ -124,6 +125,7 @@ Existing high-value integration tests:
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
 - `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
 - `internal/server/wallet_share_integration_test.go`: proves shared wallet invite lifecycle, member transactions, owner visibility, export, analytics without duplicate counting, and joined member quick entry templates on shared wallets.
+- `internal/server/wallet_validation_integration_test.go`: proves public wallet endpoints reject direct goal-wallet creation, conversion, update, and deletion.
 - `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
 - `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
 - `internal/server/splitbill_integration_test.go`: proves split bill success behavior and rollback when debt creation fails.
@@ -158,6 +160,7 @@ Current notable API decisions:
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
 - `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
+- Generic wallet create/update/delete endpoints reject direct `goal` wallet writes; goal-managed wallets are created and retained by the financial goal workflow.
 - `POST/PUT /api/v1/quick-entry-templates` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the template user.
 - `POST/PUT /api/v1/recurring-transactions` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the recurring-rule user.
 - `POST/PUT /api/v1/installments` and `POST/PUT /api/v1/subscriptions` accept `wallet_id` for wallets owned by the authenticated user or joined shared wallets; expense categories remain owned by the tracker user.
