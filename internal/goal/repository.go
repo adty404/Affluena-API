@@ -177,7 +177,7 @@ func (r *Repository) RespondInvite(ctx context.Context, goalID string, userID st
 	} else if err != nil {
 		return err
 	}
-	if currentStatus == "joined" && status == "joined" {
+	if currentStatus == "joined" {
 		return ErrInviteAlreadyJoined
 	}
 	if currentStatus == "rejected" {
