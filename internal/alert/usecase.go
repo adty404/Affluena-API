@@ -12,7 +12,7 @@ import (
 )
 
 type UseCase interface {
-	CheckBudgetAndAlert(ctx context.Context, userID, categoryID string)
+	CheckBudgetAndAlert(ctx context.Context, userID, categoryID string, transactionAt time.Time)
 }
 
 type budgetProvider interface {
@@ -33,10 +33,12 @@ func NewUseCase(repo Repository, budgetUC budgetProvider, mailSender mailer.Mail
 	}
 }
 
-func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID string) {
+func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID string, transactionAt time.Time) {
 	// Execute synchronously here, but caller should invoke via goroutine
-	now := time.Now().UTC()
-	monthValue := now.Format("2006-01")
+	if transactionAt.IsZero() {
+		transactionAt = time.Now().UTC()
+	}
+	monthValue := transactionAt.UTC().Format("2006-01")
 
 	// 1. Get budgets for the month
 	budgets, err := u.budgetUC.List(ctx, userID, monthValue, page.Params{Limit: 100, Offset: 0})

@@ -22,6 +22,20 @@ type fakeTransactionRepository struct {
 	err         error
 }
 
+type alertCall struct {
+	userID        string
+	categoryID    string
+	transactionAt time.Time
+}
+
+type fakeAlertUseCase struct {
+	called chan alertCall
+}
+
+func (f *fakeAlertUseCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID string, transactionAt time.Time) {
+	f.called <- alertCall{userID: userID, categoryID: categoryID, transactionAt: transactionAt}
+}
+
 func (f *fakeTransactionRepository) Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error) {
 	f.createInput = input
 	if f.err != nil {
@@ -90,6 +104,39 @@ func TestTransactionUseCaseRejectsInvalidInput(t *testing.T) {
 	}
 	if _, err := uc.Update(context.Background(), "user-1", "tx-1", TransactionInput{Type: TransactionTypeIncome}); err == nil {
 		t.Fatal("expected invalid transaction input error")
+	}
+}
+
+func TestTransactionUseCaseCreatePassesTransactionMonthToBudgetAlert(t *testing.T) {
+	transactionAt := time.Date(2026, time.May, 20, 15, 30, 0, 0, time.UTC)
+	repo := &fakeTransactionRepository{created: Transaction{ID: "tx-1"}}
+	alerts := &fakeAlertUseCase{called: make(chan alertCall, 1)}
+	uc := NewUseCase(repo, nil, alerts)
+
+	_, err := uc.Create(context.Background(), "user-1", TransactionInput{
+		Type:           TransactionTypeExpense,
+		WalletID:       "wallet-1",
+		CategoryID:     "category-1",
+		AmountMinor:    100_000,
+		TransactionUTC: transactionAt,
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	select {
+	case call := <-alerts.called:
+		if call.userID != "user-1" {
+			t.Fatalf("expected alert user user-1, got %q", call.userID)
+		}
+		if call.categoryID != "category-1" {
+			t.Fatalf("expected alert category category-1, got %q", call.categoryID)
+		}
+		if !call.transactionAt.Equal(transactionAt) {
+			t.Fatalf("expected alert transaction time %s, got %s", transactionAt, call.transactionAt)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected budget alert check to be triggered")
 	}
 }
 

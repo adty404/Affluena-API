@@ -4,6 +4,7 @@ import "context"
 
 import (
 	"fmt"
+	"time"
 
 	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
@@ -18,7 +19,7 @@ type RepositoryPort interface {
 }
 
 type alertUseCase interface {
-	CheckBudgetAndAlert(ctx context.Context, userID, categoryID string)
+	CheckBudgetAndAlert(ctx context.Context, userID, categoryID string, transactionAt time.Time)
 }
 
 type UseCase struct {
@@ -43,7 +44,7 @@ func (u *UseCase) Create(ctx context.Context, userID string, input TransactionIn
 	if err == nil && u.alertUC != nil && input.Type == TransactionTypeExpense && input.CategoryID != "" {
 		// Run alert check asynchronously
 		// Use context.Background() since the request context might be cancelled
-		go u.alertUC.CheckBudgetAndAlert(context.Background(), userID, input.CategoryID)
+		go u.alertUC.CheckBudgetAndAlert(context.Background(), userID, input.CategoryID, input.TransactionUTC)
 	}
 	return t, err
 }
