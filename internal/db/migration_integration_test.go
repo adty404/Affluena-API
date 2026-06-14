@@ -20,9 +20,7 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		{name: "transactions_user_category_fk", cardinality: 2},
 		{name: "quick_entry_templates_user_category_fk", cardinality: 2},
 		{name: "category_budgets_user_category_fk", cardinality: 2},
-		{name: "installments_user_wallet_fk", cardinality: 2},
 		{name: "installments_user_category_fk", cardinality: 2},
-		{name: "subscriptions_user_wallet_fk", cardinality: 2},
 		{name: "subscriptions_user_category_fk", cardinality: 2},
 		{name: "recurring_rules_user_category_fk", cardinality: 2},
 		{name: "recurring_runs_user_rule_fk", cardinality: 2},
@@ -89,9 +87,9 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 			args: []any{fixture.userA, fixture.expenseCategoryB},
 		},
 		{
-			name: "installment cannot use another user's wallet",
+			name: "installment cannot use another user's category",
 			sql:  `INSERT INTO installments (user_id, name, wallet_id, category_id, total_amount_minor, monthly_amount_minor, tenor_months, remaining_months, start_date, due_day, status) VALUES ($1, 'Cross installment', $2, $3, 3000, 1000, 3, 3, '2026-06-01', 5, 'active')`,
-			args: []any{fixture.userA, fixture.walletB, fixture.expenseCategoryA},
+			args: []any{fixture.userA, fixture.walletA, fixture.expenseCategoryB},
 		},
 		{
 			name: "subscription cannot use another user's category",
