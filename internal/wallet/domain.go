@@ -69,6 +69,15 @@ func IsValidType(walletType string) bool {
 	}
 }
 
+func IsPublicType(walletType string) bool {
+	switch walletType {
+	case "cash", "bank", "e_wallet", "investment":
+		return true
+	default:
+		return false
+	}
+}
+
 func NotFound(err error) bool {
 	return errors.Is(err, ErrNotFound)
 }

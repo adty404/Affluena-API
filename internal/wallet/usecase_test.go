@@ -118,6 +118,17 @@ func TestWalletUseCaseRejectsInvalidType(t *testing.T) {
 	}
 }
 
+func TestWalletUseCaseRejectsPublicGoalWalletWrites(t *testing.T) {
+	uc := NewUseCase(&fakeWalletRepository{}, nil)
+
+	if _, err := uc.Create(context.Background(), "user-1", CreateWalletInput{Name: "Goal", Type: "goal"}); err == nil {
+		t.Fatal("expected public goal wallet create to fail")
+	}
+	if _, err := uc.Update(context.Background(), "user-1", "wallet-1", UpdateWalletInput{Name: "Goal", Type: "goal", CurrencyCode: "IDR"}); err == nil {
+		t.Fatal("expected public goal wallet update to fail")
+	}
+}
+
 func TestWalletUseCaseUpdateDelegatesValidInput(t *testing.T) {
 	repo := &fakeWalletRepository{updated: Wallet{ID: "wallet-1", Name: "Updated"}}
 	uc := NewUseCase(repo, nil)
