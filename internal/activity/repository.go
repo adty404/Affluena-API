@@ -33,7 +33,7 @@ func (r *repository) Create(ctx context.Context, activity Activity) error {
 	return err
 }
 
-func (r *repository) List(ctx context.Context, userID string, limit, offset int) ([]Activity, int, error) {
+func (r *repository) List(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error) {
 	var total int
 	err := r.pool.QueryRow(ctx, `SELECT count(*) FROM user_activities WHERE user_id = $1`, userID).Scan(&total)
 	if err != nil {
@@ -44,7 +44,7 @@ func (r *repository) List(ctx context.Context, userID string, limit, offset int)
 		SELECT id, user_id, action_type, entity_type, entity_id, description, created_at
 		FROM user_activities
 		WHERE user_id = $1
-		ORDER BY created_at DESC
+		ORDER BY ` + activityOrderBy(sort) + `
 		LIMIT $2 OFFSET $3
 	`
 	rows, err := r.pool.Query(ctx, query, userID, limit, offset)
@@ -80,4 +80,13 @@ func (r *repository) List(ctx context.Context, userID string, limit, offset int)
 	}
 
 	return activities, total, nil
+}
+
+func activityOrderBy(sort string) string {
+	switch sort {
+	case "created_at_asc":
+		return "created_at ASC"
+	default:
+		return "created_at DESC"
+	}
 }

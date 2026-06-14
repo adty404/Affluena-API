@@ -36,6 +36,6 @@ func (u *useCase) LogActivity(ctx context.Context, userID, actionType, entityTyp
 	}()
 }
 
-func (u *useCase) ListActivities(ctx context.Context, userID string, limit, offset int) ([]Activity, int, error) {
-	return u.repo.List(ctx, userID, limit, offset)
+func (u *useCase) ListActivities(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error) {
+	return u.repo.List(ctx, userID, limit, offset, sort)
 }
