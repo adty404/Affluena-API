@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -27,7 +28,7 @@ func TestParseBudgetMonthRejectsInvalidFormats(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		if _, err := ParseBudgetMonth(tc); err == nil {
+		if _, err := ParseBudgetMonth(tc); !errors.Is(err, ErrInvalidBudgetMonth) {
 			t.Fatalf("expected ParseBudgetMonth(%q) to fail", tc)
 		}
 	}

@@ -2,6 +2,7 @@ package budget
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -67,6 +68,10 @@ func (h *Handler) List(c *gin.Context) {
 	}
 	result, err := h.usecase.List(c.Request.Context(), userID, c.Query("month"), pagination)
 	if err != nil {
+		if errors.Is(err, ErrInvalidBudgetMonth) {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		httpx.Error(c, http.StatusInternalServerError, "list category budgets failed")
 		return
 	}

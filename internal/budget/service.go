@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var ErrInvalidBudgetMonth = errors.New("month must use YYYY-MM format")
+
 type UsageSummary struct {
 	LimitMinor     int64   `json:"limit_minor"`
 	SpentMinor     int64   `json:"spent_minor"`
@@ -20,7 +22,7 @@ func ParseBudgetMonth(value string) (time.Time, error) {
 
 	parsed, err := time.Parse("2006-01", value)
 	if err != nil {
-		return time.Time{}, errors.New("month must use YYYY-MM format")
+		return time.Time{}, ErrInvalidBudgetMonth
 	}
 	return time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, time.UTC), nil
 }
