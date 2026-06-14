@@ -160,6 +160,8 @@ curl -s http://localhost:8080/api/v1/wallets \
   -d '{"name":"BCA Main","type":"bank","currency_code":"IDR","balance_minor":10000000}'
 ```
 
+Public wallet `type` values are `cash`, `bank`, `e_wallet`, and `investment`. Goal wallets use internal type `goal` and are created only through the financial goal workflow.
+
 Create expense category:
 
 ```bash

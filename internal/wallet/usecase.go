@@ -29,7 +29,7 @@ func NewUseCase(repo RepositoryPort, activityUC activity.UseCase) *UseCase {
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input CreateWalletInput) (Wallet, error) {
-	if !IsValidType(input.Type) {
+	if !IsPublicType(input.Type) {
 		return Wallet{}, errors.New("invalid wallet type")
 	}
 	if input.CurrencyCode == "" {
@@ -51,7 +51,7 @@ func (u *UseCase) Get(ctx context.Context, userID string, id string) (Wallet, er
 }
 
 func (u *UseCase) Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error) {
-	if !IsValidType(input.Type) {
+	if !IsPublicType(input.Type) {
 		return Wallet{}, errors.New("invalid wallet type")
 	}
 	w, err := u.repo.Update(ctx, userID, id, input)
