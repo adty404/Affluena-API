@@ -18,7 +18,7 @@ Core domains:
 - Category budgets: monthly expense category budget summaries.
 - Installments: finite payment tracking.
 - Subscriptions: recurring subscription tracking; includes optional `account_detail` to distinguish multiple accounts for the same service.
-- Recurring transactions: native scheduled transaction generation.
+- Recurring transactions: native scheduled transaction generation; `wallet_id` and `to_wallet_id` can be owned wallets or joined shared wallets.
 - Debts: payable/receivable tracking with payment lifecycle.
 - Financial goals: collaborative saving goals that create goal wallets and support member invitations.
 
@@ -127,7 +127,7 @@ Existing high-value integration tests:
 - `internal/server/goal_integration_test.go`: proves financial goal creation, membership, and access behavior.
 - `internal/server/tag_integration_test.go`: proves tag CRUD and transaction tag integration.
 - `internal/server/splitbill_integration_test.go`: proves split bill success behavior and rollback when debt creation fails.
-- `internal/server/recurring_integration_test.go`: proves manual recurring execution creates a transaction and updates wallet balance.
+- `internal/server/recurring_integration_test.go`: proves manual recurring execution creates a transaction and updates wallet balance, including joined shared-wallet member rules.
 - `internal/server/subscription_account_detail_integration_test.go`: proves subscription `account_detail` lifecycle.
 - `internal/db/migration_integration_test.go`: proves database constraints and migrations.
 - `internal/debt/repository_integration_test.go`: proves debt repository lifecycle.
@@ -157,6 +157,7 @@ Current notable API decisions:
 - `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
 - `POST/PUT /api/v1/quick-entry-templates` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the template user.
+- `POST/PUT /api/v1/recurring-transactions` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the recurring-rule user.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
 - Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.

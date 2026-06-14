@@ -8489,7 +8489,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Transaksi Berulang\nMirip dengan Subscriptions namun berjalan otomatis di _background_ melalui _Scheduler_. Sistem secara mandiri membuat transaksi baru setiap kali jadwal yang ditetapkan telah jatuh tempo."
+            "description": "### Modul Transaksi Berulang\nMirip dengan Subscriptions namun berjalan otomatis di _background_ melalui _Scheduler_. `wallet_id` dan `to_wallet_id` dapat memakai wallet milik sendiri atau wallet bersama dengan status `joined`; kategori tetap harus milik user pembuat rule. Sistem secara mandiri membuat transaksi baru setiap kali jadwal yang ditetapkan telah jatuh tempo."
         },
         {
             "name": "Financial Goals",
