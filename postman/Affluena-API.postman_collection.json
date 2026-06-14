@@ -7270,7 +7270,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Cicilan (Installments)\nMencatat dan memantau kewajiban cicilan tetap dengan tenor dan tanggal jatuh tempo. `total_amount_minor` harus sama dengan `monthly_amount_minor * tenor_months` agar siklus pembayaran tidak menagih lebih atau kurang dari total yang dideklarasikan."
+            "description": "### Modul Cicilan (Installments)\nMencatat dan memantau kewajiban cicilan tetap dengan tenor dan tanggal jatuh tempo. `wallet_id` dapat memakai wallet milik sendiri atau wallet bersama dengan status `joined`; kategori tetap harus milik user pembuat cicilan. `total_amount_minor` harus sama dengan `monthly_amount_minor * tenor_months` agar siklus pembayaran tidak menagih lebih atau kurang dari total yang dideklarasikan."
         },
         {
             "name": "Subscriptions",
@@ -7934,7 +7934,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Berlangganan (Subscriptions)\nUntuk melacak pembayaran langganan periodik (misal: Netflix, Spotify, biaya langganan software) yang memotong dana secara rutin, baik harian, mingguan, bulanan, atau tahunan."
+            "description": "### Modul Berlangganan (Subscriptions)\nUntuk melacak pembayaran langganan periodik (misal: Netflix, Spotify, biaya langganan software) yang memotong dana secara rutin, baik harian, mingguan, bulanan, atau tahunan. `wallet_id` dapat memakai wallet milik sendiri atau wallet bersama dengan status `joined`; kategori tetap harus milik user pembuat subscription."
         },
         {
             "name": "Recurring Transactions",
