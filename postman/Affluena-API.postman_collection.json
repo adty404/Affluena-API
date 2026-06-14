@@ -9241,7 +9241,7 @@
                     ]
                 }
             ],
-            "description": "### Modul Tujuan Finansial (Goals)\nMemungkinkan pembuatan tabungan untuk target jangka panjang (misal: Liburan, Dana Darurat). Target dapat dibuat sebagai *Shared Goal* yang dapat diisi secara patungan (bersama teman atau pasangan)."
+            "description": "### Modul Tujuan Finansial (Goals)\nMemungkinkan pembuatan tabungan untuk target jangka panjang (misal: Liburan, Dana Darurat). Target dapat dibuat sebagai *Shared Goal* yang dapat diisi secara patungan (bersama teman atau pasangan). Penerimaan invitation membuat goal wallet secara atomik; setelah status member `joined`, endpoint response invitation tidak bisa mengubahnya kembali menjadi `rejected`."
         },
         {
             "name": "Tags",

@@ -206,6 +206,16 @@ func TestGoalDuplicateNamesAndInviteEdgeCases(t *testing.T) {
 	if got := findGoalWallet(t, router, tokenB, goalA); got == "" {
 		t.Fatalf("expected re-invited member to receive goal wallet after joining")
 	}
+	if got := countGoalWallets(t, router, tokenB, goalA); got != 1 {
+		t.Fatalf("expected exactly one goal wallet after joining, got %d", got)
+	}
+	assertAPIStatus(t, router, tokenB, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userB+"/respond", `{
+		"status": "rejected"
+	}`, http.StatusBadRequest)
+	assertGoalListContains(t, router, tokenB, goalA, true)
+	if got := countGoalWallets(t, router, tokenB, goalA); got != 1 {
+		t.Fatalf("expected joined member rejection attempt to keep exactly one goal wallet, got %d", got)
+	}
 
 	assertAPIStatus(t, router, tokenA, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userA+"/respond", `{
 		"status": "rejected"
@@ -213,6 +223,20 @@ func TestGoalDuplicateNamesAndInviteEdgeCases(t *testing.T) {
 }
 
 func findGoalWallet(t *testing.T, router http.Handler, token string, goalID string) string {
+	t.Helper()
+	wallets := listGoalWalletIDs(t, router, token, goalID)
+	if len(wallets) == 0 {
+		return ""
+	}
+	return wallets[0]
+}
+
+func countGoalWallets(t *testing.T, router http.Handler, token string, goalID string) int {
+	t.Helper()
+	return len(listGoalWalletIDs(t, router, token, goalID))
+}
+
+func listGoalWalletIDs(t *testing.T, router http.Handler, token string, goalID string) []string {
 	t.Helper()
 	res := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
 	t.Log("Wallets response:", string(res))
@@ -225,12 +249,13 @@ func findGoalWallet(t *testing.T, router http.Handler, token string, goalID stri
 	}
 	json.Unmarshal(res, &wallets)
 
+	var ids []string
 	for _, w := range wallets.Wallets {
 		if w.Type == "goal" && w.GoalID != nil && *w.GoalID == goalID {
-			return w.ID
+			ids = append(ids, w.ID)
 		}
 	}
-	return ""
+	return ids
 }
 
 func assertGoalListContains(t *testing.T, router http.Handler, token string, goalID string, want bool) {

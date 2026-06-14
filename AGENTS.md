@@ -58,6 +58,7 @@ Important invariants:
 - Installment plans must keep `total_amount_minor == monthly_amount_minor * tenor_months`; otherwise payments can overcharge or undercharge the declared total.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
 - Financial goal creation and invite acceptance create related goal wallets atomically; treat those as cross-module workflows and test partial-write risks when touching them.
+- Financial goal invitation response is terminal after `joined` or `rejected`; do not let `PUT /api/v1/goals/:id/members/:user_id/respond` turn a joined member into a rejected member because that can orphan goal wallets.
 - Category CRUD endpoints are generic. Do not create separate income/expense CRUD routes; use list filtering where needed.
 - Category nesting must not exceed 3 levels and must reject cyclic parent relationships, cross-user parents, and parent categories with a different type.
 - User-facing list endpoints usually return `{collection, pagination}` and support `limit`, `offset`, and whitelisted `sort` values. Keep pagination metadata scoped to the authenticated user and matching active filters. Financial goals are a current exception: `GET /api/v1/goals` returns a JSON array ordered by creation time.
@@ -166,7 +167,7 @@ Current notable API decisions:
 - `POST/PUT /api/v1/installments` and `POST/PUT /api/v1/subscriptions` accept `wallet_id` for wallets owned by the authenticated user or joined shared wallets; expense categories remain owned by the tracker user.
 - `POST /api/v1/debts` accepts `wallet_id` for wallets owned by the authenticated user or joined shared wallets; disbursement and payment categories remain owned by the debt user.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
-- Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist.
+- Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist. Joined goal invitations cannot be rejected later via the invitation-response endpoint.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
 - `GET /api/v1/dashboard/cashflow-trend?months=6` returns income/expense trends.
 - `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` returns category expense distribution.

@@ -311,7 +311,7 @@ Shared wallet owners and joined members can see transactions recorded on the sha
 
 Category `parent_id` must point to a category owned by the authenticated user with the same category `type`. Category trees are limited to 3 levels and cyclic parent relationships are rejected.
 
-Financial goal creation and invitation acceptance create goal wallets atomically. Goal wallet names include the goal ID suffix, so duplicate goal names can safely coexist. Rejected invitations are not returned as accessible goals, and `PUT /api/v1/goals/:id/members/:user_id/respond` only lets the authenticated member respond for their own `:user_id`.
+Financial goal creation and invitation acceptance create goal wallets atomically. Goal wallet names include the goal ID suffix, so duplicate goal names can safely coexist. Rejected invitations are not returned as accessible goals, and `PUT /api/v1/goals/:id/members/:user_id/respond` only lets the authenticated member respond for their own `:user_id`. Once a goal invitation is `joined`, it cannot be changed back to `rejected` through the invitation-response endpoint.
 
 Debt creation and debt payment endpoints also run atomically:
 
