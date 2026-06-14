@@ -1,0 +1,3 @@
+ALTER TABLE recurring_transaction_rules
+	DROP CONSTRAINT recurring_rules_user_wallet_fk,
+	DROP CONSTRAINT recurring_rules_user_to_wallet_fk;

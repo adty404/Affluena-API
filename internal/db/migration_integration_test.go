@@ -24,8 +24,6 @@ func TestOwnershipForeignKeysExist(t *testing.T) {
 		{name: "installments_user_category_fk", cardinality: 2},
 		{name: "subscriptions_user_wallet_fk", cardinality: 2},
 		{name: "subscriptions_user_category_fk", cardinality: 2},
-		{name: "recurring_rules_user_wallet_fk", cardinality: 2},
-		{name: "recurring_rules_user_to_wallet_fk", cardinality: 2},
 		{name: "recurring_rules_user_category_fk", cardinality: 2},
 		{name: "recurring_runs_user_rule_fk", cardinality: 2},
 		{name: "recurring_runs_user_transaction_fk", cardinality: 2},
@@ -101,9 +99,9 @@ func TestOwnershipForeignKeysRejectCrossUserReferences(t *testing.T) {
 			args: []any{fixture.userA, fixture.walletA, fixture.expenseCategoryB},
 		},
 		{
-			name: "recurring rule cannot use another user's wallet",
+			name: "recurring rule cannot use another user's category",
 			sql:  `INSERT INTO recurring_transaction_rules (user_id, name, type, wallet_id, category_id, amount_minor, frequency, interval_count, next_run_at, status) VALUES ($1, 'Cross recurring', 'expense', $2, $3, 1000, 'monthly', 1, '2030-01-01T00:00:00Z', 'active')`,
-			args: []any{fixture.userA, fixture.walletB, fixture.expenseCategoryA},
+			args: []any{fixture.userA, fixture.walletA, fixture.expenseCategoryB},
 		},
 		{
 			name: "debt cannot use another user's payment category",
