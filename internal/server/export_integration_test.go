@@ -146,3 +146,19 @@ func TestExportCSV(t *testing.T) {
 		t.Fatalf("unexpected row for user 2: %v", records[1])
 	}
 }
+
+func TestExportCSVRejectsInvalidDateFilters(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "export-validation-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userID, token := registerIntegrationAPIUser(t, router, "export-validation")
+	defer cleanupServerIntegrationUsers(t, pool, userID)
+
+	assertAPIStatus(t, router, token, http.MethodGet, "/api/v1/export/csv?from=not-a-time", "", http.StatusBadRequest)
+	assertAPIStatus(t, router, token, http.MethodGet, "/api/v1/export/csv?from=2026-06-30T00:00:00Z&to=2026-06-01T00:00:00Z", "", http.StatusBadRequest)
+}

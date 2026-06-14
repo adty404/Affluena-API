@@ -4825,7 +4825,7 @@
                                 {
                                     "key": "to",
                                     "value": "2024-12-31T23:59:59Z",
-                                    "description": "RFC3339 end date"
+                                    "description": "RFC3339 end date; must be after or equal to from"
                                 }
                             ]
                         }
@@ -4861,7 +4861,7 @@
                                         {
                                             "key": "to",
                                             "value": "2024-12-31T23:59:59Z",
-                                            "description": "RFC3339 end date"
+                                            "description": "RFC3339 end date; must be after or equal to from"
                                         }
                                     ]
                                 }
