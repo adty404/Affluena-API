@@ -176,3 +176,19 @@ func waitForActivityTestSignal(t *testing.T, ch <-chan struct{}) {
 		t.Fatal("timed out waiting for background activity logger")
 	}
 }
+
+func TestLogActivityConcurrency(t *testing.T) {
+	repo := &fakeRepository{calledCh: make(chan struct{}, 1000)}
+	uc := NewUseCase(repo)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			uc.LogActivity(context.Background(), "user-1", "CREATE", "WALLET", nil, "Concurrency test")
+		}(i)
+	}
+
+	wg.Wait()
+}

@@ -175,3 +175,42 @@ func TestAPILogMiddleware_ExportResponseSkip(t *testing.T) {
 		t.Errorf("expected response payload to be nil (skipped) for export path, got %s", *repo.lastLog.ResponsePayload)
 	}
 }
+
+func TestAPILogMiddleware_ExactBoundaryRequestBodyPassthrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &mockRepo{}
+
+	router := gin.New()
+	router.Use(APILogMiddleware(repo))
+
+	exactPayloadSize := 32 * 1024 // 32KB
+	exactBody := bytes.Repeat([]byte("A"), exactPayloadSize)
+
+	var handlerReadSize int
+	router.POST("/test-exact", func(c *gin.Context) {
+		body, _ := io.ReadAll(c.Request.Body)
+		handlerReadSize = len(body)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	req, _ := http.NewRequest("POST", "/test-exact", bytes.NewReader(exactBody))
+	req.Header.Set("Content-Type", "text/plain")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	time.Sleep(50 * time.Millisecond)
+
+	if handlerReadSize != exactPayloadSize {
+		t.Errorf("handler read %d bytes, expected %d", handlerReadSize, exactPayloadSize)
+	}
+
+	if repo.lastLog.RequestPayload == nil {
+		t.Fatal("expected request payload to be logged")
+	}
+	// It should NOT be truncated, so it should equal the exact body string
+	expectedPayload := string(exactBody)
+	if *repo.lastLog.RequestPayload != expectedPayload {
+		t.Errorf("expected exact payload logged, but it was truncated or altered")
+	}
+}
