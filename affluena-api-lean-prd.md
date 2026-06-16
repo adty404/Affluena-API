@@ -99,7 +99,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 ### 3.11. Split Bill (Macro Transaction)
 
 - **Fitur:** Memfasilitasi pembayaran tagihan gabungan dalam satu transaksi, lalu memecahnya secara otomatis menjadi pengeluaran pribadi dan piutang ke teman.
-- **Use Case:** Pengguna membayar tagihan makan malam Rp 300.000 dengan teman-temannya. Ia membuat satu request Split Bill, dan API secara cerdas akan mencatat Rp 100.000 sebagai `Expense` miliknya, serta Rp 200.000 sebagai `Disbursement` untuk membuat 2 entitas `Debt` (Piutang) baru bagi temannya.
+- **Use Case:** Pengguna membayar tagihan makan malam Rp 300.000 dengan teman-temannya. Ia membuat satu request Split Bill, dan API secara cerdas akan mencatat keseluruhan Rp 300.000 sebagai `Expense` miliknya di awal, serta Rp 200.000 sebagai `Disbursement` untuk membuat 2 entitas `Debt` (Piutang) baru bagi temannya sebagai penyeimbang kekayaan (Net Worth).
 
 ### 3.12. Mailer & Notifications
 
@@ -112,3 +112,4 @@ Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
 - **Cashflow Trend**: Mendapatkan data income dan expense selama 1-12 bulan ke belakang untuk melihat pergerakan cashflow.
 - **Expense Distribution**: Melihat distribusi pengeluaran berdasarkan kategori dalam bentuk persentase.
 - **Spend Forecasting**: Sistem menghitung rata-rata harian pengeluaran dan memprediksi total pengeluaran di akhir bulan, serta memberikan peringatan ("overbudget") jika prediksi melewati batas budget yang dianggarkan. Jika belum ada budget pada bulan tersebut, status tetap "safe".
+a bulan tersebut, status tetap "safe".

@@ -531,8 +531,8 @@ transaction.Create (Expense)
        ├─ List budgets for month
        ├─ Find matching category budget
        ├─ ratio = spent / limit
-       ├─ Check sent_alerts for deduplication (user_id, category_id, month, alert_type)
-       ├─ if already sent → skip
+       ├─ TryInsertSentAlert for atomic deduplication (user_id, category_id, month, alert_type)
+       ├─ if exist → skip
        ├─ if ratio ≥ 0.8 → WARNING email
        ├─ if ratio ≥ 1.0 → EXCEEDED email
        ├─ mailer.SendEmail(SMTP) → Mailtrap
