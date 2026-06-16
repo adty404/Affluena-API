@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -60,7 +59,7 @@ func (h *Handler) Create(c *gin.Context) {
 		BalanceMinor: req.BalanceMinor,
 	})
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, wallet)
@@ -99,13 +98,14 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	wallet, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	wallet, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "wallet not found")
-			return
-		}
-		httpx.Error(c, http.StatusInternalServerError, "get wallet failed")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, wallet)
@@ -117,22 +117,23 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
 	var req updateWalletRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	wallet, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateWalletInput{
+	wallet, err := h.usecase.Update(c.Request.Context(), userID, id, UpdateWalletInput{
 		Name:         req.Name,
 		Type:         req.Type,
 		CurrencyCode: req.CurrencyCode,
 	})
 	if err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "wallet not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, wallet)
@@ -144,12 +145,13 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "wallet not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -161,21 +163,18 @@ func (h *Handler) InviteMember(c *gin.Context) {
 		return
 	}
 
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
 	var req InviteMemberInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := h.usecase.InviteMember(c.Request.Context(), userID, c.Param("id"), req); err != nil {
-		if errors.Is(err, ErrNotAuthorized) {
-			httpx.Error(c, http.StatusForbidden, err.Error())
-			return
-		}
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "wallet not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+	if err := h.usecase.InviteMember(c.Request.Context(), userID, id, req); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusCreated)
@@ -187,17 +186,23 @@ func (h *Handler) RespondInvite(c *gin.Context) {
 		return
 	}
 
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	memberID, ok := httpx.GetUUIDParam(c, "member_id")
+	if !ok {
+		return
+	}
+
 	var req RespondInviteInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := h.usecase.RespondInvite(c.Request.Context(), userID, c.Param("id"), c.Param("member_id"), req); err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "wallet or invitation not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+	if err := h.usecase.RespondInvite(c.Request.Context(), userID, id, memberID, req); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusOK)

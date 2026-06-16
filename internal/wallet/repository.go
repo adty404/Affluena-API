@@ -229,3 +229,34 @@ func (r *Repository) GetMembers(ctx context.Context, walletID string) ([]WalletM
 	}
 	return members, rows.Err()
 }
+
+// GetAccessLevel returns user's access level for a wallet.
+func (r *Repository) GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error) {
+	var isOwner bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM wallets WHERE id = $1 AND user_id = $2
+		)
+	`, walletID, userID).Scan(&isOwner)
+	if err != nil {
+		return AccessNone, err
+	}
+	if isOwner {
+		return AccessOwner, nil
+	}
+
+	var isMember bool
+	err = r.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM wallet_shares WHERE wallet_id = $1 AND user_id = $2 AND status = 'joined'
+		)
+	`, walletID, userID).Scan(&isMember)
+	if err != nil {
+		return AccessNone, err
+	}
+	if isMember {
+		return AccessMember, nil
+	}
+
+	return AccessNone, nil
+}

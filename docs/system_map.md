@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.4 — 16 Juni 2026
-> **Total Source Code:** ~10.150 baris (88 file `.go`) | **Test Code:** ~7.350 baris (49 file `*_test.go`)
+> **Versi:** v2.5 — 16 Juni 2026
+> **Total Source Code:** ~10.450 baris (91 file `.go`) | **Test Code:** ~7.550 baris (51 file `*_test.go`)
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
@@ -85,7 +85,7 @@ graph TB
 | **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 16 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
 | **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (19 file SQL). | pgx |
 | **page** | `internal/page/` | Struct generik `Result[T]` untuk pagination (`limit`, `offset`, `total`). | stdlib |
-| **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `ParsePage`, `BindOptionalJSON`, `Error`, `JSON`, `InternalError` (sanitasi error), `PublicError`. | page, gin |
+| **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `GetUUIDParam`, `ParsePage`, `BindOptionalJSON`, `WriteError` (error mapping), `Error`, `JSON`, `InternalError`, `PublicError`, `RateLimiter` (auth/API rate limiting). | page, gin, golang.org/x/time/rate |
 | **caldate** | `internal/caldate/` | Fungsi `AddMonthsClamped` — menambah bulan dengan clamping hari ke akhir bulan target. | stdlib |
 
 ### 2.2. Core Domain
@@ -93,7 +93,7 @@ graph TB
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
 | **auth** | `internal/auth/` | 6 src + 2 test | 469 + 241 | Registrasi, login, refresh token (JWT HS256 + bcrypt). Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
-| **wallet** | `internal/wallet/` | 4 src + 1 test | 625 + 201 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. |
+| **wallet** | `internal/wallet/` | 5 src + 1 test | 715 + 201 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. Access control: `AccessLevel`, `CheckOwnerAccess`, `CheckMemberAccess`. |
 | **category** | `internal/category/` | 4 src + 1 test | 490 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
 | **transaction** | `internal/transaction/` | 5 src + 3 test | 883 + 360 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
 
@@ -116,9 +116,9 @@ graph TB
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **activity** | `internal/activity/` | 4 src + 1 test | 218 + 178 | Audit trail aktivitas user. Fire-and-forget goroutine (5s timeout). |
+| **activity** | `internal/activity/` | 4 src + 1 test | 278 + 178 | Audit trail aktivitas user. Fire-and-forget goroutine (5s timeout). Description truncation (500 char), deduplication (5-min window). |
 | **apilog** | `internal/apilog/` | 3 src + 1 test | 198 + 108 | Middleware pencatatan HTTP request/response ke DB. Masking auth payload, sensitive field redaction, 32KB payload limit, skip response logging untuk export endpoints. |
-| **alert** | `internal/alert/` | 2 src + 1 test | 173 + 125 | Cek budget threshold (≥80%/≥100%) → kirim email peringatan. |
+| **alert** | `internal/alert/` | 2 src + 1 test | 195 + 125 | Cek budget threshold (≥80%/≥100%) → kirim email peringatan. Deduplication via `sent_alerts` table prevents duplicate notifications. |
 | **mailer** | `internal/mailer/` | 1 src | 61 | Interface `Mailer` + implementasi `SMTPMailer` (net/smtp). |
 
 ---
@@ -283,8 +283,9 @@ erDiagram
 | 18 | `goal_members` | goal_id, user_id, status | PK(goal_id, user_id), CHECK status ∈ {pending,joined,rejected} |
 | 19 | `api_logs` | id, method, path, status_code, latency_ms, client_ip, user_agent, user_id, request_payload, response_payload | Index on created_at |
 | 20 | `user_activities` | id, user_id, action_type, entity_type, entity_id, description | Index on (user_id, created_at DESC) |
+| 21 | `sent_alerts` | user_id, category_id, month_value, alert_type, sent_at | PK(user_id, category_id, month_value, alert_type) — prevents duplicate alerts |
 
-### 4.2. Migrasi (15 File)
+### 4.2. Migrasi (21 File)
 
 | File | Deskripsi |
 |------|-----------|
@@ -303,6 +304,11 @@ erDiagram
 | `000013_api_logs.sql` | api_logs table |
 | `000014_api_logs_payloads.sql` | Adds request/response payload columns |
 | `000015_user_activities.sql` | user_activities table |
+| `000016_wallet_share_quick_entry_templates.sql` | Shared wallet support for templates |
+| `000017_wallet_share_recurring_rules.sql` | Shared wallet support for recurring rules |
+| `000018_wallet_share_trackers.sql` | Shared wallet support for trackers |
+| `000019_wallet_share_debts.sql` | Shared wallet support for debts |
+| `000020_sent_alerts.sql` | sent_alerts table for budget alert deduplication |
 
 ### 4.3. Scripts (Development)
 
@@ -525,9 +531,12 @@ transaction.Create (Expense)
        ├─ List budgets for month
        ├─ Find matching category budget
        ├─ ratio = spent / limit
+       ├─ Check sent_alerts for deduplication (user_id, category_id, month, alert_type)
+       ├─ if already sent → skip
        ├─ if ratio ≥ 0.8 → WARNING email
        ├─ if ratio ≥ 1.0 → EXCEEDED email
-       └─ mailer.SendEmail(SMTP) → Mailtrap
+       ├─ mailer.SendEmail(SMTP) → Mailtrap
+       └─ Mark alert as sent in sent_alerts table
 ```
 
 ---
@@ -535,17 +544,18 @@ transaction.Create (Expense)
 ## 7. Middleware Pipeline
 
 ```
-Request ──► gin.Recovery() ──► apilog.APILogMiddleware ──► [auth.AuthMiddleware] ──► Handler
-                                    │                            │
-                                    │                    (hanya untuk /api/v1/*)
-                                    │
-                                    ▼
-                              Catat ke DB:
-                              - Method, Path, Status
-                              - Latency (ms)
-                              - Client IP, User Agent
-                              - Request & Response Body
-                              - Masking pada /auth/*
+Request ──► gin.Recovery() ──► CORS ──► apilog.APILogMiddleware ──► [RateLimiter] ──► [auth.AuthMiddleware] ──► Handler
+                                         │                                      │                           │
+                                         │                              /auth/* only                │
+                                         │                      (AuthLimiter: 5 req/s)       │
+                                         │                                                      │
+                                         ▼                                                      ▼
+                                   Catat ke DB                                    Validate JWT
+                                   - Method, Path, Status                              - Extract userID
+                                   - Latency (ms)                                       - Set context
+                                   - Client IP, User Agent
+                                   - Request & Response Body
+                                   - Masking pada /auth/*
 ```
 
 ---
@@ -592,7 +602,7 @@ internal/server/
 | config | config_test.go | 59 | Env var parsing, defaults |
 | debt | service_test.go, usecase_test.go | 362 | ApplyPayment, ResolveStatus, overpayment |
 | goal | usecase_test.go | 146 | Create, invite, respond |
-| httpx | context_test.go, request_test.go | 78 | UserID context, bind |
+| httpx | context_test.go, request_test.go, response_test.go, ratelimit_test.go | 147 | UserID context, bind, error mapping, UUID validation, rate limiting |
 | quickentry | usecase_test.go | 209 | Template validation, execute |
 | recurring | service_test.go, usecase_test.go | 254 | AdvanceNextRunAt, NextState |
 | tracker | service_test.go, usecase_test.go | 388 | Installment plan validation, payment |
@@ -668,6 +678,9 @@ make verify
 | `github.com/golang-jwt/jwt/v5` | v5.3.1 | JWT token creation & validation |
 | `golang.org/x/crypto` | v0.53.0 | bcrypt password hashing |
 | `github.com/stretchr/testify` | v1.11.1 | Test assertions |
+| `github.com/google/uuid` | v1.6.0 | UUID validation |
+| `github.com/cespare/xxhash/v2` | v2.3.0 | Fast hash for deduplication |
+| `golang.org/x/time/rate` | v0.15.0 | Rate limiting |
 
 ---
 
@@ -709,10 +722,12 @@ sequenceDiagram
 5. **Conventional Commits** — Format: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`.
 6. **Monetary Values** — Disimpan sebagai `int64` minor units (misal: Rp 50.000 = `50000`).
 7. **Auth Masking** — Payload auth (password, token) HARUS di-mask di API logs.
-8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.InternalError()` atau `httpx.PublicError`.
+8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.WriteError()`, `httpx.PublicError`, atau helper yang tersedia.
 9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter). Aplikasi fail-fast jika config invalid.
 10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
 11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
+12. **UUID Path Parameters** — Gunakan `httpx.GetUUIDParam()` untuk validasi UUID dari path parameters. Menulis 400 error otomatis jika format invalid.
+13. **Rate Limiting** — Endpoint auth (`/auth/*`) dilindungi oleh `AuthLimiter` (5 req/s, burst 10). Gunakan `APILimiter` untuk endpoint lain jika diperlukan.
 
 ---
 

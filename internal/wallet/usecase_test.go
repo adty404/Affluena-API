@@ -72,6 +72,13 @@ func (f *fakeWalletRepository) RespondInvite(ctx context.Context, walletID strin
 	return f.err
 }
 
+func (f *fakeWalletRepository) GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error) {
+	if f.err != nil {
+		return AccessNone, f.err
+	}
+	return AccessOwner, nil
+}
+
 func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
 	uc := NewUseCase(repo, nil)
