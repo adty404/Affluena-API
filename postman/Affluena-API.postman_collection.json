@@ -6663,7 +6663,7 @@
                     ]
                 },
                 {
-                    "name": "Delete Debt (Soft Cancel, Optional / Run Last)",
+                    "name": "Cancel Debt (Soft Cancel, Optional / Run Last)",
                     "disabled": true,
                     "request": {
                         "method": "DELETE",

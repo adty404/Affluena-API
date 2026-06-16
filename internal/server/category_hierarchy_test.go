@@ -114,7 +114,7 @@ func TestCategoryHierarchyRejectsCrossUserAndTypeMismatchParents(t *testing.T) {
 		"name": "Cross User Child",
 		"type": "expense",
 		"parent_id": "`+otherUserParent+`"
-	}`, http.StatusBadRequest)
+	}`, http.StatusNotFound)
 
 	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/categories", `{
 		"name": "Mixed Type Child",

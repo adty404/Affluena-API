@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var ErrInvalidBudgetMonth = errors.New("month must use YYYY-MM format")
+var ErrInvalidBudgetMonth = errors.New("invalid month format: must use YYYY-MM")
 
 type UsageSummary struct {
 	LimitMinor     int64   `json:"limit_minor"`

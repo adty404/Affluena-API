@@ -352,6 +352,84 @@ func TestFormerSharedWalletMemberCannotMutateWalletBalanceThroughOldTransactions
 	assertAPIStatus(t, router, ownerToken, http.MethodGet, "/api/v1/transactions/"+deleteAttemptTxID, "", http.StatusOK)
 }
 
+func TestSharedWalletOwnerCannotMutateMemberTransaction(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-share-owner-mutate-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "share-owner-mutate")
+	memberID, memberToken := registerIntegrationAPIUser(t, router, "share-member-mutate")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberID)
+
+	walletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Household Mutate Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+	memberEmail := getIntegrationUserEmail(t, router, memberToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+memberEmail+`"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+memberID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	categoryID := createAPIResource(t, router, memberToken, "/api/v1/categories", `{
+		"name": "Member Mutate Groceries",
+		"type": "expense"
+	}`)
+
+	// Member creates a transaction
+	txID := createAPIResource(t, router, memberToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 20000,
+		"transaction_at": "2026-06-15T08:00:00Z"
+	}`)
+
+	// Owner attempts to UPDATE member's transaction - should fail with Forbidden
+	assertAPIStatus(t, router, ownerToken, http.MethodPut, "/api/v1/transactions/"+txID, `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 50000,
+		"transaction_at": "2026-06-15T08:00:00Z"
+	}`, http.StatusForbidden)
+
+	// Owner attempts to DELETE member's transaction - should fail with Forbidden
+	assertAPIStatus(t, router, ownerToken, http.MethodDelete, "/api/v1/transactions/"+txID, "", http.StatusForbidden)
+
+	// Unrelated user attempts to mutate - should fail with Not Found (because they don't have access to wallet/tx)
+	unrelatedID, unrelatedToken := registerIntegrationAPIUser(t, router, "share-unrelated-mutate")
+	defer cleanupServerIntegrationUsers(t, pool, unrelatedID)
+	assertAPIStatus(t, router, unrelatedToken, http.MethodPut, "/api/v1/transactions/"+txID, `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 50000,
+		"transaction_at": "2026-06-15T08:00:00Z"
+	}`, http.StatusForbidden)
+
+	// Member CAN UPDATE their own transaction
+	assertAPIStatus(t, router, memberToken, http.MethodPut, "/api/v1/transactions/"+txID, `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+categoryID+`",
+		"amount_minor": 25000,
+		"transaction_at": "2026-06-15T08:00:00Z"
+	}`, http.StatusOK)
+
+	// Member CAN DELETE their own transaction
+	assertAPIStatus(t, router, memberToken, http.MethodDelete, "/api/v1/transactions/"+txID, "", http.StatusNoContent)
+}
+
 func getIntegrationUserEmail(t *testing.T, router http.Handler, token string) string {
 	t.Helper()
 

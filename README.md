@@ -133,7 +133,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/debts[?limit=100&offset=0&sort=opened_at_desc]`
 - `GET /api/v1/debts/:id`
 - `PUT /api/v1/debts/:id`
-- `DELETE /api/v1/debts/:id`
+- `DELETE /api/v1/debts/:id` (Soft-cancel)
 - `POST /api/v1/debts/:id/pay`
 - `POST /api/v1/installments`
 - `GET /api/v1/installments[?limit=100&offset=0&sort=created_at_desc]`
@@ -363,6 +363,8 @@ Category `parent_id` must point to a category owned by the authenticated user wi
 
 Financial goal creation and invitation acceptance create goal wallets atomically. Goal wallet names include the goal ID suffix, so duplicate goal names can safely coexist. Rejected invitations are not returned as accessible goals, and `PUT /api/v1/goals/:id/members/:user_id/respond` only lets the authenticated member respond for their own `:user_id`. Once a goal invitation is `joined`, it cannot be changed back to `rejected` through the invitation-response endpoint.
 
+**Goal Contribution Flow:** To contribute to a financial goal, create a `transfer` transaction with `to_wallet_id` set to the goal's wallet ID. The goal's `collected_amount_minor` automatically reflects the sum of its wallet balances. Withdrawals can be made by transferring funds out of the goal wallet.
+
 Debt creation and debt payment endpoints also run atomically:
 
 - `receivable` creation creates an expense transaction and decreases the wallet.
@@ -395,3 +397,5 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 - `GET /api/v1/dashboard/cashflow-trend?months=6` - Get income/expense trends over time. `months` must be between 1 and 12.
 - `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` - Get breakdown of expenses by category.
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Predict if spending will exceed budget based on daily average. Months with no budget remain `safe` instead of overbudget.
+
+**Scope Note:** Dashboard analytics (Summary, Trend, Distribution, Forecast) display an **accessible view**, including member transactions in shared wallets. Category Budgets enforce a **personal view**, calculating limits only against expenses created personally by the budget owner. Member expenses in a shared wallet appear in the owner's dashboard but do not consume the owner's personal budget.

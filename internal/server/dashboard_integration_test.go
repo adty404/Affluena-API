@@ -285,3 +285,124 @@ func TestDashboardForecastWithoutBudgetDoesNotOverbudget(t *testing.T) {
 		t.Fatalf("expected no-budget spending to remain safe, got %+v", forecast)
 	}
 }
+
+func TestSharedWalletMemberTransactionsDoNotAffectOwnerPersonalBudgetButAffectDashboard(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "dash-shared-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	owner, tokenOwner := registerIntegrationAPIUser(t, router, "dash-shared-owner")
+	member, tokenMember := registerIntegrationAPIUser(t, router, "dash-shared-member")
+	defer cleanupServerIntegrationUsers(t, pool, owner, member)
+
+	// Owner creates wallet
+	walletID := createAPIResource(t, router, tokenOwner, "/api/v1/wallets", `{
+		"name": "Shared Expense Wallet",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 10000000
+	}`)
+
+	// Fetch member email
+	resMe := performAPIRequest(t, router, tokenMember, http.MethodGet, "/api/v1/auth/me", "", http.StatusOK)
+	var me struct {
+		User struct {
+			Email string `json:"email"`
+		} `json:"user"`
+	}
+	json.Unmarshal(resMe, &me)
+
+	// Owner shares wallet with Member
+	performAPIRequest(t, router, tokenOwner, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+me.User.Email+`"
+	}`, http.StatusCreated)
+
+	// Member accepts
+	performAPIRequest(t, router, tokenMember, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+member, `{"status":"joined"}`, http.StatusOK)
+
+	// Owner creates a category and a budget
+	ownerCategory := createAPIResource(t, router, tokenOwner, "/api/v1/categories", `{
+		"name": "Owner Food",
+		"type": "expense"
+	}`)
+	now := time.Now().UTC()
+	currentMonthStr := now.Format("2006-01")
+	createAPIResource(t, router, tokenOwner, "/api/v1/category-budgets", `{
+		"category_id": "`+ownerCategory+`",
+		"month": "`+currentMonthStr+`",
+		"limit_minor": 1000000
+	}`)
+
+	// Member creates their own category
+	memberCategory := createAPIResource(t, router, tokenMember, "/api/v1/categories", `{
+		"name": "Member Food",
+		"type": "expense"
+	}`)
+
+	// Member creates an expense transaction in the shared wallet using their category
+	createAPIResource(t, router, tokenMember, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+memberCategory+`",
+		"amount_minor": 300000,
+		"transaction_at": "`+now.Format(time.RFC3339)+`"
+	}`)
+
+	// Owner checks Dashboard Expense Distribution
+	resDist := performAPIRequest(t, router, tokenOwner, http.MethodGet, "/api/v1/dashboard/expense-distribution?month="+currentMonthStr, "", http.StatusOK)
+	var distResp struct {
+		Distribution []dashboard.ExpenseDistribution `json:"distribution"`
+	}
+	if err := json.Unmarshal(resDist, &distResp); err != nil {
+		t.Fatalf("parse distribution response: %v", err)
+	}
+	if len(distResp.Distribution) != 1 {
+		t.Fatalf("expected 1 distribution row, got %d", len(distResp.Distribution))
+	}
+	// Fallback to Uncategorized since the category belongs to the member
+	if distResp.Distribution[0].CategoryName != "Uncategorized" {
+		t.Fatalf("expected Uncategorized, got %s", distResp.Distribution[0].CategoryName)
+	}
+	if distResp.Distribution[0].AmountMinor != 300000 {
+		t.Fatalf("expected amount 300000, got %d", distResp.Distribution[0].AmountMinor)
+	}
+
+	// Owner checks Dashboard Forecast
+	resForecast := performAPIRequest(t, router, tokenOwner, http.MethodGet, "/api/v1/dashboard/forecast?month="+currentMonthStr, "", http.StatusOK)
+	var forecast dashboard.Forecast
+	if err := json.Unmarshal(resForecast, &forecast); err != nil {
+		t.Fatalf("parse forecast response: %v", err)
+	}
+	// The current expense minor in the forecast should include the member's expense
+	if forecast.CurrentExpenseMinor != 300000 {
+		t.Fatalf("expected current expense to be 300000, got %d", forecast.CurrentExpenseMinor)
+	}
+	// The budget limit minor should be 1000000 (Owner's budget)
+	if forecast.BudgetLimitMinor != 1000000 {
+		t.Fatalf("expected budget limit to be 1000000, got %d", forecast.BudgetLimitMinor)
+	}
+
+	// Owner checks personal Budget List (from /api/v1/category-budgets)
+	resBudgets := performAPIRequest(t, router, tokenOwner, http.MethodGet, "/api/v1/category-budgets?month="+currentMonthStr, "", http.StatusOK)
+	var budgetsResp struct {
+		Budgets []struct {
+			LimitMinor     int64 `json:"limit_minor"`
+			SpentMinor     int64 `json:"spent_minor"`
+			RemainingMinor int64 `json:"remaining_minor"`
+		} `json:"budgets"`
+	}
+	if err := json.Unmarshal(resBudgets, &budgetsResp); err != nil {
+		t.Fatalf("parse budgets response: %v", err)
+	}
+	if len(budgetsResp.Budgets) != 1 {
+		t.Fatalf("expected 1 budget, got %d", len(budgetsResp.Budgets))
+	}
+	// The member's transaction should NOT affect the owner's budget spent amount
+	if budgetsResp.Budgets[0].SpentMinor != 0 {
+		t.Fatalf("expected owner budget spent minor to be 0, got %d", budgetsResp.Budgets[0].SpentMinor)
+	}
+}

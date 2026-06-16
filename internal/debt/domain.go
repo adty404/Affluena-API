@@ -30,15 +30,16 @@ type Debt struct {
 }
 
 type DebtInput struct {
-	Type                   DebtType
-	CounterpartyName       string
-	WalletID               string
-	DisbursementCategoryID string
-	PaymentCategoryID      string
-	PrincipalAmountMinor   int64
-	OpenedAt               time.Time
-	DueDate                *time.Time
-	Note                   string
+	Type                     DebtType
+	CounterpartyName         string
+	WalletID                 string
+	DisbursementCategoryID   string
+	PaymentCategoryID        string
+	OriginationTransactionID *string
+	PrincipalAmountMinor     int64
+	OpenedAt                 time.Time
+	DueDate                  *time.Time
+	Note                     string
 }
 
 type DebtUpdate struct {

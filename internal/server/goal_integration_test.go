@@ -3,11 +3,13 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"affluena-api/internal/config"
 	"affluena-api/internal/goal"
+	"affluena-api/internal/wallet"
 )
 
 func TestGoalLifecycleAndMembers(t *testing.T) {
@@ -60,10 +62,10 @@ func TestGoalLifecycleAndMembers(t *testing.T) {
 		"email": "anyone@example.com"
 	}`, http.StatusNotFound)
 
-	// --- Edge Case Red: User A invites non-existent user -> 400 Bad Request
+	// --- Edge Case Red: User A invites non-existent user -> 404 Not Found
 	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/goals/"+goalID+"/members", `{
 		"email": "notfound@example.com"
-	}`, http.StatusBadRequest)
+	}`, http.StatusNotFound)
 
 	// --- Green Flow: User A invites User B -> 200 OK
 	assertAPIStatus(t, router, tokenA, http.MethodPost, "/api/v1/goals/"+goalID+"/members", `{
@@ -219,7 +221,7 @@ func TestGoalDuplicateNamesAndInviteEdgeCases(t *testing.T) {
 
 	assertAPIStatus(t, router, tokenA, http.MethodPut, "/api/v1/goals/"+goalA+"/members/"+userA+"/respond", `{
 		"status": "rejected"
-	}`, http.StatusBadRequest)
+	}`, http.StatusForbidden)
 }
 
 func findGoalWallet(t *testing.T, router http.Handler, token string, goalID string) string {
@@ -276,5 +278,100 @@ func assertGoalListContains(t *testing.T, router http.Handler, token string, goa
 	}
 	if want {
 		t.Fatalf("expected goal %s in list: %+v", goalID, goals)
+	}
+}
+
+func TestGoalContributionViaTransfer(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "goal-contrib-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userID, token := registerIntegrationAPIUser(t, router, "goal-contrib")
+	unauthID, unauthToken := registerIntegrationAPIUser(t, router, "goal-contrib-unauth")
+	defer cleanupServerIntegrationUsers(t, pool, userID, unauthID)
+
+	sourceWalletID := createAPIResource(t, router, token, "/api/v1/wallets", `{
+		"name": "Main Wallet",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 10000000
+	}`)
+
+	goalID := createAPIResource(t, router, token, "/api/v1/goals", `{
+		"name": "Buy Car",
+		"target_amount_minor": 50000000,
+		"deadline": "2027-01-01T00:00:00Z"
+	}`)
+
+	// Get goal to find its wallet
+	resBody := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/goals/"+goalID, "", http.StatusOK)
+	var getGoal struct {
+		CollectedAmountMinor int64 `json:"collected_amount_minor"`
+	}
+	if err := json.Unmarshal(resBody, &getGoal); err != nil {
+		t.Fatalf("parse goal: %v", err)
+	}
+	if getGoal.CollectedAmountMinor != 0 {
+		t.Fatalf("expected 0 collected amount, got %d", getGoal.CollectedAmountMinor)
+	}
+
+	// We need to find the goal wallet ID. It's returned in /api/v1/wallets
+	walletsRes := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
+	var walletsResp struct {
+		Wallets []wallet.Wallet `json:"wallets"`
+	}
+	if err := json.Unmarshal(walletsRes, &walletsResp); err != nil {
+		t.Fatalf("parse wallets: %v", err)
+	}
+	var goalWalletID string
+	for _, w := range walletsResp.Wallets {
+		if w.Type == "goal" && strings.Contains(w.Name, "Buy Car") {
+			goalWalletID = w.ID
+			break
+		}
+	}
+	if goalWalletID == "" {
+		t.Fatalf("goal wallet not found")
+	}
+
+	// Unauth user tries to transfer to the goal wallet
+	unauthSourceWallet := createAPIResource(t, router, unauthToken, "/api/v1/wallets", `{
+		"name": "Unauth Wallet",
+		"type": "cash",
+		"currency_code": "IDR",
+		"balance_minor": 10000000
+	}`)
+	assertAPIStatus(t, router, unauthToken, http.MethodPost, "/api/v1/transactions", `{
+		"type": "transfer",
+		"wallet_id": "`+unauthSourceWallet+`",
+		"to_wallet_id": "`+goalWalletID+`",
+		"amount_minor": 500000,
+		"transaction_at": "`+time.Now().Format(time.RFC3339)+`"
+	}`, http.StatusNotFound) // Should fail because goal wallet doesn't belong to unauth
+
+	// Owner contributes 2,000,000
+	assertAPIStatus(t, router, token, http.MethodPost, "/api/v1/transactions", `{
+		"type": "transfer",
+		"wallet_id": "`+sourceWalletID+`",
+		"to_wallet_id": "`+goalWalletID+`",
+		"amount_minor": 2000000,
+		"transaction_at": "`+time.Now().Format(time.RFC3339)+`"
+	}`, http.StatusCreated)
+
+	// Check balances
+	assertWalletBalance(t, router, token, sourceWalletID, 8000000)
+	assertWalletBalance(t, router, token, goalWalletID, 2000000)
+
+	// Check goal collected amount
+	resBodyAfter := performAPIRequest(t, router, token, http.MethodGet, "/api/v1/goals/"+goalID, "", http.StatusOK)
+	if err := json.Unmarshal(resBodyAfter, &getGoal); err != nil {
+		t.Fatalf("parse goal after: %v", err)
+	}
+	if getGoal.CollectedAmountMinor != 2000000 {
+		t.Fatalf("expected 2000000 collected amount, got %d", getGoal.CollectedAmountMinor)
 	}
 }

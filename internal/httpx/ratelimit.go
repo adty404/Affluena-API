@@ -82,3 +82,9 @@ var (
 	// APILimiter: 100 req/s, burst 200 - for general API
 	APILimiter = NewRateLimiter(100, 200)
 )
+
+// DisableRateLimitersForTest overrides limiters to allow infinite requests during integration tests.
+func DisableRateLimitersForTest() {
+	AuthLimiter = NewRateLimiter(rate.Inf, 1000000)
+	APILimiter = NewRateLimiter(rate.Inf, 1000000)
+}

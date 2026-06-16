@@ -86,14 +86,15 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 	var debtIDs []string
 	for _, split := range input.Splits {
 		debtInput := debt.DebtInput{
-			Type:                   debt.DebtTypeReceivable,
-			CounterpartyName:       split.CounterpartyName,
-			WalletID:               input.WalletID,
-			DisbursementCategoryID: split.DisbursementCategoryID,
-			PaymentCategoryID:      split.PaymentCategoryID,
-			PrincipalAmountMinor:   split.AmountMinor,
-			OpenedAt:               input.TransactionAt,
-			Note:                   input.Note + " (Split: " + split.CounterpartyName + ")",
+			Type:                     debt.DebtTypeReceivable,
+			CounterpartyName:         split.CounterpartyName,
+			WalletID:                 input.WalletID,
+			DisbursementCategoryID:   split.DisbursementCategoryID,
+			PaymentCategoryID:        split.PaymentCategoryID,
+			OriginationTransactionID: &userTx.ID,
+			PrincipalAmountMinor:     split.AmountMinor,
+			OpenedAt:                 input.TransactionAt,
+			Note:                     input.Note + " (Split: " + split.CounterpartyName + ")",
 		}
 
 		createdDebt, err := u.debtRepo.CreateInTx(ctx, tx, userID, debtInput)

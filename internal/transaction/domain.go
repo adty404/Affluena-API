@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrNotFound     = errors.New("resource not found")
-	ErrUnauthorized = errors.New("only transaction creator can modify or delete")
+	ErrUnauthorized = errors.New("forbidden: only transaction creator can modify or delete")
 )
 
 type Transaction struct {
