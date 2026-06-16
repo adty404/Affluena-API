@@ -16,6 +16,8 @@ func TestLoadUsesDefaultsWhenEnvIsMissingOrInvalid(t *testing.T) {
 	t.Setenv("RECURRING_SCHEDULER_ENABLED", "not-bool")
 	t.Setenv("RECURRING_SCHEDULER_INTERVAL", "bad-duration")
 	t.Setenv("RECURRING_SCHEDULER_BATCH_SIZE", "not-int")
+	t.Setenv("AUTH_RATE_LIMIT_RPS", "invalid")
+	t.Setenv("AUTH_RATE_LIMIT_BURST", "-5")
 
 	cfg := Load()
 
@@ -31,6 +33,9 @@ func TestLoadUsesDefaultsWhenEnvIsMissingOrInvalid(t *testing.T) {
 	if !cfg.RunMigrations || !cfg.RecurringSchedulerEnabled || cfg.RecurringSchedulerBatchSize != 20 {
 		t.Fatalf("expected default bool/int values, got %+v", cfg)
 	}
+	if cfg.AuthRateLimitRPS != 5 || cfg.AuthRateLimitBurst != 10 {
+		t.Fatalf("expected default auth rate limits, got RPS %d Burst %d", cfg.AuthRateLimitRPS, cfg.AuthRateLimitBurst)
+	}
 }
 
 func TestLoadParsesExplicitEnv(t *testing.T) {
@@ -44,6 +49,8 @@ func TestLoadParsesExplicitEnv(t *testing.T) {
 	t.Setenv("RECURRING_SCHEDULER_ENABLED", "false")
 	t.Setenv("RECURRING_SCHEDULER_INTERVAL", "5s")
 	t.Setenv("RECURRING_SCHEDULER_BATCH_SIZE", "7")
+	t.Setenv("AUTH_RATE_LIMIT_RPS", "20")
+	t.Setenv("AUTH_RATE_LIMIT_BURST", "50")
 
 	cfg := Load()
 
@@ -55,6 +62,9 @@ func TestLoadParsesExplicitEnv(t *testing.T) {
 	}
 	if cfg.RunMigrations || cfg.RecurringSchedulerEnabled || cfg.RecurringSchedulerBatchSize != 7 {
 		t.Fatalf("unexpected bool/int config values: %+v", cfg)
+	}
+	if cfg.AuthRateLimitRPS != 20 || cfg.AuthRateLimitBurst != 50 {
+		t.Fatalf("unexpected auth rate limits, got RPS %d Burst %d", cfg.AuthRateLimitRPS, cfg.AuthRateLimitBurst)
 	}
 }
 

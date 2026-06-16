@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"affluena-api/internal/async"
+	"affluena-api/internal/config"
 	"context"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -84,12 +85,19 @@ func (rl *RateLimiter) StartCleanup(ctx context.Context, interval time.Duration)
 
 // Common rate limiters for different use cases
 var (
-	// AuthLimiter: 5 req/s, burst 10 - for login/register
+	// AuthLimiter: default 5 req/s, burst 10 - for login/register
 	AuthLimiter = NewRateLimiter(5, 10)
 
-	// APILimiter: 100 req/s, burst 200 - for general API
+	// APILimiter: default 100 req/s, burst 200 - for general API
 	APILimiter = NewRateLimiter(100, 200)
 )
+
+// InitRateLimiters initializes rate limiters with given config
+func InitRateLimiters(cfg config.Config) {
+	if cfg.AuthRateLimitRPS > 0 && cfg.AuthRateLimitBurst > 0 {
+		AuthLimiter = NewRateLimiter(rate.Limit(cfg.AuthRateLimitRPS), cfg.AuthRateLimitBurst)
+	}
+}
 
 // DisableRateLimitersForTest overrides limiters to allow infinite requests during integration tests.
 func DisableRateLimitersForTest() {

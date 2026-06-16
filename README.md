@@ -64,10 +64,15 @@ The application is configured via environment variables. Copy `.env.example` to 
 | `SMTP_USER` | SMTP username | - | No |
 | `SMTP_PASS` | SMTP password | - | No |
 | `SMTP_FROM` | Sender email address | `noreply@affluena.com` | No |
+| `AUTH_RATE_LIMIT_RPS` | Authentication rate limit requests per second | `5` | No |
+| `AUTH_RATE_LIMIT_BURST` | Authentication rate limit burst allowance | `10` | No |
 
 **Required Configuration:**
 - `JWT_SECRET` must be set to a random string of at least 32 characters in all environments
 - The application will fail to start if `JWT_SECRET` is unset, empty, too short, or uses the default placeholder
+
+**Migration Safety Note:**
+The internal migration runner (`internal/db/migrate.go`) is currently basic and sufficient for MVP/Development environments. However, for Production environments, it lacks advanced safety mechanisms such as checksum validation, dirty-state handling, and migration locking. It is highly recommended to integrate tools like `golang-migrate`, `goose`, `tern`, or `atlas` for production deployments.
 
 ## Verify
 

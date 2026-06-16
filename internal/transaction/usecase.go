@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"affluena-api/internal/activity"
+	"affluena-api/internal/async"
 	"affluena-api/internal/httpx"
 	"affluena-api/internal/page"
 	"affluena-api/internal/wallet"
@@ -54,7 +55,9 @@ func (u *UseCase) Create(ctx context.Context, userID string, input TransactionIn
 	if err == nil && u.alertUC != nil && input.Type == TransactionTypeExpense && input.CategoryID != "" {
 		// Run alert check asynchronously
 		// Use context.Background() since the request context might be cancelled
-		go u.alertUC.CheckBudgetAndAlert(context.Background(), userID, input.CategoryID, input.TransactionUTC)
+		async.SafeGo(context.Background(), "budget_alert_check", func(ctx context.Context) {
+			u.alertUC.CheckBudgetAndAlert(ctx, userID, input.CategoryID, input.TransactionUTC)
+		})
 	}
 	return t, err
 }

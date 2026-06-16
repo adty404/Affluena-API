@@ -57,6 +57,7 @@ func main() {
 		slog.Info("recurring scheduler enabled", "interval", cfg.RecurringSchedulerInterval, "batch_size", cfg.RecurringSchedulerBatchSize)
 	}
 
+	httpx.InitRateLimiters(cfg)
 	httpx.AuthLimiter.StartCleanup(appCtx, httpx.CleanupInterval)
 	httpx.APILimiter.StartCleanup(appCtx, httpx.CleanupInterval)
 

@@ -34,7 +34,7 @@ func (w *responseBodyWriter) Write(b []byte) (int, error) {
 	}
 	remaining := maxLogPayloadSize - w.written
 	if remaining <= 0 {
-		if !w.limitHit {
+		if !w.limitHit && len(b) > 0 {
 			w.limitHit = true
 		}
 		return w.ResponseWriter.Write(b)
@@ -42,6 +42,7 @@ func (w *responseBodyWriter) Write(b []byte) (int, error) {
 	if len(b) > remaining {
 		w.body.Write(b[:remaining])
 		w.written += remaining
+		w.limitHit = true
 		n, err := w.ResponseWriter.Write(b)
 		return n, err
 	}
@@ -56,7 +57,7 @@ func (w *responseBodyWriter) WriteString(s string) (int, error) {
 	}
 	remaining := maxLogPayloadSize - w.written
 	if remaining <= 0 {
-		if !w.limitHit {
+		if !w.limitHit && len(s) > 0 {
 			w.limitHit = true
 		}
 		return w.ResponseWriter.WriteString(s)
@@ -64,6 +65,7 @@ func (w *responseBodyWriter) WriteString(s string) (int, error) {
 	if len(s) > remaining {
 		w.body.WriteString(s[:remaining])
 		w.written += remaining
+		w.limitHit = true
 		n, err := w.ResponseWriter.WriteString(s)
 		return n, err
 	}
@@ -90,20 +92,26 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 		var reqBodyBytes []byte
 		var reqTruncated bool
 		if c.Request.Body != nil {
-			buf := make([]byte, maxLogPayloadSize)
+			buf := make([]byte, maxLogPayloadSize+1)
 			n, err := io.ReadFull(c.Request.Body, buf)
-			reqBodyBytes = buf[:n]
 
-			if err == nil {
-				// We read exactly maxLogPayloadSize, assume there's more
+			var readBytesForPassthrough []byte
+			if n > maxLogPayloadSize {
+				reqBodyBytes = buf[:maxLogPayloadSize]
 				reqTruncated = true
-			} else if err == io.ErrUnexpectedEOF || err == io.EOF {
-				// Read less than maxLogPayloadSize
+			} else {
+				reqBodyBytes = buf[:n]
 				reqTruncated = false
+			}
+			readBytesForPassthrough = buf[:n]
+
+			// io.ReadFull returns io.ErrUnexpectedEOF if n < len(buf)
+			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+				slog.Warn("error reading request body for log", "error", err)
 			}
 
 			// Reconstruct request body so handler can read it fully
-			c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewReader(reqBodyBytes), c.Request.Body))
+			c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewReader(readBytesForPassthrough), c.Request.Body))
 		}
 
 		// 2. Intercept Response Body (capped)

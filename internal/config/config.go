@@ -26,6 +26,9 @@ type Config struct {
 	SMTPUser string
 	SMTPPass string
 	SMTPFrom string
+
+	AuthRateLimitRPS   int
+	AuthRateLimitBurst int
 }
 
 func Load() Config {
@@ -47,6 +50,9 @@ func Load() Config {
 		SMTPUser: getEnv("SMTP_USER", ""),
 		SMTPPass: getEnv("SMTP_PASS", ""),
 		SMTPFrom: getEnv("SMTP_FROM", "noreply@affluena.com"),
+
+		AuthRateLimitRPS:   getPositiveIntEnv("AUTH_RATE_LIMIT_RPS", 5),
+		AuthRateLimitBurst: getPositiveIntEnv("AUTH_RATE_LIMIT_BURST", 10),
 	}
 }
 
@@ -95,6 +101,14 @@ func getIntEnv(key string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func getPositiveIntEnv(key string, fallback int) int {
+	val := getIntEnv(key, fallback)
+	if val <= 0 {
+		return fallback
+	}
+	return val
 }
 
 const minJWTSecretLength = 32

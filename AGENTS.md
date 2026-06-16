@@ -67,6 +67,7 @@ Important invariants:
 - Background jobs and goroutines must use `internal/async.SafeGo` for panic recovery.
 - Use `httpx.GetUUIDParam` to parse path UUIDs safely, rather than raw `c.Param`.
 - Use `httpx.WriteError` along with `errors.Is(err, ...)` checking sentinel errors (`IsNotFound`, `IsForbidden`, etc.) for robust HTTP error mapping without leaking database errors.
+- A centralized `wallet.AccessChecker` helper is available for checking user access to wallets (including shared wallets). It is currently used by the `transaction` module, but migration for other modules (`splitbill`, `debt`, `tracker`, `quickentry`) is intentionally deferred and should be done gradually. Modules not yet migrated are still protected by their existing DB-level checks and integration tests.
 
 ## Required Workflow For Every Change
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -18,6 +19,7 @@ const (
 
 type useCase struct {
 	repo   Repository
+	mu     sync.RWMutex
 	dedupe map[uint64]time.Time
 }
 
@@ -46,10 +48,18 @@ func (u *useCase) LogActivity(ctx context.Context, userID, actionType, entityTyp
 
 	// Check dedupe window (safe for concurrent use)
 	u.cleanupDedupe()
-	if lastSeen, exists := u.dedupe[key]; exists && time.Since(lastSeen) < dedupeWindow {
+
+	u.mu.RLock()
+	lastSeen, exists := u.dedupe[key]
+	u.mu.RUnlock()
+
+	if exists && time.Since(lastSeen) < dedupeWindow {
 		return
 	}
+
+	u.mu.Lock()
 	u.dedupe[key] = time.Now()
+	u.mu.Unlock()
 
 	// Create a new context with timeout for the background job
 	async.SafeGo(context.Background(), "activity_log_save", func(ctx context.Context) {
@@ -101,6 +111,9 @@ func dedupeKey(userID, actionType, entityType string, entityID *string, descript
 // cleanupDedupe removes expired entries from dedupe map.
 func (u *useCase) cleanupDedupe() {
 	now := time.Now()
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	for key, timestamp := range u.dedupe {
 		if now.Sub(timestamp) > dedupeWindow {
 			delete(u.dedupe, key)
