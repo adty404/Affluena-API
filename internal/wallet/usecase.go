@@ -17,6 +17,7 @@ type RepositoryPort interface {
 	AddMember(ctx context.Context, walletID string, userID string, status string) error
 	FindUserByEmail(ctx context.Context, email string) (string, error)
 	RespondInvite(ctx context.Context, walletID string, userID string, status string) error
+	GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error)
 }
 
 type UseCase struct {
@@ -118,4 +119,9 @@ func (u *UseCase) RespondInvite(ctx context.Context, userID string, id string, m
 		u.activityUC.LogActivity(ctx, userID, "UPDATE", "WALLET_MEMBER", &id, "Merespons undangan dompet bersama: "+input.Status)
 	}
 	return err
+}
+
+// GetAccessLevel returns user's access level for a wallet.
+func (u *UseCase) GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error) {
+	return u.repo.GetAccessLevel(ctx, userID, walletID)
 }

@@ -69,9 +69,7 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 	ratio := float64(targetBudget.SpentMinor) / float64(targetBudget.LimitMinor)
 
 	// We alert at >= 100% and >= 80% thresholds
-	// For simplicity, we just send the email if it crosses these thresholds.
-	// In a real production app, we would track if we ALREADY sent the 80% alert this month
-	// so we don't spam. But for MVP, this is acceptable.
+	// Check deduplication to avoid spamming
 	var alertType string
 	if ratio >= 1.0 {
 		alertType = "EXCEEDED"
@@ -79,6 +77,16 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 		alertType = "WARNING"
 	} else {
 		// All good
+		return
+	}
+
+	// Check if alert already sent for this month/category/type
+	alreadySent, err := u.repo.HasAlertBeenSent(ctx, userID, categoryID, monthValue, alertType)
+	if err != nil {
+		slog.Error("failed to check alert deduplication", "error", err, "user_id", userID)
+		return
+	}
+	if alreadySent {
 		return
 	}
 
@@ -103,6 +111,8 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 		slog.Error("failed to send budget alert email", "error", err, "email", email)
 	} else {
 		slog.Info("budget alert email sent successfully", "user_id", userID, "category", categoryName, "alert_type", alertType)
+		// Mark alert as sent to prevent duplicates
+		_ = u.repo.MarkAlertSent(ctx, userID, categoryID, monthValue, alertType)
 	}
 }
 

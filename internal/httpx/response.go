@@ -20,47 +20,64 @@ func Error(c *gin.Context, status int, message string) {
 	c.AbortWithStatusJSON(status, errorResponse{Error: message})
 }
 
-// InternalError sanitizes internal errors before sending to client.
-// For server errors (5xx), it returns a generic message.
-// For client errors (4xx), it returns the original message if safe.
-func InternalError(c *gin.Context, err error) {
+// WriteError maps domain errors to appropriate HTTP status codes.
+// Returns true if the error was handled and response was sent.
+func WriteError(c *gin.Context, err error) bool {
 	if err == nil {
-		Error(c, http.StatusInternalServerError, "internal server error")
-		return
+		return false
 	}
 
-	// Check if it's a PublicError - expose it with its status
+	// Check PublicError first
 	var pubErr PublicError
 	if errors.As(err, &pubErr) {
 		Error(c, pubErr.HTTPStatus, pubErr.Message)
-		return
+		return true
 	}
 
-	// For other errors, check if the message is safe to expose
-	if shouldExposeError(err.Error()) {
-		Error(c, http.StatusBadRequest, err.Error())
-		return
+	// Check common error patterns
+	errMsg := err.Error()
+	lowerMsg := strings.ToLower(errMsg)
+
+	// Unauthorized
+	if strings.Contains(lowerMsg, "unauthorized") || strings.Contains(lowerMsg, "invalid email or password") {
+		Error(c, http.StatusUnauthorized, errMsg)
+		return true
 	}
 
-	// Generic internal error message
+	// Forbidden
+	if strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized") || strings.Contains(lowerMsg, "only creator") {
+		Error(c, http.StatusForbidden, errMsg)
+		return true
+	}
+
+	// Not found
+	if strings.Contains(lowerMsg, "not found") || errors.Is(err, ErrNotFound) {
+		Error(c, http.StatusNotFound, "resource not found")
+		return true
+	}
+
+	// Conflict
+	if strings.Contains(lowerMsg, "already exists") || strings.Contains(lowerMsg, "conflict") || strings.Contains(lowerMsg, "duplicate") {
+		Error(c, http.StatusConflict, errMsg)
+		return true
+	}
+
+	// Validation errors (bad request)
+	if strings.HasPrefix(lowerMsg, "invalid") || strings.HasPrefix(lowerMsg, "required") ||
+		strings.Contains(lowerMsg, "must be") || strings.Contains(lowerMsg, "cannot") {
+		Error(c, http.StatusBadRequest, errMsg)
+		return true
+	}
+
+	// Default: internal server error with generic message
 	Error(c, http.StatusInternalServerError, "internal server error")
+	return true
 }
 
-// shouldExposeError determines if an error message is safe to expose.
-func shouldExposeError(msg string) bool {
-	safePrefixes := []string{
-		"invalid", "not found", "already exists", "required",
-		"must be", "cannot", "unauthorized", "forbidden",
-		"email and password", "invalid email or password",
-	}
-
-	lowerMsg := strings.ToLower(msg)
-	for _, prefix := range safePrefixes {
-		if strings.HasPrefix(lowerMsg, prefix) || strings.Contains(lowerMsg, prefix) {
-			return true
-		}
-	}
-	return false
+// InternalError sanitizes internal errors before sending to client.
+// Deprecated: Use WriteError instead for better error mapping.
+func InternalError(c *gin.Context, err error) {
+	WriteError(c, err)
 }
 
 // PublicError wraps an error that is safe to expose to clients.
@@ -76,4 +93,32 @@ func (e PublicError) Error() string {
 // NewPublicError creates a new PublicError with the given message and status.
 func NewPublicError(message string, status int) PublicError {
 	return PublicError{Message: message, HTTPStatus: status}
+}
+
+// Common domain errors that can be checked with errors.Is
+var (
+	ErrNotFound = errors.New("resource not found")
+)
+
+// IsNotFound checks if an error is a not found error.
+func IsNotFound(err error) bool {
+	return err != nil && (errors.Is(err, ErrNotFound) || strings.Contains(err.Error(), "not found"))
+}
+
+// IsUnauthorized checks if an error is an unauthorized error.
+func IsUnauthorized(err error) bool {
+	if err == nil {
+		return false
+	}
+	lowerMsg := strings.ToLower(err.Error())
+	return strings.Contains(lowerMsg, "unauthorized") || strings.Contains(lowerMsg, "invalid email or password")
+}
+
+// IsForbidden checks if an error is a forbidden error.
+func IsForbidden(err error) bool {
+	if err == nil {
+		return false
+	}
+	lowerMsg := strings.ToLower(err.Error())
+	return strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized")
 }

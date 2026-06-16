@@ -50,7 +50,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	transaction, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, transaction)
@@ -95,9 +95,14 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	transaction, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, transaction)
@@ -109,13 +114,18 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
 	input, ok := bindInput(c)
 	if !ok {
 		return
 	}
-	transaction, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), input)
+	transaction, err := h.usecase.Update(c.Request.Context(), userID, id, input)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, transaction)
@@ -127,8 +137,13 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		writeError(c, err)
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -153,7 +168,7 @@ func bindFilter(c *gin.Context) (TransactionFilter, bool) {
 		{name: "category_id", value: filter.CategoryID},
 		{name: "tag_id", value: filter.TagID},
 	} {
-		if candidate.value != "" && !isUUID(candidate.value) {
+		if candidate.value != "" && !isValidUUID(candidate.value) {
 			httpx.Error(c, http.StatusBadRequest, candidate.name+" must be a UUID")
 			return TransactionFilter{}, false
 		}
@@ -208,7 +223,7 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		transactionAt = parsed.UTC()
 	}
 	for _, tagID := range req.TagIDs {
-		if !isUUID(tagID) {
+		if !isValidUUID(tagID) {
 			httpx.Error(c, http.StatusBadRequest, "tag_ids must contain UUIDs")
 			return TransactionInput{}, false
 		}
@@ -227,7 +242,9 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 	return input, true
 }
 
-func isUUID(value string) bool {
+// isValidUUID checks if a string is a valid UUID format.
+// Deprecated: Use httpx.GetUUIDParam for path parameters.
+func isValidUUID(value string) bool {
 	if len(value) != 36 {
 		return false
 	}
@@ -244,12 +261,4 @@ func isUUID(value string) bool {
 		}
 	}
 	return true
-}
-
-func writeError(c *gin.Context, err error) {
-	if NotFound(err) {
-		httpx.Error(c, http.StatusNotFound, "resource not found")
-		return
-	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
 }

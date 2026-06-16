@@ -16,6 +16,7 @@ import (
 	"affluena-api/internal/debt"
 	"affluena-api/internal/export"
 	"affluena-api/internal/goal"
+	"affluena-api/internal/httpx"
 	"affluena-api/internal/mailer"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
@@ -100,9 +101,13 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	})
 
 	v1 := router.Group("/api/v1")
-	v1.POST("/auth/register", authHandler.Register)
-	v1.POST("/auth/login", authHandler.Login)
-	v1.POST("/auth/refresh", authHandler.Refresh)
+
+	// Apply rate limiting to auth endpoints
+	authGroup := v1.Group("/auth")
+	authGroup.Use(httpx.AuthLimiter.Middleware())
+	authGroup.POST("/register", authHandler.Register)
+	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/refresh", authHandler.Refresh)
 
 	protected := v1.Group("")
 	protected.Use(auth.AuthMiddleware(tokenManager))

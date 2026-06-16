@@ -10,9 +10,10 @@ import (
 )
 
 type mockRepo struct {
-	email   string
-	err     error
-	catName string
+	email       string
+	err         error
+	catName     string
+	alreadySent bool
 }
 
 func (m *mockRepo) GetUserEmail(ctx context.Context, userID string) (string, error) {
@@ -21,6 +22,14 @@ func (m *mockRepo) GetUserEmail(ctx context.Context, userID string) (string, err
 
 func (m *mockRepo) GetCategoryName(ctx context.Context, categoryID string) (string, error) {
 	return m.catName, nil
+}
+
+func (m *mockRepo) HasAlertBeenSent(ctx context.Context, userID, categoryID, monthValue, alertType string) (bool, error) {
+	return m.alreadySent, nil
+}
+
+func (m *mockRepo) MarkAlertSent(ctx context.Context, userID, categoryID, monthValue, alertType string) error {
+	return nil
 }
 
 type mockBudget struct {
@@ -121,5 +130,27 @@ func TestCheckBudgetAndAlertUsesTransactionMonth(t *testing.T) {
 	}
 	if mailer.sentCount != 1 {
 		t.Fatalf("expected alert email to be sent for matching transaction month, got %d", mailer.sentCount)
+	}
+}
+
+func TestCheckBudgetAndAlertDeduplication(t *testing.T) {
+	b := budget.BudgetSummary{
+		Budget: budget.Budget{
+			CategoryID: "cat-1",
+			LimitMinor: 100,
+		},
+		SpentMinor: 80,
+	}
+	provider := &mockBudget{
+		result: page.Result[budget.BudgetSummary]{Items: []budget.BudgetSummary{b}},
+	}
+	repo := &mockRepo{email: "test@example.com", alreadySent: true}
+	mailer := &mockMailer{}
+	uc := NewUseCase(repo, provider, mailer)
+
+	uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", time.Now().UTC())
+
+	if mailer.sentCount != 0 {
+		t.Errorf("expected 0 emails sent when alert already sent, got %d", mailer.sentCount)
 	}
 }
