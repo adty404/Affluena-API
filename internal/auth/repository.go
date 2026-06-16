@@ -82,3 +82,21 @@ func (r *Repository) RevokeRefreshToken(ctx context.Context, tokenHash string) e
 	`, tokenHash)
 	return err
 }
+
+// ConsumeRefreshToken atomically revokes and returns the user if the token is valid.
+// Returns ErrInvalidRefreshToken if the token doesn't exist, is already revoked, or is expired.
+func (r *Repository) ConsumeRefreshToken(ctx context.Context, tokenHash string, now time.Time) (string, error) {
+	var userID string
+	err := r.pool.QueryRow(ctx, `
+		UPDATE refresh_tokens
+		SET revoked_at = now()
+		WHERE token_hash = $1
+			AND revoked_at IS NULL
+			AND expires_at > $2
+		RETURNING user_id::text
+	`, tokenHash, now).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrInvalidRefreshToken
+	}
+	return userID, err
+}

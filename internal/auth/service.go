@@ -29,6 +29,7 @@ type RepositoryPort interface {
 	StoreRefreshToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error
 	RefreshTokenUser(ctx context.Context, tokenHash string, now time.Time) (User, error)
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	ConsumeRefreshToken(ctx context.Context, tokenHash string, now time.Time) (string, error)
 }
 
 func NewService(repo RepositoryPort, tokens *TokenManager, activityUC activity.UseCase) *Service {
@@ -86,11 +87,13 @@ func (s *Service) Login(ctx context.Context, email string, password string) (Use
 
 func (s *Service) Refresh(ctx context.Context, refreshToken string) (User, TokenPair, error) {
 	hash := HashRefreshToken(refreshToken)
-	user, err := s.repo.RefreshTokenUser(ctx, hash, time.Now().UTC())
+	userID, err := s.repo.ConsumeRefreshToken(ctx, hash, time.Now().UTC())
 	if err != nil {
 		return User{}, TokenPair{}, ErrInvalidRefreshToken
 	}
-	if err := s.repo.RevokeRefreshToken(ctx, hash); err != nil {
+
+	user, err := s.repo.UserByID(ctx, userID)
+	if err != nil {
 		return User{}, TokenPair{}, err
 	}
 

@@ -36,6 +36,7 @@ type fakeAuthRepository struct {
 	revokeErr   error
 	storedHash  string
 	revokedHash string
+	consumed    bool
 }
 
 func (f *fakeAuthRepository) CreateUser(ctx context.Context, email string, passwordHash string) (User, error) {
@@ -75,6 +76,14 @@ func (f *fakeAuthRepository) RefreshTokenUser(ctx context.Context, tokenHash str
 func (f *fakeAuthRepository) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
 	f.revokedHash = tokenHash
 	return f.revokeErr
+}
+
+func (f *fakeAuthRepository) ConsumeRefreshToken(ctx context.Context, tokenHash string, now time.Time) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	f.consumed = true
+	return f.createdUser.ID, nil
 }
 
 func TestServiceUsesRepositoryPort(t *testing.T) {
@@ -136,11 +145,11 @@ func TestRefreshRevokesOldTokenBeforeIssuingNewPair(t *testing.T) {
 	if tokens.AccessToken == "" || tokens.RefreshToken == "" {
 		t.Fatal("expected refreshed token pair")
 	}
-	if repo.revokedHash != HashRefreshToken("refresh-token") {
-		t.Fatalf("expected old refresh token hash to be revoked, got %q", repo.revokedHash)
+	if !repo.consumed {
+		t.Fatal("expected refresh token to be consumed atomically")
 	}
-	if repo.storedHash == "" || repo.storedHash == repo.revokedHash {
-		t.Fatalf("expected new refresh token hash to be stored, got stored=%q revoked=%q", repo.storedHash, repo.revokedHash)
+	if repo.storedHash == "" || repo.storedHash == HashRefreshToken("refresh-token") {
+		t.Fatalf("expected new refresh token hash to be stored, got %q", repo.storedHash)
 	}
 
 	service = NewService(&fakeAuthRepository{err: errors.New("invalid")}, NewTokenManager("secret", time.Minute, time.Hour), nil)

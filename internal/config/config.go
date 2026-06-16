@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -17,6 +19,7 @@ type Config struct {
 	RecurringSchedulerEnabled   bool
 	RecurringSchedulerInterval  time.Duration
 	RecurringSchedulerBatchSize int
+	CORSAllowedOrigins          string
 
 	SMTPHost string
 	SMTPPort int
@@ -37,6 +40,7 @@ func Load() Config {
 		RecurringSchedulerEnabled:   getBoolEnv("RECURRING_SCHEDULER_ENABLED", true),
 		RecurringSchedulerInterval:  getDurationEnv("RECURRING_SCHEDULER_INTERVAL", time.Minute),
 		RecurringSchedulerBatchSize: getIntEnv("RECURRING_SCHEDULER_BATCH_SIZE", 20),
+		CORSAllowedOrigins:          getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
 
 		SMTPHost: getEnv("SMTP_HOST", "sandbox.smtp.mailtrap.io"),
 		SMTPPort: getIntEnv("SMTP_PORT", 2525),
@@ -91,4 +95,16 @@ func getIntEnv(key string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+const minJWTSecretLength = 32
+
+func (c Config) Validate() error {
+	if c.JWTSecret == "" || c.JWTSecret == "change-me-in-production" {
+		return errors.New("JWT_SECRET must be set and not be the default value")
+	}
+	if len(c.JWTSecret) < minJWTSecretLength {
+		return fmt.Errorf("JWT_SECRET must be at least %d characters long", minJWTSecretLength)
+	}
+	return nil
 }

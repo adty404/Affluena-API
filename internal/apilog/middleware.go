@@ -12,6 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const maxLogPayloadSize = 32 * 1024 // 32KB
+
+var sensitiveFields = []string{
+	"password", "token", "access_token", "refresh_token",
+	"authorization", "jwt", "secret", "pass",
+}
+
 type responseBodyWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
@@ -36,10 +43,10 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			return
 		}
 
-		// 1. Intercept Request Body
+		// 1. Intercept Request Body (with limit)
 		var reqBodyBytes []byte
 		if c.Request.Body != nil {
-			reqBodyBytes, _ = io.ReadAll(c.Request.Body)
+			reqBodyBytes, _ = io.ReadAll(io.LimitReader(c.Request.Body, maxLogPayloadSize+1))
 			// Restore the io.ReadCloser to its original state
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(reqBodyBytes))
 		}
@@ -71,16 +78,18 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			}
 		}
 
-		// 3. Process Payloads & Mask Sensitive Auth Data
+		// 3. Process Payloads & Mask Sensitive Data
 		var requestPayload *string
 		if len(reqBodyBytes) > 0 {
-			reqStr := logPayload(path, reqBodyBytes)
+			reqStr := logPayload(path, reqBodyBytes, true)
 			requestPayload = &reqStr
 		}
 
+		// Skip response logging for export/download endpoints
+		skipResponseLogging := isExportPath(path)
 		var responsePayload *string
-		if w.body.Len() > 0 {
-			respStr := logPayload(path, w.body.Bytes())
+		if !skipResponseLogging && w.body.Len() > 0 {
+			respStr := logPayload(path, w.body.Bytes(), false)
 			responsePayload = &respStr
 		}
 
@@ -96,7 +105,6 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 
 		// 2. Database Save (Async)
 		go func(entry APILog) {
-			// Using background context because the request context is canceled when response is sent
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -115,22 +123,64 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 	}
 }
 
-func logPayload(path string, payload []byte) string {
+func logPayload(path string, payload []byte, isRequest bool) string {
+	// Mask entire payload for auth endpoints (both request and response may contain secrets)
 	if isSensitiveAuthPath(path) {
 		return `{"masked": true}`
 	}
+
+	// Truncate if exceeds max size
+	if len(payload) > maxLogPayloadSize {
+		payload = payload[:maxLogPayloadSize]
+	}
+
 	payloadStr := string(payload)
 	if json.Valid(payload) {
-		var compacted bytes.Buffer
-		if err := json.Compact(&compacted, payload); err == nil {
-			payloadStr = compacted.String()
+		var data map[string]interface{}
+		if err := json.Unmarshal(payload, &data); err == nil {
+			data = redactSensitiveFields(data)
+			if compacted, err := json.Marshal(data); err == nil {
+				payloadStr = string(compacted)
+			}
+		} else {
+			// If parsing fails, at least compact the original
+			var compacted bytes.Buffer
+			if err := json.Compact(&compacted, payload); err == nil {
+				payloadStr = compacted.String()
+			}
 		}
 	}
 	return payloadStr
+}
+
+func redactSensitiveFields(data map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for key, value := range data {
+		lowerKey := strings.ToLower(key)
+		isSensitive := false
+		for _, sensitive := range sensitiveFields {
+			if strings.Contains(lowerKey, sensitive) {
+				isSensitive = true
+				break
+			}
+		}
+		if isSensitive {
+			result[key] = "***REDACTED***"
+		} else if nested, ok := value.(map[string]interface{}); ok {
+			result[key] = redactSensitiveFields(nested)
+		} else {
+			result[key] = value
+		}
+	}
+	return result
 }
 
 func isSensitiveAuthPath(path string) bool {
 	return strings.Contains(path, "/auth/login") ||
 		strings.Contains(path, "/auth/register") ||
 		strings.Contains(path, "/auth/refresh")
+}
+
+func isExportPath(path string) bool {
+	return strings.Contains(path, "/export/")
 }
