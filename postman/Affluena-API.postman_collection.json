@@ -9272,7 +9272,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Vacation 2026\"\n}",
+                            "raw": "{\n  \"name\": \"Vacation 2026\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -9476,7 +9476,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Bali Trip 2026\"\n}",
+                            "raw": "{\n  \"name\": \"Bali Trip 2026\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"

@@ -23,11 +23,11 @@ This document provides a testing checklist for QA and Frontend engineers to ensu
 ## Transactions
 | Flow | Action | Expected Result | Edge Cases |
 |------|--------|-----------------|------------|
-| **Create Income**| Income to Wallet A | Wallet A balance increases by amount. | - |
-| **Create Expense**| Expense from Wallet A | Wallet A balance decreases by amount. | - |
+| **Create Income**| Submit `transaction_at`, `note` to Wallet A | Wallet A balance increases by amount. | - |
+| **Create Expense**| Submit `transaction_at`, `note` from Wallet A | Wallet A balance decreases by amount. | - |
 | **Transfer** | Transfer A -> B | Wallet A decreases, Wallet B increases. | Requires `to_wallet_id`. Must own both wallets. |
 | **Adjustment** | Adjust Wallet A | Calculates difference and creates adjustment transaction. | - |
-| **Split Bill** | Split expense | Debt generated automatically. | Split total must equal transaction amount. |
+| **Split Bill** | Split expense | Debt generated automatically. `origination_transaction_id` is an internal flow. | Split total must equal transaction amount. |
 | **Data Isolation**| Submit expense to unowned wallet| 403 Forbidden. | - |
 
 ## Budget
@@ -64,3 +64,10 @@ This document provides a testing checklist for QA and Frontend engineers to ensu
 |------|--------|-----------------|------------|
 | **Export CSV** | Valid date range | Returns CSV file stream. | Invalid dates 400. |
 | **Export Isolation**| - | Only contains data accessible to authenticated user. | - |
+
+## Tags & Trackers
+| Flow | Action | Expected Result | Edge Cases |
+|------|--------|-----------------|------------|
+| **Create Tag** | Submit tag data | 201 Created. | Request body must only contain `name` (no color). |
+| **Pay Installment** | Submit `paid_at` and `note` | 201 Created. Amount is internally configured. | Do not send `amount_minor` from frontend. |
+| **Pay Subscription** | Submit `paid_at` and `note` | 201 Created. Amount is internally configured. | Do not send `amount_minor` from frontend. |

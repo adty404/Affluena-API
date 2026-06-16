@@ -59,14 +59,14 @@ This document serves as the primary contract for frontend integration (React UI/
 - *Note:* Tree depth max 3 levels. Parent and child must be the same type.
 
 ### Tag
-- `POST /api/v1/tags` - `{ name, color }`
+- `POST /api/v1/tags` - `{ name }`
 - `GET /api/v1/tags`
 - `GET /api/v1/tags/:id`
-- `PUT /api/v1/tags/:id` - `{ name, color }`
+- `PUT /api/v1/tags/:id` - `{ name }`
 - `DELETE /api/v1/tags/:id`
 
 ### Transaction
-- `POST /api/v1/transactions` - `{ type, amount_minor, date, notes, wallet_id, to_wallet_id, category_id, tag_ids }`
+- `POST /api/v1/transactions` - `{ type, amount_minor, transaction_at, note, wallet_id, to_wallet_id, category_id, tag_ids }`
 - `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`.
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id` - Fields same as POST.
@@ -76,12 +76,12 @@ This document serves as the primary contract for frontend integration (React UI/
 - *Split Bill Rules:* Parent transaction uses `total_amount_minor`, decreasing wallet balance by the total bill. Splits create `payable`/`receivable` debts. Full split is valid if total split == total amount. Over split is invalid. Transaction amount cannot be 0.
 
 ### Quick Entry
-- `POST /api/v1/quick-entry-templates` - `{ name, type, amount_minor, category_id, wallet_id, to_wallet_id, notes, tag_ids }`
+- `POST /api/v1/quick-entry-templates` - `{ name, type, amount_minor, category_id, wallet_id, to_wallet_id, note, tag_ids }`
 - `GET /api/v1/quick-entry-templates`
 - `GET /api/v1/quick-entry-templates/:id`
 - `PUT /api/v1/quick-entry-templates/:id`
 - `DELETE /api/v1/quick-entry-templates/:id`
-- `POST /api/v1/quick-entry-templates/:id/execute` - Applies template directly into a new transaction.
+- `POST /api/v1/quick-entry-templates/:id/execute` - `{ transaction_at, note }` (Applies template directly into a new transaction.)
 
 ### Budget
 - `POST /api/v1/category-budgets` - `{ category_id, amount_minor, month }`
@@ -92,12 +92,13 @@ This document serves as the primary contract for frontend integration (React UI/
 - *Note:* Budgets are personal. Shared wallet expenses by other members do not decrement the owner's personal category budget.
 
 ### Debt
-- `POST /api/v1/debts` - `{ type: "payable"|"receivable", counterparty_name, wallet_id, disbursement_category_id, payment_category_id, origination_transaction_id, principal_amount_minor, opened_at, due_date, note }`
+- `POST /api/v1/debts` - `{ type: "payable"|"receivable", counterparty_name, wallet_id, disbursement_category_id, payment_category_id, principal_amount_minor, opened_at, due_date, note }`
 - `GET /api/v1/debts`
 - `GET /api/v1/debts/:id`
 - `PUT /api/v1/debts/:id` - `{ counterparty_name, due_date, status, note }`
 - `DELETE /api/v1/debts/:id` - Cancel Debt / Soft Cancel. Updates status to `cancelled`. Cannot be paid or counted as active debt. Cancel fails if payments exist.
 - `POST /api/v1/debts/:id/pay` - `{ amount_minor, paid_at, note }` (Wallet/category are automatically inferred from the debt configuration.)
+- *Note:* `origination_transaction_id` is an internal-only field populated during the split bill workflow and must not be supplied by clients in public creation.
 
 ### Tracker (Installments & Subscriptions)
 - `POST /api/v1/installments` - `{ name, wallet_id, category_id, total_amount_minor, monthly_amount_minor, tenor_months, remaining_months, start_date, due_day, status, note }`
@@ -105,13 +106,13 @@ This document serves as the primary contract for frontend integration (React UI/
 - `GET /api/v1/installments/:id`
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
-- `POST /api/v1/installments/:id/pay` - `{ amount_minor, paid_at, note }`
+- `POST /api/v1/installments/:id/pay` - `{ paid_at, note }` (Amount is inferred from installment configuration.)
 - `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "monthly"|"yearly", next_due_date, status, note }`
 - `GET /api/v1/subscriptions`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
 - `DELETE /api/v1/subscriptions/:id`
-- `POST /api/v1/subscriptions/:id/pay` - `{ amount_minor, paid_at, note }`
+- `POST /api/v1/subscriptions/:id/pay` - `{ paid_at, note }` (Amount is inferred from subscription configuration.)
 
 ### Recurring
 - `POST /api/v1/recurring-transactions` - `{ name, type, wallet_id, to_wallet_id, category_id, amount_minor, frequency: "daily"|"weekly"|"monthly", interval_count, next_run_at, end_at, status: "active"|"paused", note }`
