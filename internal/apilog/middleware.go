@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"affluena-api/internal/async"
 	"github.com/gin-gonic/gin"
 )
 
@@ -161,21 +162,21 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 		)
 
 		// 2. Database Save (Async)
-		go func(entry APILog) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		async.SafeGo(context.Background(), "api_log_save", func(ctx context.Context) {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_ = repo.SaveLog(ctx, entry)
-		}(APILog{
-			Method:          method,
-			Path:            path,
-			StatusCode:      statusCode,
-			LatencyMs:       latencyMs,
-			ClientIP:        clientIP,
-			UserAgent:       userAgent,
-			UserID:          userID,
-			RequestPayload:  requestPayload,
-			ResponsePayload: responsePayload,
+			_ = repo.SaveLog(ctxTimeout, APILog{
+				Method:          method,
+				Path:            path,
+				StatusCode:      statusCode,
+				LatencyMs:       latencyMs,
+				ClientIP:        clientIP,
+				UserAgent:       userAgent,
+				UserID:          userID,
+				RequestPayload:  requestPayload,
+				ResponsePayload: responsePayload,
+			})
 		})
 	}
 }

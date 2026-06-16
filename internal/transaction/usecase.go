@@ -1,11 +1,14 @@
 package transaction
 
 import (
-	"affluena-api/internal/activity"
-	"affluena-api/internal/page"
 	"context"
 	"fmt"
 	"time"
+
+	"affluena-api/internal/activity"
+	"affluena-api/internal/httpx"
+	"affluena-api/internal/page"
+	"affluena-api/internal/wallet"
 )
 
 type RepositoryPort interface {
@@ -24,13 +27,22 @@ type UseCase struct {
 	repo       RepositoryPort
 	activityUC activity.UseCase
 	alertUC    alertUseCase
+	walletAC   wallet.AccessChecker
 }
 
-func NewUseCase(repo RepositoryPort, activityUC activity.UseCase, alertUC alertUseCase) *UseCase {
-	return &UseCase{repo: repo, activityUC: activityUC, alertUC: alertUC}
+func NewUseCase(repo RepositoryPort, activityUC activity.UseCase, alertUC alertUseCase, walletAC wallet.AccessChecker) *UseCase {
+	return &UseCase{repo: repo, activityUC: activityUC, alertUC: alertUC, walletAC: walletAC}
 }
 
 func (u *UseCase) Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error) {
+	if err := wallet.CheckMemberAccess(u.walletAC, ctx, userID, input.WalletID); err != nil {
+		return Transaction{}, httpx.ErrNotFound
+	}
+	if input.ToWalletID != "" {
+		if err := wallet.CheckMemberAccess(u.walletAC, ctx, userID, input.ToWalletID); err != nil {
+			return Transaction{}, httpx.ErrNotFound
+		}
+	}
 	if _, err := BalanceDeltas(input); err != nil {
 		return Transaction{}, err
 	}

@@ -13,6 +13,7 @@ import (
 	"affluena-api/internal/activity"
 	"affluena-api/internal/config"
 	"affluena-api/internal/db"
+	"affluena-api/internal/httpx"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/server"
 	"affluena-api/internal/transaction"
@@ -55,6 +56,9 @@ func main() {
 		recurring.NewScheduler(recurring.NewUseCase(recurringRepo, activityUC), cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
 		slog.Info("recurring scheduler enabled", "interval", cfg.RecurringSchedulerInterval, "batch_size", cfg.RecurringSchedulerBatchSize)
 	}
+
+	httpx.AuthLimiter.StartCleanup(appCtx, httpx.CleanupInterval)
+	httpx.APILimiter.StartCleanup(appCtx, httpx.CleanupInterval)
 
 	router := server.NewRouter(cfg, pool)
 	srv := &http.Server{
