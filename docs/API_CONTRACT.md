@@ -30,7 +30,7 @@ This document serves as the primary contract for frontend integration (React UI/
 ### Auth
 - `POST /api/v1/auth/register` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`
 - `POST /api/v1/auth/login` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`
-- `POST /api/v1/auth/refresh` - `{ refresh_token }` -> `{ tokens: { access_token, refresh_token } }`
+- `POST /api/v1/auth/refresh` - `{ refresh_token }` -> `{ user: { id, email, created_at, updated_at }, tokens: { access_token, refresh_token } }`
 - `GET /api/v1/auth/me` - Profile data -> `{ user: { id, email, created_at, updated_at } }`
 - *Note:* Logout/Revoke is handled purely client-side (token deletion) currently.
 
@@ -41,14 +41,14 @@ This document serves as the primary contract for frontend integration (React UI/
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Spend forecasting and budget alerts.
 
 ### Wallet
-- `POST /api/v1/wallets` - `{ name, type, currency_code, balance_minor, goal_id }`
+- `POST /api/v1/wallets` - `{ name, type, currency_code, balance_minor }`
 - `GET /api/v1/wallets` - Paginated wallet list.
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id` - `{ name, type, currency_code }` (Balance updates via transactions).
 - `DELETE /api/v1/wallets/:id` - Soft archive behavior based on constraints.
 - `POST /api/v1/wallets/:id/invites` - Share wallet. `{ email }`
 - `PATCH /api/v1/wallets/:id/members/:member_id` - `{ status: "joined"|"rejected" }`
-- *Note:* Direct writes to `type="goal"` wallets are rejected. Supported types: `cash`, `bank`, `e_wallet`, `investment`.
+- *Note:* Direct writes to `type="goal"` wallets are rejected. Supported types: `cash`, `bank`, `e_wallet`, `investment`. `goal_id` is not sent by frontend when creating a wallet; goal wallets are created and managed internally by the goal module.
 
 ### Category
 - `POST /api/v1/categories` - `{ name, type, parent_id }`
@@ -84,10 +84,10 @@ This document serves as the primary contract for frontend integration (React UI/
 - `POST /api/v1/quick-entry-templates/:id/execute` - `{ transaction_at, note }` (Applies template directly into a new transaction.)
 
 ### Budget
-- `POST /api/v1/category-budgets` - `{ category_id, amount_minor, month }`
+- `POST /api/v1/category-budgets` - `{ category_id, limit_minor, month }`
 - `GET /api/v1/category-budgets`
 - `GET /api/v1/category-budgets/:id`
-- `PUT /api/v1/category-budgets/:id`
+- `PUT /api/v1/category-budgets/:id` - `{ limit_minor }`
 - `DELETE /api/v1/category-budgets/:id`
 - *Note:* Budgets are personal. Shared wallet expenses by other members do not decrement the owner's personal category budget.
 
@@ -131,7 +131,8 @@ This document serves as the primary contract for frontend integration (React UI/
 - *Note:* Collected amount is calculated from the goal wallet balance. Contributions are made via `POST /api/v1/transactions` with `type=transfer` and `to_wallet_id=<goal_wallet_id>`. There is no dedicated `/goals/:id/contribute` endpoint.
 
 ### Reports / Export
-- `GET /api/v1/export/csv?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/v1/export/csv?from=2026-06-01T00:00:00Z&to=2026-06-30T23:59:59Z`
+- *Note:* `from` and `to` query parameters must be in valid RFC3339 format (e.g. `2026-06-01T00:00:00Z`).
 - *Note:* Response is raw CSV bytes, `Content-Type: text/csv`.
 
 ### Activity
