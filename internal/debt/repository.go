@@ -58,20 +58,26 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 		return Debt{}, translateNotFound(err)
 	}
 
-	txType, err := TransactionTypeFor(input.Type, DebtActionOrigination)
-	if err != nil {
-		return Debt{}, err
-	}
-	origination, err := r.transactionRepo.CreateInTx(ctx, tx, userID, transaction.TransactionInput{
-		Type:           txType,
-		WalletID:       input.WalletID,
-		CategoryID:     input.DisbursementCategoryID,
-		AmountMinor:    input.PrincipalAmountMinor,
-		TransactionUTC: input.OpenedAt.UTC(),
-		Note:           originationNote(input.Type, input.CounterpartyName, input.Note),
-	})
-	if err != nil {
-		return Debt{}, err
+	var originationID string
+	if input.OriginationTransactionID != nil {
+		originationID = *input.OriginationTransactionID
+	} else {
+		txType, err := TransactionTypeFor(input.Type, DebtActionOrigination)
+		if err != nil {
+			return Debt{}, err
+		}
+		origination, err := r.transactionRepo.CreateInTx(ctx, tx, userID, transaction.TransactionInput{
+			Type:           txType,
+			WalletID:       input.WalletID,
+			CategoryID:     input.DisbursementCategoryID,
+			AmountMinor:    input.PrincipalAmountMinor,
+			TransactionUTC: input.OpenedAt.UTC(),
+			Note:           originationNote(input.Type, input.CounterpartyName, input.Note),
+		})
+		if err != nil {
+			return Debt{}, err
+		}
+		originationID = origination.ID
 	}
 
 	debt, err := scanDebt(tx.QueryRow(ctx, `
@@ -87,7 +93,7 @@ func (r *Repository) CreateInTx(ctx context.Context, tx pgx.Tx, userID string, i
 			(principal_amount_minor - paid_amount_minor), opened_at, due_date, status, note,
 			created_at, updated_at
 	`, userID, input.Type, input.CounterpartyName, input.WalletID, input.DisbursementCategoryID,
-		input.PaymentCategoryID, origination.ID, input.PrincipalAmountMinor, input.OpenedAt.UTC(),
+		input.PaymentCategoryID, originationID, input.PrincipalAmountMinor, input.OpenedAt.UTC(),
 		nullableDate(input.DueDate), DebtStatusOpen, input.Note))
 	if err != nil {
 		return Debt{}, translateNotFound(err)

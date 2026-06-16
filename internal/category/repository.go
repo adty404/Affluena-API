@@ -3,6 +3,7 @@ package category
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"affluena-api/internal/page"
 
@@ -110,6 +111,9 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM categories WHERE user_id = $1 AND id = $2`, userID, id)
 	if err != nil {
+		if strings.Contains(err.Error(), "violates foreign key constraint") {
+			return errors.New("cannot delete: category is still in use")
+		}
 		return err
 	}
 	if tag.RowsAffected() == 0 {
@@ -119,7 +123,7 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 }
 
 var ErrDepthExceeded = errors.New("category depth cannot exceed 3 levels")
-var ErrCyclicReference = errors.New("cyclic category reference detected")
+var ErrCyclicReference = errors.New("invalid: cyclic category reference detected")
 
 func (r *Repository) CheckParent(ctx context.Context, userID string, categoryType string, parentID *string) error {
 	if parentID == nil {

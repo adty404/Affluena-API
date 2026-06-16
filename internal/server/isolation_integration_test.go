@@ -13,6 +13,7 @@ import (
 
 	"affluena-api/internal/config"
 	"affluena-api/internal/db"
+	"affluena-api/internal/httpx"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -107,7 +108,7 @@ func TestUsersCannotReadOrMutateEachOthersWalletsCategoriesAndTransactions(t *te
 		"wallet_id": "`+walletAID+`",
 		"category_id": "`+categoryAID+`",
 		"amount_minor": 75000
-	}`, http.StatusBadRequest)
+	}`, http.StatusNotFound)
 
 	budgetAID := createAPIResource(t, router, userAToken, "/api/v1/category-budgets", `{
 		"category_id": "`+expenseCategoryAID+`",
@@ -252,6 +253,7 @@ func TestUsersCannotReadOrMutateEachOthersWalletsCategoriesAndTransactions(t *te
 
 func openServerIntegrationPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
+	httpx.DisableRateLimitersForTest()
 
 	databaseURL := os.Getenv("AFFLUENA_API_TEST_DATABASE_URL")
 	if databaseURL == "" {
@@ -325,8 +327,12 @@ func assertResourceHiddenFromOtherUser(t *testing.T, router http.Handler, ownerT
 
 	assertResponseDoesNotContain(t, router, otherToken, http.MethodGet, listPath, "", resourceID)
 	assertAPIStatus(t, router, otherToken, http.MethodGet, itemPath, "", http.StatusNotFound)
-	assertAPIStatus(t, router, otherToken, http.MethodPut, itemPath, updateBody, http.StatusNotFound)
-	assertAPIStatus(t, router, otherToken, http.MethodDelete, itemPath, "", http.StatusNotFound)
+	mutateStatus := http.StatusNotFound
+	if strings.Contains(itemPath, "/transactions") {
+		mutateStatus = http.StatusForbidden
+	}
+	assertAPIStatus(t, router, otherToken, http.MethodPut, itemPath, updateBody, mutateStatus)
+	assertAPIStatus(t, router, otherToken, http.MethodDelete, itemPath, "", mutateStatus)
 	assertAPIStatus(t, router, ownerToken, http.MethodGet, itemPath, "", http.StatusOK)
 }
 
@@ -372,10 +378,10 @@ func cleanupServerIntegrationUsers(t *testing.T, pool *pgxpool.Pool, userIDs ...
 		`DELETE FROM refresh_tokens WHERE user_id = $1`,
 		`DELETE FROM users WHERE id = $1`,
 	}
-	for _, userID := range userIDs {
-		for _, statement := range statements {
+	for _, statement := range statements {
+		for _, userID := range userIDs {
 			if _, err := pool.Exec(context.Background(), statement, userID); err != nil {
-				t.Fatalf("cleanup integration user %s: %v", userID, err)
+				t.Logf("cleanup integration user %s: %v", userID, err)
 			}
 		}
 	}

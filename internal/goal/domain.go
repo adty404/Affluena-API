@@ -8,10 +8,10 @@ import (
 var (
 	ErrNotFound               = errors.New("goal not found")
 	ErrNotAuthorized          = errors.New("not authorized to access this goal")
-	ErrOwnerCannotRespond     = errors.New("goal owner cannot respond to their own invitation")
-	ErrInviteAlreadyJoined    = errors.New("already joined")
-	ErrInviteAlreadyRejected  = errors.New("invitation already rejected")
-	ErrInviteMemberIDMismatch = errors.New("invitation member does not match authenticated user")
+	ErrOwnerCannotRespond     = errors.New("forbidden: goal owner cannot respond to their own invitation")
+	ErrInviteAlreadyJoined    = errors.New("cannot respond: already joined")
+	ErrInviteAlreadyRejected  = errors.New("cannot respond: invitation already rejected")
+	ErrInviteMemberIDMismatch = errors.New("forbidden: invitation member does not match authenticated user")
 )
 
 type Goal struct {

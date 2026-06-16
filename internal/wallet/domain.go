@@ -11,8 +11,8 @@ var (
 	ErrOwnerCannotRespond     = errors.New("owner cannot respond to invite")
 	ErrInviteAlreadyJoined    = errors.New("already joined")
 	ErrInviteAlreadyRejected  = errors.New("invite already rejected")
-	ErrInviteMemberIDMismatch = errors.New("invitation member does not match authenticated user")
-	ErrGoalWalletReadOnly     = errors.New("goal wallets are managed by financial goals")
+	ErrInviteMemberIDMismatch = errors.New("forbidden: invitation member does not match authenticated user")
+	ErrGoalWalletReadOnly     = errors.New("cannot mutate: goal wallets are managed by financial goals")
 )
 
 type Wallet struct {
