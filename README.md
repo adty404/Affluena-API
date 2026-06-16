@@ -334,7 +334,14 @@ Create, update, delete, quick entry execution, and split bill execution use data
 
 Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Duplicate tag IDs in a request are stored once, and transaction listing can filter by one owned tag with `tag_id=<id>`.
 
-Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Joined members can create quick entry templates, debt records, installment trackers, subscription trackers, and recurring transaction rules for shared wallets; executing those templates, debt payments, tracker payments, or rules records transactions against the shared wallet. Shared-wallet analytics count each wallet transaction once even when multiple members have joined. Transaction updates and deletes only apply wallet balance deltas when the authenticated user still owns or has joined access to every affected wallet.
+Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Joined members can create quick entry templates, debt records, installment trackers, subscription trackers, and recurring transaction rules for shared wallets; executing those templates, debt payments, tracker payments, or rules records transactions against the shared wallet. Shared-wallet analytics count each wallet transaction once even when multiple members have joined.
+
+**Transaction permissions on shared wallets:**
+- View: Anyone with wallet access can view transactions
+- Create: Any user with wallet access can create transactions
+- Update/Delete: **Only the transaction creator** can update or delete their own transactions
+
+Categories and tags are personal metadata owned by the transaction creator. When viewing shared wallet transactions, you may see categories from other users — this is intentional and reflects how the creator categorized their expense.
 
 Category `parent_id` must point to a category owned by the authenticated user with the same category `type`. Category trees are limited to 3 levels and cyclic parent relationships are rejected.
 

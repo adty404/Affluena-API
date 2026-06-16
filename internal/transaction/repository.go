@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Transaction permission rules:
+// - View: Anyone with wallet access (owner or joined member) can view transactions
+// - Create: Any user with wallet access can create transactions on shared wallets
+// - Update/Delete: ONLY the transaction creator can update or delete their own transactions
+// - Balance: All balance changes are atomic within database transactions
+//
+// Category/Tag behavior on shared wallets:
+// - Categories and tags are personal metadata owned by the transaction creator
+// - When viewing shared wallet transactions, you may see categories/tags from other users
+// - This is intentional - it shows how the transaction creator categorized their expense
+// - Dashboard reports handle "Uncategorized" (missing category) gracefully
+// - No category sharing validation - each user uses their own category hierarchy
+
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -129,9 +142,13 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 	}
 	defer tx.Rollback(ctx)
 
-	oldTransaction, err := r.get(ctx, tx, userID, id, true)
+	oldTransaction, err := r.getForUpdate(ctx, tx, id)
 	if err != nil {
 		return Transaction{}, translateNotFound(err)
+	}
+	// Only the transaction creator can update
+	if oldTransaction.UserID != userID {
+		return Transaction{}, ErrUnauthorized
 	}
 	oldDeltas, err := BalanceDeltas(oldTransaction.Input())
 	if err != nil {
@@ -172,9 +189,13 @@ func (r *Repository) Delete(ctx context.Context, userID string, id string) error
 	}
 	defer tx.Rollback(ctx)
 
-	oldTransaction, err := r.get(ctx, tx, userID, id, true)
+	oldTransaction, err := r.getForUpdate(ctx, tx, id)
 	if err != nil {
 		return translateNotFound(err)
+	}
+	// Only the transaction creator can delete
+	if oldTransaction.UserID != userID {
+		return ErrUnauthorized
 	}
 	oldDeltas, err := BalanceDeltas(oldTransaction.Input())
 	if err != nil {
@@ -222,6 +243,21 @@ func (r *Repository) get(ctx context.Context, q interface {
 		sql += ` FOR UPDATE`
 	}
 	return scanTransaction(q.QueryRow(ctx, sql, userID, id))
+}
+
+// getForUpdate fetches a transaction by ID with FOR UPDATE lock, without wallet access checks.
+// Used for update/delete operations where the caller verifies user_id separately.
+func (r *Repository) getForUpdate(ctx context.Context, tx pgx.Tx, id string) (Transaction, error) {
+	sql := `
+		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
+			COALESCE(category_id::text, ''), amount_minor,
+			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
+			transaction_at, note, created_at, updated_at
+		FROM transactions
+		WHERE id = $1
+		FOR UPDATE
+	`
+	return scanTransaction(tx.QueryRow(ctx, sql, id))
 }
 
 func (r *Repository) ensureRefs(ctx context.Context, tx pgx.Tx, userID string, input TransactionInput) error {

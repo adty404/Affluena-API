@@ -12,6 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Split bill validation rules:
+// - Partial split: total split amounts < transaction amount (user pays the difference)
+// - Full split: total split amounts == transaction amount (user pays 0, all amounts are split)
+// - Invalid: total split amounts > transaction amount (reject)
+// - All individual split amounts must be positive
+
 var (
 	ErrInvalidSplitAmount            = errors.New("total split amount exceeds transaction amount")
 	ErrInvalidSplitParticipantAmount = errors.New("split amount must be positive")
@@ -50,7 +56,7 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 		totalSplitMinor += split.AmountMinor
 	}
 
-	if totalSplitMinor >= input.TotalAmountMinor {
+	if totalSplitMinor > input.TotalAmountMinor {
 		return SplitTransactionResponse{}, ErrInvalidSplitAmount
 	}
 
