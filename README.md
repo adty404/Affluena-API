@@ -404,3 +404,15 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Predict if spending will exceed budget based on daily average. Months with no budget remain `safe` instead of overbudget.
 
 **Scope Note:** Dashboard analytics (Summary, Trend, Distribution, Forecast) display an **accessible view**, including member transactions in shared wallets. Category Budgets enforce a **personal view**, calculating limits only against expenses created personally by the budget owner. Member expenses in a shared wallet appear in the owner's dashboard but do not consume the owner's personal budget.
+
+## API Documentation & Contract
+
+For frontend integration (Stage 1-10), refer to the official API Contract documentation:
+
+- [API_CONTRACT.md](docs/API_CONTRACT.md)
+- [FRONTEND_API_MAPPING.md](docs/FRONTEND_API_MAPPING.md)
+- [QA_INTEGRATION_MATRIX.md](docs/QA_INTEGRATION_MATRIX.md)
+- [SEED_DATA.md](docs/SEED_DATA.md)
+- [INTEGRATION_PLAN.md](docs/INTEGRATION_PLAN.md)
+
+These docs strictly align with the exact backend handler request/response shapes. Please use them as the primary reference.
