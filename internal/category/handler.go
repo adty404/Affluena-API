@@ -2,7 +2,6 @@ package category
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -46,7 +45,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, category)
@@ -64,11 +63,7 @@ func (h *Handler) List(c *gin.Context) {
 	}
 	result, err := h.usecase.List(c.Request.Context(), userID, c.Query("type"), pagination)
 	if err != nil {
-		if errors.Is(err, ErrInvalidCategoryType) {
-			httpx.Error(c, http.StatusBadRequest, err.Error())
-			return
-		}
-		httpx.Error(c, http.StatusInternalServerError, "list categories failed")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, gin.H{"categories": result.Items, "pagination": result.Pagination})
@@ -88,14 +83,14 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	category, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	category, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "category not found")
-			return
-		}
-		httpx.Error(c, http.StatusInternalServerError, "get category failed")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, category)
@@ -106,19 +101,19 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	var req categoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	category, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
+	category, err := h.usecase.Update(c.Request.Context(), userID, id, UpdateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
 	if err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "category not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, category)
@@ -129,13 +124,13 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, "category not found")
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)

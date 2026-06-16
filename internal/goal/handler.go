@@ -1,7 +1,6 @@
 package goal
 
 import (
-	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -20,7 +19,7 @@ func NewHandler(usecase *Usecase) *Handler {
 func (h *Handler) Create(c *gin.Context) {
 	var input CreateGoalInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	userID, ok := httpx.MustUserID(c)
@@ -29,7 +28,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	goal, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, goal)
@@ -42,7 +41,7 @@ func (h *Handler) List(c *gin.Context) {
 	}
 	goals, err := h.usecase.List(c.Request.Context(), userID)
 	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	// ensure not null json array
@@ -57,14 +56,13 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	id := c.Param("id")
-	goal, err := h.usecase.Get(c.Request.Context(), userID, id)
-	if NotFound(err) {
-		httpx.Error(c, http.StatusNotFound, err.Error())
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
 		return
 	}
+	goal, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, goal)
@@ -73,24 +71,19 @@ func (h *Handler) Get(c *gin.Context) {
 func (h *Handler) InviteMember(c *gin.Context) {
 	var input InviteMemberInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	userID, ok := httpx.MustUserID(c)
 	if !ok {
 		return
 	}
-	id := c.Param("id")
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.usecase.InviteMember(c.Request.Context(), userID, id, input); err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, err.Error())
-			return
-		}
-		if errors.Is(err, ErrNotAuthorized) {
-			httpx.Error(c, http.StatusForbidden, err.Error())
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, gin.H{"message": "invited"})
@@ -99,20 +92,23 @@ func (h *Handler) InviteMember(c *gin.Context) {
 func (h *Handler) RespondInvite(c *gin.Context) {
 	var input RespondInviteInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	userID, ok := httpx.MustUserID(c)
 	if !ok {
 		return
 	}
-	id := c.Param("id")
-	if err := h.usecase.RespondInvite(c.Request.Context(), userID, id, c.Param("user_id"), input); err != nil {
-		if NotFound(err) {
-			httpx.Error(c, http.StatusNotFound, err.Error())
-			return
-		}
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	memberID, ok := httpx.GetUUIDParam(c, "user_id")
+	if !ok {
+		return
+	}
+	if err := h.usecase.RespondInvite(c.Request.Context(), userID, id, memberID, input); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, gin.H{"message": "responded"})

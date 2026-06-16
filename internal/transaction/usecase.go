@@ -1,13 +1,11 @@
 package transaction
 
-import "context"
-
 import (
-	"fmt"
-	"time"
-
 	"affluena-api/internal/activity"
 	"affluena-api/internal/page"
+	"context"
+	"fmt"
+	"time"
 )
 
 type RepositoryPort interface {

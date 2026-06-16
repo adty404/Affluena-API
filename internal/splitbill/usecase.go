@@ -60,19 +60,19 @@ func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTr
 		return SplitTransactionResponse{}, ErrInvalidSplitAmount
 	}
 
-	userExpenseMinor := input.TotalAmountMinor - totalSplitMinor
-
 	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return SplitTransactionResponse{}, err
 	}
 	defer tx.Rollback(ctx)
 
+	// The user pays the full amount upfront, so the transaction records the total amount.
+	// The portions owed by others are recorded as receivable debts.
 	userTxInput := transaction.TransactionInput{
 		Type:           transaction.TransactionTypeExpense,
 		WalletID:       input.WalletID,
 		CategoryID:     input.CategoryID,
-		AmountMinor:    userExpenseMinor,
+		AmountMinor:    input.TotalAmountMinor,
 		TagIDs:         input.TagIDs,
 		TransactionUTC: input.TransactionAt,
 		Note:           input.Note,

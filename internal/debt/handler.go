@@ -2,7 +2,6 @@ package debt
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -65,7 +64,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	created, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
-		writeError(c, err, "debt not found")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, created)
@@ -102,9 +101,13 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	debt, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	debt, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		writeError(c, err, "debt not found")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, debt)
@@ -115,13 +118,17 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	update, ok := bindUpdate(c)
 	if !ok {
 		return
 	}
-	updated, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), update)
+	updated, err := h.usecase.Update(c.Request.Context(), userID, id, update)
 	if err != nil {
-		writeError(c, err, "debt not found")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, updated)
@@ -132,8 +139,12 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		writeError(c, err, "debt not found")
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -144,13 +155,17 @@ func (h *Handler) Pay(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	amountMinor, paidAt, note, ok := bindPay(c)
 	if !ok {
 		return
 	}
-	payment, err := h.usecase.Pay(c.Request.Context(), userID, c.Param("id"), amountMinor, paidAt, note)
+	payment, err := h.usecase.Pay(c.Request.Context(), userID, id, amountMinor, paidAt, note)
 	if err != nil {
-		writeError(c, err, "debt not found")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, payment)
@@ -251,21 +266,4 @@ func parseOptionalDate(c *gin.Context, value string, field string) (*time.Time, 
 	}
 	date := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC)
 	return &date, true
-}
-
-func writeError(c *gin.Context, err error, notFoundMessage string) {
-	if NotFound(err) {
-		httpx.Error(c, http.StatusNotFound, notFoundMessage)
-		return
-	}
-	if errors.Is(err, errInvalidPayment) ||
-		errors.Is(err, errOverpayment) ||
-		errors.Is(err, errInactiveDebt) ||
-		errors.Is(err, errInvalidDebtType) ||
-		errors.Is(err, errInvalidDebtStatus) ||
-		errors.Is(err, errInvalidDebtAction) {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
 }

@@ -115,7 +115,11 @@ func (h *Handler) GetInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	installment, err := h.usecase.GetInstallment(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	installment, err := h.usecase.GetInstallment(c.Request.Context(), userID, id)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -128,11 +132,15 @@ func (h *Handler) UpdateInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	installment, ok := bindInstallment(c)
 	if !ok {
 		return
 	}
-	updated, err := h.usecase.UpdateInstallment(c.Request.Context(), userID, c.Param("id"), installment)
+	updated, err := h.usecase.UpdateInstallment(c.Request.Context(), userID, id, installment)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -145,7 +153,11 @@ func (h *Handler) DeleteInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.usecase.DeleteInstallment(c.Request.Context(), userID, c.Param("id")); err != nil {
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.usecase.DeleteInstallment(c.Request.Context(), userID, id); err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
 	}
@@ -157,11 +169,15 @@ func (h *Handler) PayInstallment(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	paidAt, note, ok := bindPay(c)
 	if !ok {
 		return
 	}
-	payment, err := h.usecase.PayInstallment(c.Request.Context(), userID, c.Param("id"), paidAt, note)
+	payment, err := h.usecase.PayInstallment(c.Request.Context(), userID, id, paidAt, note)
 	if err != nil {
 		writeTrackerError(c, err, "installment not found")
 		return
@@ -217,7 +233,11 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	subscription, err := h.usecase.GetSubscription(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	subscription, err := h.usecase.GetSubscription(c.Request.Context(), userID, id)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -230,11 +250,15 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	subscription, ok := bindSubscription(c)
 	if !ok {
 		return
 	}
-	updated, err := h.usecase.UpdateSubscription(c.Request.Context(), userID, c.Param("id"), subscription)
+	updated, err := h.usecase.UpdateSubscription(c.Request.Context(), userID, id, subscription)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -247,7 +271,11 @@ func (h *Handler) DeleteSubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.usecase.DeleteSubscription(c.Request.Context(), userID, c.Param("id")); err != nil {
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.usecase.DeleteSubscription(c.Request.Context(), userID, id); err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
 	}
@@ -259,11 +287,15 @@ func (h *Handler) PaySubscription(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	paidAt, note, ok := bindPay(c)
 	if !ok {
 		return
 	}
-	payment, err := h.usecase.PaySubscription(c.Request.Context(), userID, c.Param("id"), paidAt, note)
+	payment, err := h.usecase.PaySubscription(c.Request.Context(), userID, id, paidAt, note)
 	if err != nil {
 		writeTrackerError(c, err, "subscription not found")
 		return
@@ -278,7 +310,7 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 		return Installment{}, false
 	}
 	if err := ValidateInstallmentPlan(req.TotalAmountMinor, req.MonthlyAmountMinor, req.TenorMonths); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return Installment{}, false
 	}
 	if req.DueDay < 1 || req.DueDay > 31 {
@@ -287,7 +319,7 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 	}
 	remainingMonths, status, err := ResolveInstallmentRemainingAndStatus(req.TenorMonths, req.RemainingMonths, req.Status)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return Installment{}, false
 	}
 	startDate, err := parseDate(req.StartDate)
@@ -382,8 +414,8 @@ func writeTrackerError(c *gin.Context, err error, notFoundMessage string) {
 		return
 	}
 	if errors.Is(err, errInactiveSubscription) {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return
 	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
+	httpx.Error(c, http.StatusBadRequest, "invalid request")
 }

@@ -10,10 +10,10 @@ import (
 )
 
 type mockRepo struct {
-	email       string
-	err         error
-	catName     string
-	alreadySent bool
+	email      string
+	err        error
+	catName    string
+	shouldSend bool
 }
 
 func (m *mockRepo) GetUserEmail(ctx context.Context, userID string) (string, error) {
@@ -24,8 +24,12 @@ func (m *mockRepo) GetCategoryName(ctx context.Context, categoryID string) (stri
 	return m.catName, nil
 }
 
-func (m *mockRepo) HasAlertBeenSent(ctx context.Context, userID, categoryID, monthValue, alertType string) (bool, error) {
-	return m.alreadySent, nil
+func (m *mockRepo) TryInsertSentAlert(ctx context.Context, userID, categoryID, monthValue, alertType string) (bool, error) {
+	return m.shouldSend, m.err
+}
+
+func (m *mockRepo) DeleteSentAlert(ctx context.Context, userID, categoryID, monthValue, alertType string) error {
+	return nil
 }
 
 func (m *mockRepo) MarkAlertSent(ctx context.Context, userID, categoryID, monthValue, alertType string) error {
@@ -46,9 +50,13 @@ func (m *mockBudget) List(ctx context.Context, userID string, monthValue string,
 type mockMailer struct {
 	sentCount int
 	lastSubj  string
+	err       error
 }
 
 func (m *mockMailer) SendEmail(ctx context.Context, to []string, subject string, htmlBody string) error {
+	if m.err != nil {
+		return m.err
+	}
 	m.sentCount++
 	m.lastSubj = subject
 	return nil
@@ -81,7 +89,7 @@ func TestCheckBudgetAndAlert(t *testing.T) {
 			provider := &mockBudget{
 				result: page.Result[budget.BudgetSummary]{Items: []budget.BudgetSummary{b}},
 			}
-			repo := &mockRepo{email: "test@example.com"}
+			repo := &mockRepo{email: "test@example.com", shouldSend: true}
 			mailer := &mockMailer{}
 
 			uc := NewUseCase(repo, provider, mailer)
@@ -118,7 +126,7 @@ func TestCheckBudgetAndAlertUsesTransactionMonth(t *testing.T) {
 			},
 		},
 	}
-	repo := &mockRepo{email: "test@example.com"}
+	repo := &mockRepo{email: "test@example.com", shouldSend: true}
 	mailer := &mockMailer{}
 	uc := NewUseCase(repo, provider, mailer)
 
@@ -133,24 +141,76 @@ func TestCheckBudgetAndAlertUsesTransactionMonth(t *testing.T) {
 	}
 }
 
-func TestCheckBudgetAndAlertDeduplication(t *testing.T) {
+type fakeAtomicRepo struct {
+	email    string
+	catName  string
+	inserted bool
+	deleted  bool
+}
+
+func (m *fakeAtomicRepo) GetUserEmail(ctx context.Context, userID string) (string, error) {
+	return m.email, nil
+}
+func (m *fakeAtomicRepo) GetCategoryName(ctx context.Context, categoryID string) (string, error) {
+	return m.catName, nil
+}
+func (m *fakeAtomicRepo) TryInsertSentAlert(ctx context.Context, userID, categoryID, monthValue, alertType string) (bool, error) {
+	if m.inserted {
+		return false, nil // Already inserted, atomic dedup prevents duplicate
+	}
+	m.inserted = true
+	return true, nil
+}
+func (m *fakeAtomicRepo) DeleteSentAlert(ctx context.Context, userID, categoryID, monthValue, alertType string) error {
+	m.deleted = true
+	m.inserted = false
+	return nil
+}
+func (m *fakeAtomicRepo) MarkAlertSent(ctx context.Context, userID, categoryID, monthValue, alertType string) error {
+	return nil
+}
+
+func TestCheckBudgetAndAlertAtomicDeduplication(t *testing.T) {
 	b := budget.BudgetSummary{
 		Budget: budget.Budget{
 			CategoryID: "cat-1",
 			LimitMinor: 100,
 		},
-		SpentMinor: 80,
+		SpentMinor: 80, // 80% used -> triggers 80% alert
 	}
 	provider := &mockBudget{
 		result: page.Result[budget.BudgetSummary]{Items: []budget.BudgetSummary{b}},
 	}
-	repo := &mockRepo{email: "test@example.com", alreadySent: true}
+
+	repo := &fakeAtomicRepo{email: "test@example.com", catName: "Food"}
 	mailer := &mockMailer{}
 	uc := NewUseCase(repo, provider, mailer)
 
+	// First call should succeed and send email
 	uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", time.Now().UTC())
 
-	if mailer.sentCount != 0 {
-		t.Errorf("expected 0 emails sent when alert already sent, got %d", mailer.sentCount)
+	if mailer.sentCount != 1 {
+		t.Errorf("expected 1 email sent, got %d", mailer.sentCount)
+	}
+	if !repo.inserted {
+		t.Errorf("expected alert to be inserted atomically")
+	}
+
+	// Second call with same state should be deduped by TryInsertSentAlert returning false
+	uc.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", time.Now().UTC())
+
+	if mailer.sentCount != 1 {
+		t.Errorf("expected email count to remain 1 due to atomic dedup, got %d", mailer.sentCount)
+	}
+
+	// Simulate failure policy: if mailer fails, it deletes the alert
+	mailerWithError := &mockMailer{err: context.DeadlineExceeded}
+	repoForFailure := &fakeAtomicRepo{email: "test@example.com", catName: "Food"}
+	ucWithErr := NewUseCase(repoForFailure, provider, mailerWithError)
+
+	ucWithErr.CheckBudgetAndAlert(context.Background(), "user-1", "cat-1", time.Now().UTC())
+
+	if !repoForFailure.deleted {
+		t.Errorf("expected alert to be deleted after email failure for retry")
 	}
 }

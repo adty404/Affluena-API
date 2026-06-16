@@ -40,13 +40,13 @@ func WriteError(c *gin.Context, err error) bool {
 
 	// Unauthorized
 	if strings.Contains(lowerMsg, "unauthorized") || strings.Contains(lowerMsg, "invalid email or password") {
-		Error(c, http.StatusUnauthorized, errMsg)
+		Error(c, http.StatusUnauthorized, "unauthorized access")
 		return true
 	}
 
 	// Forbidden
 	if strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized") || strings.Contains(lowerMsg, "only creator") {
-		Error(c, http.StatusForbidden, errMsg)
+		Error(c, http.StatusForbidden, "forbidden action")
 		return true
 	}
 
@@ -58,14 +58,14 @@ func WriteError(c *gin.Context, err error) bool {
 
 	// Conflict
 	if strings.Contains(lowerMsg, "already exists") || strings.Contains(lowerMsg, "conflict") || strings.Contains(lowerMsg, "duplicate") {
-		Error(c, http.StatusConflict, errMsg)
+		Error(c, http.StatusConflict, "conflict in resource state")
 		return true
 	}
 
 	// Validation errors (bad request)
 	if strings.HasPrefix(lowerMsg, "invalid") || strings.HasPrefix(lowerMsg, "required") ||
 		strings.Contains(lowerMsg, "must be") || strings.Contains(lowerMsg, "cannot") {
-		Error(c, http.StatusBadRequest, errMsg)
+		Error(c, http.StatusBadRequest, "invalid request")
 		return true
 	}
 

@@ -159,6 +159,93 @@ func TestSplitBillRollsBackAllWritesWhenDebtCreationFails(t *testing.T) {
 	assertListCount(t, router, token, "/api/v1/debts", "debts", 0)
 }
 
+func TestSplitBillFullSplit(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "split-full-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	user, token := registerIntegrationAPIUser(t, router, "splitfulluser")
+	defer cleanupServerIntegrationUsers(t, pool, user)
+
+	// Create wallet
+	walletID := createAPIResource(t, router, token, "/api/v1/wallets", `{
+		"name": "BCA Full Split",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 10000000
+	}`)
+
+	// Create categories
+	foodCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Food",
+		"type": "expense"
+	}`)
+	piutangDisbCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Memberi Pinjaman",
+		"type": "expense"
+	}`)
+	piutangPayCat := createAPIResource(t, router, token, "/api/v1/categories", `{
+		"name": "Pinjaman Dibayar",
+		"type": "income"
+	}`)
+
+	// Payload for full split
+	splitPayload := `{
+		"wallet_id": "` + walletID + `",
+		"category_id": "` + foodCat + `",
+		"total_amount_minor": 200000,
+		"note": "Full dinner split",
+		"splits": [
+			{
+				"counterparty_name": "Budi",
+				"amount_minor": 100000,
+				"disbursement_category_id": "` + piutangDisbCat + `",
+				"payment_category_id": "` + piutangPayCat + `"
+			},
+			{
+				"counterparty_name": "Citra",
+				"amount_minor": 100000,
+				"disbursement_category_id": "` + piutangDisbCat + `",
+				"payment_category_id": "` + piutangPayCat + `"
+			}
+		]
+	}`
+
+	respBody := performAPIRequest(t, router, token, "POST", "/api/v1/transactions/split", splitPayload, http.StatusCreated)
+
+	var splitResp splitbill.SplitTransactionResponse
+	json.Unmarshal([]byte(respBody), &splitResp)
+
+	if splitResp.TransactionID == "" {
+		t.Errorf("expected transaction_id to be populated")
+	}
+
+	// Verify wallet balance
+	wBody := performAPIRequest(t, router, token, "GET", "/api/v1/wallets/"+walletID, "", http.StatusOK)
+	// Expected balance: 10M - 200k = 9,800,000
+	var walletResp struct {
+		BalanceMinor int64 `json:"balance_minor"`
+	}
+	json.Unmarshal([]byte(wBody), &walletResp)
+	if walletResp.BalanceMinor != 9800000 {
+		t.Errorf("expected wallet balance 9,800,000, got %d", walletResp.BalanceMinor)
+	}
+
+	// Verify the original transaction amount is not 0
+	txBody := performAPIRequest(t, router, token, "GET", "/api/v1/transactions/"+splitResp.TransactionID, "", http.StatusOK)
+	var txResp struct {
+		AmountMinor int64 `json:"amount_minor"`
+	}
+	json.Unmarshal([]byte(txBody), &txResp)
+	if txResp.AmountMinor != 200000 {
+		t.Errorf("expected transaction amount to remain 200000 (total bill), got %d", txResp.AmountMinor)
+	}
+}
+
 func assertListCount(t *testing.T, router http.Handler, token string, path string, key string, wantCount int) {
 	t.Helper()
 

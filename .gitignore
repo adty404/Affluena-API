@@ -38,7 +38,7 @@ Thumbs.db
 # Build artifacts
 *.log
 verify.log
-golang-codebase.zip
+*.zip
 
 # Environment (use .env.example instead)
 .env
@@ -51,3 +51,7 @@ scripts/*.sql
 
 # Air live reload
 tmp/
+
+# Claude Settings
+.claude/settings.local.json
+.claude/*.local.json
