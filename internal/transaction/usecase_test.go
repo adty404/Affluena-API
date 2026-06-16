@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena-api/internal/page"
+	"affluena-api/internal/wallet"
 )
 
 type fakeTransactionRepository struct {
@@ -34,6 +35,15 @@ type fakeAlertUseCase struct {
 
 func (f *fakeAlertUseCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID string, transactionAt time.Time) {
 	f.called <- alertCall{userID: userID, categoryID: categoryID, transactionAt: transactionAt}
+}
+
+type fakeAccessChecker struct {
+	level wallet.AccessLevel
+	err   error
+}
+
+func (f *fakeAccessChecker) GetAccessLevel(ctx context.Context, userID string, walletID string) (wallet.AccessLevel, error) {
+	return f.level, f.err
 }
 
 func (f *fakeTransactionRepository) Create(ctx context.Context, userID string, input TransactionInput) (Transaction, error) {
@@ -75,7 +85,8 @@ func (f *fakeTransactionRepository) Delete(ctx context.Context, userID string, i
 
 func TestTransactionUseCaseCreateValidatesAndDelegates(t *testing.T) {
 	repo := &fakeTransactionRepository{created: Transaction{ID: "tx-1"}}
-	uc := NewUseCase(repo, nil, nil)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(repo, nil, nil, checker)
 	input := TransactionInput{
 		Type:           TransactionTypeIncome,
 		WalletID:       "wallet-1",
@@ -97,7 +108,8 @@ func TestTransactionUseCaseCreateValidatesAndDelegates(t *testing.T) {
 }
 
 func TestTransactionUseCaseRejectsInvalidInput(t *testing.T) {
-	uc := NewUseCase(&fakeTransactionRepository{}, nil, nil)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(&fakeTransactionRepository{}, nil, nil, checker)
 
 	if _, err := uc.Create(context.Background(), "user-1", TransactionInput{Type: TransactionTypeIncome}); err == nil {
 		t.Fatal("expected invalid transaction input error")
@@ -111,7 +123,8 @@ func TestTransactionUseCaseCreatePassesTransactionMonthToBudgetAlert(t *testing.
 	transactionAt := time.Date(2026, time.May, 20, 15, 30, 0, 0, time.UTC)
 	repo := &fakeTransactionRepository{created: Transaction{ID: "tx-1"}}
 	alerts := &fakeAlertUseCase{called: make(chan alertCall, 1)}
-	uc := NewUseCase(repo, nil, alerts)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(repo, nil, alerts, checker)
 
 	_, err := uc.Create(context.Background(), "user-1", TransactionInput{
 		Type:           TransactionTypeExpense,
@@ -142,7 +155,8 @@ func TestTransactionUseCaseCreatePassesTransactionMonthToBudgetAlert(t *testing.
 
 func TestTransactionUseCaseUpdateValidatesAndDelegates(t *testing.T) {
 	repo := &fakeTransactionRepository{updated: Transaction{ID: "tx-1"}}
-	uc := NewUseCase(repo, nil, nil)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(repo, nil, nil, checker)
 	input := TransactionInput{
 		Type:           TransactionTypeTransfer,
 		WalletID:       "wallet-1",
@@ -168,7 +182,8 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 		listed: []Transaction{{ID: "tx-1"}},
 		got:    Transaction{ID: "tx-1"},
 	}
-	uc := NewUseCase(repo, nil, nil)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(repo, nil, nil, checker)
 
 	listed, err := uc.List(context.Background(), "user-1", TransactionFilter{Type: TransactionTypeExpense}, page.Params{Limit: 10, Sort: "transaction_at_desc"})
 	if err != nil || len(listed.Items) != 1 || listed.Items[0].ID != "tx-1" {
@@ -194,7 +209,8 @@ func TestTransactionUseCaseDelegatesReadAndDelete(t *testing.T) {
 
 func TestTransactionUseCasePropagatesRepositoryErrors(t *testing.T) {
 	repoErr := errors.New("repo failed")
-	uc := NewUseCase(&fakeTransactionRepository{err: repoErr}, nil, nil)
+	checker := &fakeAccessChecker{level: wallet.AccessOwner}
+	uc := NewUseCase(&fakeTransactionRepository{err: repoErr}, nil, nil, checker)
 	valid := TransactionInput{
 		Type:           TransactionTypeIncome,
 		WalletID:       "wallet-1",

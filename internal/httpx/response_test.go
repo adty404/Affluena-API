@@ -125,3 +125,26 @@ func TestIsForbidden(t *testing.T) {
 	assert.False(t, IsForbidden(errors.New("other error")))
 	assert.False(t, IsForbidden(nil))
 }
+
+func TestIsConflict(t *testing.T) {
+	assert.True(t, IsConflict(ErrConflict))
+	assert.True(t, IsConflict(errors.New("already exists")))
+	assert.False(t, IsConflict(errors.New("other error")))
+	assert.False(t, IsConflict(nil))
+}
+
+func TestIsValidation(t *testing.T) {
+	assert.True(t, IsValidation(ErrValidation))
+	assert.True(t, IsValidation(errors.New("invalid input")))
+	assert.False(t, IsValidation(errors.New("other error")))
+	assert.False(t, IsValidation(nil))
+}
+
+func TestWriteError_Validation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+
+	handled := WriteError(c, errors.New("invalid param"))
+	assert.True(t, handled)
+	assert.Equal(t, http.StatusBadRequest, c.Writer.Status())
+}

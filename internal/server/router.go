@@ -62,7 +62,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	authService := auth.NewService(authRepo, tokenManager, activityUC)
 	authHandler := auth.NewHandler(authService)
 
-	walletHandler := wallet.NewHandler(wallet.NewUseCase(wallet.NewRepository(pool), activityUC))
+	walletRepo := wallet.NewRepository(pool)
+	walletHandler := wallet.NewHandler(wallet.NewUseCase(walletRepo, activityUC))
 	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool), activityUC))
 	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool), activityUC))
 	budgetUC := budget.NewUseCase(budget.NewRepository(pool), activityUC)
@@ -75,7 +76,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	}
 
 	transactionRepo := transaction.NewRepository(pool)
-	transactionUC := transaction.NewUseCase(transactionRepo, activityUC, alertUC)
+	transactionUC := transaction.NewUseCase(transactionRepo, activityUC, alertUC, walletRepo)
 	transactionHandler := transaction.NewHandler(transactionUC)
 	quickEntryHandler := quickentry.NewHandler(quickentry.NewUseCase(quickentry.NewRepository(pool), transactionUC, activityUC))
 	dashboardHandler := dashboard.NewHandler(dashboard.NewUseCase(dashboard.NewRepository(pool)))

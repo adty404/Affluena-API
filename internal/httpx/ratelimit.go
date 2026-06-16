@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"affluena-api/internal/async"
+	"context"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -58,20 +60,26 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 const CleanupInterval = 5 * time.Minute
 
 // StartCleanup periodically removes unused limiters.
-func (rl *RateLimiter) StartCleanup(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	go func() {
-		for range ticker.C {
-			rl.limiters.Range(func(key, value any) bool {
-				limiter := value.(*rate.Limiter)
-				// Remove if no tokens are being used
-				if limiter.Allow() {
-					rl.limiters.Delete(key)
-				}
-				return true
-			})
+func (rl *RateLimiter) StartCleanup(ctx context.Context, interval time.Duration) {
+	async.SafeGo(ctx, "rate_limiter_cleanup", func(ctx context.Context) {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				rl.limiters.Range(func(key, value any) bool {
+					limiter := value.(*rate.Limiter)
+					// Remove if no tokens are being used
+					if limiter.Allow() {
+						rl.limiters.Delete(key)
+					}
+					return true
+				})
+			}
 		}
-	}()
+	})
 }
 
 // Common rate limiters for different use cases

@@ -34,37 +34,32 @@ func WriteError(c *gin.Context, err error) bool {
 		return true
 	}
 
-	// Check common error patterns
-	errMsg := err.Error()
-	lowerMsg := strings.ToLower(errMsg)
-
 	// Unauthorized
-	if strings.Contains(lowerMsg, "unauthorized") || strings.Contains(lowerMsg, "invalid email or password") {
+	if IsUnauthorized(err) {
 		Error(c, http.StatusUnauthorized, "unauthorized access")
 		return true
 	}
 
 	// Forbidden
-	if strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized") || strings.Contains(lowerMsg, "only creator") {
+	if IsForbidden(err) {
 		Error(c, http.StatusForbidden, "forbidden action")
 		return true
 	}
 
 	// Not found
-	if strings.Contains(lowerMsg, "not found") || errors.Is(err, ErrNotFound) {
+	if IsNotFound(err) {
 		Error(c, http.StatusNotFound, "resource not found")
 		return true
 	}
 
 	// Conflict
-	if strings.Contains(lowerMsg, "already exists") || strings.Contains(lowerMsg, "conflict") || strings.Contains(lowerMsg, "duplicate") {
+	if IsConflict(err) {
 		Error(c, http.StatusConflict, "conflict in resource state")
 		return true
 	}
 
 	// Validation errors (bad request)
-	if strings.HasPrefix(lowerMsg, "invalid") || strings.HasPrefix(lowerMsg, "required") ||
-		strings.Contains(lowerMsg, "must be") || strings.Contains(lowerMsg, "cannot") {
+	if IsValidation(err) {
 		Error(c, http.StatusBadRequest, "invalid request")
 		return true
 	}
@@ -97,7 +92,11 @@ func NewPublicError(message string, status int) PublicError {
 
 // Common domain errors that can be checked with errors.Is
 var (
-	ErrNotFound = errors.New("resource not found")
+	ErrNotFound     = errors.New("resource not found")
+	ErrUnauthorized = errors.New("unauthorized access")
+	ErrForbidden    = errors.New("forbidden action")
+	ErrConflict     = errors.New("conflict in resource state")
+	ErrValidation   = errors.New("invalid request")
 )
 
 // IsNotFound checks if an error is a not found error.
@@ -110,6 +109,9 @@ func IsUnauthorized(err error) bool {
 	if err == nil {
 		return false
 	}
+	if errors.Is(err, ErrUnauthorized) {
+		return true
+	}
 	lowerMsg := strings.ToLower(err.Error())
 	return strings.Contains(lowerMsg, "unauthorized") || strings.Contains(lowerMsg, "invalid email or password")
 }
@@ -119,6 +121,34 @@ func IsForbidden(err error) bool {
 	if err == nil {
 		return false
 	}
+	if errors.Is(err, ErrForbidden) {
+		return true
+	}
 	lowerMsg := strings.ToLower(err.Error())
-	return strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized")
+	return strings.Contains(lowerMsg, "forbidden") || strings.Contains(lowerMsg, "not authorized") || strings.Contains(lowerMsg, "only creator")
+}
+
+// IsConflict checks if an error is a conflict error.
+func IsConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, ErrConflict) {
+		return true
+	}
+	lowerMsg := strings.ToLower(err.Error())
+	return strings.Contains(lowerMsg, "already exists") || strings.Contains(lowerMsg, "conflict") || strings.Contains(lowerMsg, "duplicate")
+}
+
+// IsValidation checks if an error is a validation error.
+func IsValidation(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, ErrValidation) {
+		return true
+	}
+	lowerMsg := strings.ToLower(err.Error())
+	return strings.HasPrefix(lowerMsg, "invalid") || strings.HasPrefix(lowerMsg, "required") ||
+		strings.Contains(lowerMsg, "must be") || strings.Contains(lowerMsg, "cannot") || strings.Contains(lowerMsg, "bad request")
 }
