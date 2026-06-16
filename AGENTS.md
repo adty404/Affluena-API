@@ -62,6 +62,11 @@ Important invariants:
 - Category CRUD endpoints are generic. Do not create separate income/expense CRUD routes; use list filtering where needed.
 - Category nesting must not exceed 3 levels and must reject cyclic parent relationships, cross-user parents, and parent categories with a different type.
 - User-facing list endpoints usually return `{collection, pagination}` and support `limit`, `offset`, and whitelisted `sort` values. Keep pagination metadata scoped to the authenticated user and matching active filters. Financial goals are a current exception: `GET /api/v1/goals` returns a JSON array ordered by creation time.
+- Dashboard analytics (e.g. summary, cashflow) evaluate all accessible wallets (owned wallets and joined shared wallets). However, category budgets strictly evaluate against personal budgets and are not shared.
+- Debts cannot be canceled/deleted if payments have been made.
+- Background jobs and goroutines must use `internal/async.SafeGo` for panic recovery.
+- Use `httpx.GetUUIDParam` to parse path UUIDs safely, rather than raw `c.Param`.
+- Use `httpx.WriteError` along with `errors.Is(err, ...)` checking sentinel errors (`IsNotFound`, `IsForbidden`, etc.) for robust HTTP error mapping without leaking database errors.
 
 ## Required Workflow For Every Change
 
@@ -173,7 +178,7 @@ Current notable API decisions:
 - `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` returns category expense distribution.
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` returns spend forecasting and overbudget warnings.
 - Subscriptions accept and return optional `account_detail`.
-- `POST /api/v1/goals`, `GET /api/v1/goals`, `GET /api/v1/goals/:id`, `POST /api/v1/goals/:id/members`, and `PUT /api/v1/goals/:id/members/:user_id/respond` implement financial goals and invitations.
+- `POST /api/v1/goals`, `GET /api/v1/goals`, `GET /api/v1/goals/:id`, `POST /api/v1/goals/:id/members`, and `PUT /api/v1/goals/:id/members/:user_id/respond` implement financial goals and invitations. Contributions to goals are made via `transfer` transactions to the goal wallet.
 
 ## Database Migration Rules
 
