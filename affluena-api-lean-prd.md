@@ -59,7 +59,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
 ### 3.6. Debt & Loan Manager (Hutang Piutang)
 
-- **Fitur:** Mencatat entitas peminjam/pemberi pinjaman, batas waktu, dan status progres pembayaran (Belum Lunas, Dicicil, Lunas).
+- **Fitur:** Mencatat entitas peminjam/pemberi pinjaman, batas waktu, dan status progres pembayaran (Belum Lunas, Dicicil, Lunas). Hutang tidak dapat dibatalkan (dihapus) jika sudah terdapat transaksi pembayaran yang terkait dengannya.
 - **Use Case:** Mengurangi saldo dompet saat memberikan pinjaman ke teman (masuk sebagai "Aset Piutang"). Saat cicilan dari teman tersebut masuk dan mencapai total nominal pinjaman, status otomatis berubah menjadi "Lunas".
 
 ### 3.7. Category Budgeting
@@ -70,8 +70,8 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 ### 3.8. Financial Goals (Tabungan Bersama) & Shared Wallets
 
 - **Fitur:** Menetapkan target tabungan finansial dengan batas waktu, dan kemampuan mengundang pengguna lain sebagai anggota (kolaborasi). Termasuk fungsionalitas berbagi "Shared Wallet" untuk pengeluaran operasional gabungan.
-- **Use Case:** Suami dan istri bisa memiliki satu dompet gabungan khusus pengeluaran belanja dapur. Keduanya bebas mencatat transaksi menggunakan dompet yang di-*share* sehingga *cashflow* dan *dashboard analytics* menjadi lebih akurat di kedua belah pihak.
-- **Integrity Rules:** Pembuatan goal dan penerimaan undangan membuat _Goal Wallet_ secara atomik. Nama goal boleh sama karena _Goal Wallet_ memakai suffix ID goal. Undangan yang ditolak tidak lagi membuka akses goal, dan respons undangan hanya boleh dilakukan oleh member yang sesuai dengan `:user_id` pada route.
+- **Use Case:** Suami dan istri bisa memiliki satu dompet gabungan khusus pengeluaran belanja dapur. Keduanya bebas mencatat transaksi menggunakan dompet yang di-*share* sehingga *cashflow* dan *dashboard analytics* menjadi lebih akurat di kedua belah pihak (dashboard mengevaluasi *accessible wallets* termasuk *shared wallet*). Namun, sistem memisahkan perhitungan *Budget* sehingga *shared expense* dari istri tidak akan mengurangi kuota budget personal suami.
+- **Integrity Rules:** Pembuatan goal dan penerimaan undangan membuat _Goal Wallet_ secara atomik. Nama goal boleh sama karena _Goal Wallet_ memakai suffix ID goal. Undangan yang ditolak tidak lagi membuka akses goal, dan respons undangan hanya boleh dilakukan oleh member yang sesuai dengan `:user_id` pada route. Kontribusi uang ke sebuah Goal dilakukan via tipe transaksi `transfer` ke _Goal Wallet_ tersebut.
 
 ### 3.9. Tags / Labeling
 
