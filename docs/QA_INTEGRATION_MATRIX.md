@@ -5,7 +5,7 @@ This document provides a testing checklist for QA and Frontend engineers to ensu
 ## Foundation & Auth
 | Flow | Action | Expected Result | Edge Cases |
 |------|--------|-----------------|------------|
-| **Register** | Submit new valid user | 201 Created. User logged in automatically. | Duplicate email throws 409. |
+| **Register** | Submit new valid user (email & password) | 201 Created. User logged in automatically. | Duplicate email throws 409. |
 | **Login** | Valid credentials | 200 OK. Returns access and refresh tokens. | Wrong password throws 401. |
 | **Protected Route**| Access without token | 401 Unauthorized. | Missing Bearer header. |
 | **Token Refresh**| Refresh using valid refresh token| 200 OK. New token pair generated. | Expired refresh token returns 401. |
@@ -16,7 +16,7 @@ This document provides a testing checklist for QA and Frontend engineers to ensu
 | **Create Wallet**| Submit valid wallet data | 201 Created. Initial balance is 0. | `type="goal"` is explicitly rejected (400). |
 | **Update Wallet**| Edit name or type | 200 OK. | Balance cannot be modified directly via PUT. |
 | **Delete Wallet**| Delete empty wallet | 200 OK. Wallet is soft-deleted. | Non-empty wallet deletion may fail depending on constraint logic. |
-| **Share Wallet** | Invite another user | 200 OK. Invite created. | Self-invite rejected. Non-existent user rejected. |
+| **Share Wallet** | Invite another user via email | 200 OK. Invite created. | Self-invite rejected. Non-existent user rejected. |
 | **Accept Share** | Member accepts invite | 200 OK. Member can now see and use wallet. | - |
 | **Cross-User Auth**| Try accessing another user's wallet| 403 Forbidden or 404 Not Found. | IDs manipulated in URL/Request payload. |
 
