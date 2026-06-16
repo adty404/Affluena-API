@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("resource not found")
+var (
+	ErrNotFound     = errors.New("resource not found")
+	ErrUnauthorized = errors.New("only transaction creator can modify or delete")
+)
 
 type Transaction struct {
 	ID            string          `json:"id"`

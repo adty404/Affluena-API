@@ -181,6 +181,9 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, updat
 	return debt, translateNotFound(err)
 }
 
+// Delete performs a soft-cancel by setting status to 'cancelled'.
+// This preserves the audit trail including the original transaction.
+// The debt remains visible in history but is marked as cancelled.
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
 	tag, err := r.pool.Exec(ctx, `
 		UPDATE debts

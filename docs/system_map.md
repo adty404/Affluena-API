@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.3 — 16 Juni 2026
-> **Total Source Code:** ~10.100 baris (88 file `.go`) | **Test Code:** ~7.350 baris (49 file `*_test.go`)
+> **Versi:** v2.4 — 16 Juni 2026
+> **Total Source Code:** ~10.150 baris (88 file `.go`) | **Test Code:** ~7.350 baris (49 file `*_test.go`)
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
@@ -95,18 +95,18 @@ graph TB
 | **auth** | `internal/auth/` | 6 src + 2 test | 469 + 241 | Registrasi, login, refresh token (JWT HS256 + bcrypt). Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
 | **wallet** | `internal/wallet/` | 4 src + 1 test | 625 + 201 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. |
 | **category** | `internal/category/` | 4 src + 1 test | 490 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
-| **transaction** | `internal/transaction/` | 5 src + 3 test | 883 + 360 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. |
+| **transaction** | `internal/transaction/` | 5 src + 3 test | 883 + 360 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
 
 ### 2.3. Feature Modules
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
 | **budget** | `internal/budget/` | 5 src + 2 test | 507 + 192 | Limit pengeluaran per kategori per bulan. Recursive CTE untuk hierarki. |
-| **debt** | `internal/debt/` | 5 src + 3 test | 946 + 500 | Hutang-piutang (payable/receivable) dengan disbursement & payment otomatis. |
+| **debt** | `internal/debt/` | 5 src + 3 test | 946 + 500 | Hutang-piutang (payable/receivable) dengan disbursement & payment otomatis. Delete adalah soft-cancel (status → cancelled) untuk audit trail. |
 | **tracker** | `internal/tracker/` | 7 src + 2 test | 1180 + 388 | Cicilan (installment) & langganan (subscription). Status transitions. |
 | **recurring** | `internal/recurring/` | 6 src + 2 test | 970 + 254 | Transaksi berulang via native Go scheduler (weekly/monthly). `SKIP LOCKED`. |
 | **quickentry** | `internal/quickentry/` | 4 src + 1 test | 540 + 209 | Template transaksi instan satu-klik. Execute = buat transaksi sungguhan. |
-| **splitbill** | `internal/splitbill/` | 3 src | 228 | Macro endpoint — 1 request = 1 expense + N piutang (receivable debts). |
+| **splitbill** | `internal/splitbill/` | 3 src | 228 | Macro endpoint — 1 request = 1 expense + N piutang (receivable debts). Mendukung full split (total split == amount) dan partial split. |
 | **goal** | `internal/goal/` | 4 src + 1 test | 518 + 146 | Target tabungan kolaboratif. Invite member → auto-create goal wallet. |
 | **tag** | `internal/tag/` | 4 src | 329 | Label lintas-kategori (Many-to-Many dengan transactions). |
 | **dashboard** | `internal/dashboard/` | 5 src | 613 | Summary, Cashflow Trend, Expense Distribution, Spend Forecast. |
@@ -712,6 +712,7 @@ sequenceDiagram
 8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.InternalError()` atau `httpx.PublicError`.
 9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter). Aplikasi fail-fast jika config invalid.
 10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
+11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
 
 ---
 
