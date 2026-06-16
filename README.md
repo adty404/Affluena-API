@@ -26,6 +26,33 @@ docker compose up postgres
 go run ./cmd/api
 ```
 
+## Configuration
+
+The application is configured via environment variables. Copy `.env.example` to `.env` and adjust as needed:
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `APP_ENV` | Environment (`development`, `production`) | `development` | No |
+| `HTTP_ADDR` | HTTP server address | `:8080` | No |
+| `DATABASE_URL` | PostgreSQL connection string | see .env.example | Yes |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) | - | **Yes (production)** |
+| `ACCESS_TOKEN_TTL` | Access token lifetime | `15m` | No |
+| `REFRESH_TOKEN_TTL` | Refresh token lifetime | `720h` | No |
+| `RUN_MIGRATIONS` | Run DB migrations on startup | `true` | No |
+| `RECURRING_SCHEDULER_ENABLED` | Enable recurring transaction scheduler | `true` | No |
+| `RECURRING_SCHEDULER_INTERVAL` | Scheduler check interval | `1m` | No |
+| `RECURRING_SCHEDULER_BATCH_SIZE` | Scheduler batch size | `20` | No |
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No |
+| `SMTP_HOST` | SMTP server host | `sandbox.smtp.mailtrap.io` | No |
+| `SMTP_PORT` | SMTP server port | `2525` | No |
+| `SMTP_USER` | SMTP username | - | No |
+| `SMTP_PASS` | SMTP password | - | No |
+| `SMTP_FROM` | Sender email address | `noreply@affluena.com` | No |
+
+**Production Requirements:**
+- `JWT_SECRET` must be set to a random string of at least 32 characters
+- The application will fail to start if `JWT_SECRET` is unset, empty, or uses the default placeholder
+
 ## Verify
 
 Run the full pre-commit/pre-push gate:

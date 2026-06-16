@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.2 — 14 Juni 2026  
-> **Total Source Code:** ~9.878 baris (87 file `.go`) | **Test Code:** ~7.300 baris (48 file `*_test.go`)  
+> **Versi:** v2.3 — 16 Juni 2026
+> **Total Source Code:** ~10.100 baris (88 file `.go`) | **Test Code:** ~7.350 baris (49 file `*_test.go`)
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
@@ -82,17 +82,17 @@ graph TB
 
 | Modul | Lokasi | Deskripsi | Dependensi |
 |-------|--------|-----------|------------|
-| **config** | `internal/config/` | Membaca environment variables dengan fallback defaults. 15 parameter konfigurasi. | stdlib |
-| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (15 file SQL). | pgx |
+| **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 16 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
+| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (19 file SQL). | pgx |
 | **page** | `internal/page/` | Struct generik `Result[T]` untuk pagination (`limit`, `offset`, `total`). | stdlib |
-| **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `ParsePage`, `BindOptionalJSON`, `Error`, `JSON`. | page, gin |
+| **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `ParsePage`, `BindOptionalJSON`, `Error`, `JSON`, `InternalError` (sanitasi error), `PublicError`. | page, gin |
 | **caldate** | `internal/caldate/` | Fungsi `AddMonthsClamped` — menambah bulan dengan clamping hari ke akhir bulan target. | stdlib |
 
 ### 2.2. Core Domain
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **auth** | `internal/auth/` | 6 src + 2 test | 469 + 241 | Registrasi, login, refresh token (JWT HS256 + bcrypt). Token rotation otomatis. |
+| **auth** | `internal/auth/` | 6 src + 2 test | 469 + 241 | Registrasi, login, refresh token (JWT HS256 + bcrypt). Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
 | **wallet** | `internal/wallet/` | 4 src + 1 test | 625 + 201 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. |
 | **category** | `internal/category/` | 4 src + 1 test | 490 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
 | **transaction** | `internal/transaction/` | 5 src + 3 test | 883 + 360 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. |
@@ -117,7 +117,7 @@ graph TB
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
 | **activity** | `internal/activity/` | 4 src + 1 test | 218 + 178 | Audit trail aktivitas user. Fire-and-forget goroutine (5s timeout). |
-| **apilog** | `internal/apilog/` | 3 src + 1 test | 198 + 108 | Middleware pencatatan HTTP request/response ke DB. Masking auth payload. |
+| **apilog** | `internal/apilog/` | 3 src + 1 test | 198 + 108 | Middleware pencatatan HTTP request/response ke DB. Masking auth payload, sensitive field redaction, 32KB payload limit, skip response logging untuk export endpoints. |
 | **alert** | `internal/alert/` | 2 src + 1 test | 173 + 125 | Cek budget threshold (≥80%/≥100%) → kirim email peringatan. |
 | **mailer** | `internal/mailer/` | 1 src | 61 | Interface `Mailer` + implementasi `SMTPMailer` (net/smtp). |
 
@@ -643,13 +643,14 @@ make verify
 | `APP_ENV` | development | Mode aplikasi |
 | `HTTP_ADDR` | :8080 | Port HTTP |
 | `DATABASE_URL` | postgres://...localhost | Connection string PostgreSQL |
-| `JWT_SECRET` | change-me-in-production | Secret untuk JWT HS256 |
+| `JWT_SECRET` | **wajib di production** | Secret untuk JWT HS256 (min 32 karakter, divalidasi saat startup) |
 | `ACCESS_TOKEN_TTL` | 15m | Masa berlaku access token |
 | `REFRESH_TOKEN_TTL` | 720h (30 hari) | Masa berlaku refresh token |
 | `RUN_MIGRATIONS` | true | Auto-run migration saat startup |
 | `RECURRING_SCHEDULER_ENABLED` | true | Aktifkan background scheduler |
 | `RECURRING_SCHEDULER_INTERVAL` | 1m | Interval pengecekan scheduler |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | 20 | Max rules per tick |
+| `CORS_ALLOWED_ORIGINS` | http://localhost:5173 | Allowed CORS origins (comma-separated) |
 | `SMTP_HOST` | sandbox.smtp.mailtrap.io | SMTP server host |
 | `SMTP_PORT` | 2525 | SMTP server port |
 | `SMTP_USER` | (kosong) | SMTP username |
@@ -675,18 +676,20 @@ make verify
 ```mermaid
 sequenceDiagram
     participant Main as cmd/api/main.go
-    participant Config as config.Load()
+    participant Config as config.Load() + Validate()
     participant DB as db.Open() + Migrate()
     participant Scheduler as recurring.Scheduler
     participant Router as server.NewRouter()
     participant HTTP as http.Server
 
     Main->>Config: Load environment
+    Main->>Config: Validate (JWT_SECRET check)
     Main->>DB: Open pool + run migrations
     Main->>Scheduler: Start(ctx) [if enabled]
     Note over Scheduler: Background goroutine<br/>Ticker every {interval}
     Main->>Router: Build handler tree
-    Main->>HTTP: ListenAndServe(:8080)
+    Main->>HTTP: ListenAndServe with timeouts
+    Note over HTTP: ReadTimeout: 30s, WriteTimeout: 30s, IdleTimeout: 120s
     Note over HTTP: Blocks until SIGINT/SIGTERM
     Main->>Scheduler: Cancel context (stop)
     Main->>HTTP: Graceful shutdown (10s)
@@ -706,6 +709,9 @@ sequenceDiagram
 5. **Conventional Commits** — Format: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`.
 6. **Monetary Values** — Disimpan sebagai `int64` minor units (misal: Rp 50.000 = `50000`).
 7. **Auth Masking** — Payload auth (password, token) HARUS di-mask di API logs.
+8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.InternalError()` atau `httpx.PublicError`.
+9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter). Aplikasi fail-fast jika config invalid.
+10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
 
 ---
 

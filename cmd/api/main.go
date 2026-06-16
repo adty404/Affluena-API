@@ -23,6 +23,11 @@ func main() {
 	slog.SetDefault(logger)
 
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
+
 	ctx := context.Background()
 
 	pool, err := db.Open(ctx, cfg.DatabaseURL)
@@ -56,6 +61,9 @@ func main() {
 		Addr:              cfg.HTTPAddr,
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
