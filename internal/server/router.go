@@ -41,12 +41,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	router.Use(gin.Recovery())
 
 	// Setup CORS
-	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
-	for i, origin := range allowedOrigins {
-		allowedOrigins[i] = strings.TrimSpace(origin)
-	}
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedOrigins,
+		AllowOrigins:     allowedCORSOrigins(cfg.CORSAllowedOrigins),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -197,4 +193,30 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.POST("/recurring-transactions/:id/run", recurringHandler.RunManual)
 
 	return router
+}
+
+// allowedCORSOrigins parses and validates CORS origins, returning defaults if empty.
+func allowedCORSOrigins(raw string) []string {
+	const defaultOrigin = "http://localhost:5173"
+
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return []string{defaultOrigin}
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+
+	if len(origins) == 0 {
+		return []string{defaultOrigin}
+	}
+
+	return origins
 }

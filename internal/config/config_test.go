@@ -57,3 +57,42 @@ func TestLoadParsesExplicitEnv(t *testing.T) {
 		t.Fatalf("unexpected bool/int config values: %+v", cfg)
 	}
 }
+
+func TestConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name      string
+		jwtSecret string
+		wantErr   bool
+	}{
+		{
+			name:      "valid config with secure JWT secret",
+			jwtSecret: "this-is-a-very-long-and-secure-jwt-secret",
+			wantErr:   false,
+		},
+		{
+			name:      "empty JWT secret is invalid",
+			jwtSecret: "",
+			wantErr:   true,
+		},
+		{
+			name:      "default JWT secret is invalid",
+			jwtSecret: "change-me-in-production",
+			wantErr:   true,
+		},
+		{
+			name:      "too short JWT secret is invalid",
+			jwtSecret: "short-secret",
+			wantErr:   true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{JWTSecret: tc.jwtSecret}
+			err := cfg.Validate()
+			if (err != nil) != tc.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}

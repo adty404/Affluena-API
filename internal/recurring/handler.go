@@ -98,7 +98,11 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rule, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	rule, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -111,11 +115,15 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	input, ok := bindRule(c)
 	if !ok {
 		return
 	}
-	rule, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), input)
+	rule, err := h.usecase.Update(c.Request.Context(), userID, id, input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -128,7 +136,11 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -140,12 +152,16 @@ func (h *Handler) RunManual(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	now, ok := bindRunNow(c)
 	if !ok {
 		return
 	}
 
-	run, err := h.usecase.RunManual(c.Request.Context(), userID, c.Param("id"), now)
+	run, err := h.usecase.RunManual(c.Request.Context(), userID, id, now)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -198,7 +214,7 @@ func bindRule(c *gin.Context) (RuleInput, bool) {
 		input.Status = StatusActive
 	}
 	if err := validateInput(input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return RuleInput{}, false
 	}
 	return input, true
@@ -227,10 +243,10 @@ func writeError(c *gin.Context, err error) {
 	case NotFound(err):
 		httpx.Error(c, http.StatusNotFound, "recurring transaction not found")
 	case errors.Is(err, ErrAlreadyExecuted):
-		httpx.Error(c, http.StatusConflict, err.Error())
+		httpx.Error(c, http.StatusConflict, "conflict in resource state")
 	case errors.Is(err, ErrRuleInactive):
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 	default:
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 	}
 }

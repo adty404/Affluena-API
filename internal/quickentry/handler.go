@@ -56,7 +56,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	created, err := h.usecase.Create(c.Request.Context(), userID, template)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, created)
@@ -92,10 +92,14 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	template, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	template, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, template)
@@ -106,14 +110,18 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	template, ok := bindTemplate(c)
 	if !ok {
 		return
 	}
-	updated, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), template)
+	updated, err := h.usecase.Update(c.Request.Context(), userID, id, template)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, updated)
@@ -124,9 +132,13 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		writeError(c, err)
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -134,6 +146,10 @@ func (h *Handler) Delete(c *gin.Context) {
 
 func (h *Handler) Execute(c *gin.Context) {
 	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+	id, ok := httpx.GetUUIDParam(c, "id")
 	if !ok {
 		return
 	}
@@ -153,12 +169,12 @@ func (h *Handler) Execute(c *gin.Context) {
 		transactionAt = parsed.UTC()
 	}
 
-	result, err := h.usecase.Execute(c.Request.Context(), userID, c.Param("id"), ExecuteInput{
+	result, err := h.usecase.Execute(c.Request.Context(), userID, id, ExecuteInput{
 		TransactionAt: transactionAt,
 		Note:          req.Note,
 	})
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -181,12 +197,4 @@ func bindTemplate(c *gin.Context) (Template, bool) {
 		AmountMinor: req.AmountMinor,
 		Note:        req.Note,
 	}, true
-}
-
-func writeError(c *gin.Context, err error) {
-	if NotFound(err) {
-		httpx.Error(c, http.StatusNotFound, "quick entry template not found")
-		return
-	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
 }

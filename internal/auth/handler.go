@@ -48,7 +48,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	user, tokens, err := h.service.Register(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.WriteError(c, err)
 		return
 	}
 

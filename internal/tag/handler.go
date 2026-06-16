@@ -40,7 +40,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	tag, err := h.usecase.Create(c.Request.Context(), userID, input)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, tag)
@@ -77,8 +77,12 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	tag, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	tag, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -91,6 +95,10 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	var input UpdateTagInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -98,7 +106,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	tag, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), input)
+	tag, err := h.usecase.Update(c.Request.Context(), userID, id, input)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -111,8 +119,12 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -124,5 +136,5 @@ func writeError(c *gin.Context, err error) {
 		httpx.Error(c, http.StatusNotFound, "resource not found")
 		return
 	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
+	httpx.Error(c, http.StatusBadRequest, "invalid request")
 }

@@ -3,6 +3,7 @@ package alert
 import (
 	"context"
 	"fmt"
+	"html"
 	"log/slog"
 	"time"
 
@@ -80,13 +81,14 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 		return
 	}
 
-	// Check if alert already sent for this month/category/type
-	alreadySent, err := u.repo.HasAlertBeenSent(ctx, userID, categoryID, monthValue, alertType)
+	// Atomically try to mark alert as sending (prevents duplicate emails)
+	shouldSend, err := u.repo.TryInsertSentAlert(ctx, userID, categoryID, monthValue, alertType)
 	if err != nil {
 		slog.Error("failed to check alert deduplication", "error", err, "user_id", userID)
 		return
 	}
-	if alreadySent {
+	if !shouldSend {
+		// Alert already sent for this month/category/type
 		return
 	}
 
@@ -102,17 +104,18 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 		categoryName = "Unknown"
 	}
 
-	// 6. Send Email
-	subject := fmt.Sprintf("Budget Alert: %s (%.0f%%)", categoryName, ratio*100)
-	body := buildBudgetEmailBody(categoryName, targetBudget.SpentMinor, targetBudget.LimitMinor, alertType)
+	// 6. Send Email (escape user input to prevent XSS)
+	safeCategoryName := html.EscapeString(categoryName)
+	subject := fmt.Sprintf("Budget Alert: %s (%.0f%%)", safeCategoryName, ratio*100)
+	body := buildBudgetEmailBody(safeCategoryName, targetBudget.SpentMinor, targetBudget.LimitMinor, alertType)
 
 	err = u.mailSender.SendEmail(ctx, []string{email}, subject, body)
 	if err != nil {
 		slog.Error("failed to send budget alert email", "error", err, "email", email)
+		// Email failed, delete the alert marker so it can be retried later
+		_ = u.repo.DeleteSentAlert(ctx, userID, categoryID, monthValue, alertType)
 	} else {
-		slog.Info("budget alert email sent successfully", "user_id", userID, "category", categoryName, "alert_type", alertType)
-		// Mark alert as sent to prevent duplicates
-		_ = u.repo.MarkAlertSent(ctx, userID, categoryID, monthValue, alertType)
+		slog.Info("budget alert email sent successfully", "user_id", userID, "category", safeCategoryName, "alert_type", alertType)
 	}
 }
 
@@ -122,14 +125,17 @@ func buildBudgetEmailBody(categoryName string, spent, limit int64, alertType str
 		title = "🚨 Budget Terlampaui!"
 	}
 
+	// Escape user-controlled input to prevent XSS
+	safeCategoryName := html.EscapeString(categoryName)
+
 	html := `
 	<html>
 	<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
 		<div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
 			<h2 style="color: #e74c3c; text-align: center;">` + title + `</h2>
 			<p>Halo Pengguna Affluena,</p>
-			<p>Kami ingin memberitahu bahwa pengeluaran Anda untuk kategori <strong>` + categoryName + `</strong> telah mencapai batas pengawasan.</p>
-			
+			<p>Kami ingin memberitahu bahwa pengeluaran Anda untuk kategori <strong>` + safeCategoryName + `</strong> telah mencapai batas pengawasan.</p>
+
 			<div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
 				<p style="margin: 0;"><strong>Total Terpakai:</strong> Rp ` + formatMoney(spent) + `</p>
 				<p style="margin: 0;"><strong>Batas Budget:</strong> Rp ` + formatMoney(limit) + `</p>

@@ -21,12 +21,54 @@ var sensitiveFields = []string{
 
 type responseBodyWriter struct {
 	gin.ResponseWriter
-	body *bytes.Buffer
+	body     *bytes.Buffer
+	written  int
+	limitHit bool
+	skipBody bool
 }
 
-func (w responseBodyWriter) Write(b []byte) (int, error) {
+func (w *responseBodyWriter) Write(b []byte) (int, error) {
+	if w.skipBody {
+		return w.ResponseWriter.Write(b)
+	}
+	remaining := maxLogPayloadSize - w.written
+	if remaining <= 0 {
+		if !w.limitHit {
+			w.limitHit = true
+		}
+		return w.ResponseWriter.Write(b)
+	}
+	if len(b) > remaining {
+		w.body.Write(b[:remaining])
+		w.written += remaining
+		n, err := w.ResponseWriter.Write(b)
+		return n, err
+	}
 	w.body.Write(b)
+	w.written += len(b)
 	return w.ResponseWriter.Write(b)
+}
+
+func (w *responseBodyWriter) WriteString(s string) (int, error) {
+	if w.skipBody {
+		return w.ResponseWriter.WriteString(s)
+	}
+	remaining := maxLogPayloadSize - w.written
+	if remaining <= 0 {
+		if !w.limitHit {
+			w.limitHit = true
+		}
+		return w.ResponseWriter.WriteString(s)
+	}
+	if len(s) > remaining {
+		w.body.WriteString(s[:remaining])
+		w.written += remaining
+		n, err := w.ResponseWriter.WriteString(s)
+		return n, err
+	}
+	w.body.WriteString(s)
+	w.written += len(s)
+	return w.ResponseWriter.WriteString(s)
 }
 
 // APILogMiddleware provides structured logging to stdout using slog
@@ -43,16 +85,33 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 			return
 		}
 
-		// 1. Intercept Request Body (with limit)
+		// 1. Intercept Request Body for logging (read capped, pass full to handler)
 		var reqBodyBytes []byte
+		var reqTruncated bool
 		if c.Request.Body != nil {
-			reqBodyBytes, _ = io.ReadAll(io.LimitReader(c.Request.Body, maxLogPayloadSize+1))
-			// Restore the io.ReadCloser to its original state
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(reqBodyBytes))
+			buf := make([]byte, maxLogPayloadSize)
+			n, err := io.ReadFull(c.Request.Body, buf)
+			reqBodyBytes = buf[:n]
+
+			if err == nil {
+				// We read exactly maxLogPayloadSize, assume there's more
+				reqTruncated = true
+			} else if err == io.ErrUnexpectedEOF || err == io.EOF {
+				// Read less than maxLogPayloadSize
+				reqTruncated = false
+			}
+
+			// Reconstruct request body so handler can read it fully
+			c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewReader(reqBodyBytes), c.Request.Body))
 		}
 
-		// 2. Intercept Response Body
-		w := &responseBodyWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
+		// 2. Intercept Response Body (capped)
+		skipResponseLogging := isExportPath(path)
+		w := &responseBodyWriter{
+			body:           &bytes.Buffer{},
+			ResponseWriter: c.Writer,
+			skipBody:       skipResponseLogging,
+		}
 		c.Writer = w
 
 		// Process request
@@ -81,15 +140,13 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 		// 3. Process Payloads & Mask Sensitive Data
 		var requestPayload *string
 		if len(reqBodyBytes) > 0 {
-			reqStr := logPayload(path, reqBodyBytes, true)
+			reqStr := logPayload(path, reqBodyBytes, reqTruncated, true)
 			requestPayload = &reqStr
 		}
 
-		// Skip response logging for export/download endpoints
-		skipResponseLogging := isExportPath(path)
 		var responsePayload *string
 		if !skipResponseLogging && w.body.Len() > 0 {
-			respStr := logPayload(path, w.body.Bytes(), false)
+			respStr := logPayload(path, w.body.Bytes(), w.limitHit, false)
 			responsePayload = &respStr
 		}
 
@@ -123,15 +180,15 @@ func APILogMiddleware(repo Repository) gin.HandlerFunc {
 	}
 }
 
-func logPayload(path string, payload []byte, isRequest bool) string {
+func logPayload(path string, payload []byte, truncated, isRequest bool) string {
 	// Mask entire payload for auth endpoints (both request and response may contain secrets)
 	if isSensitiveAuthPath(path) {
 		return `{"masked": true}`
 	}
 
-	// Truncate if exceeds max size
-	if len(payload) > maxLogPayloadSize {
-		payload = payload[:maxLogPayloadSize]
+	// Add truncation marker
+	if truncated {
+		return `{"truncated": true, "reason": "payload exceeds log limit"}`
 	}
 
 	payloadStr := string(payload)

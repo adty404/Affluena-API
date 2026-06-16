@@ -34,7 +34,7 @@ func (h *Handler) Summary(c *gin.Context) {
 
 	month, err := ParseMonth(c.Query("month"))
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *Handler) ExpenseDistribution(c *gin.Context) {
 
 	month, err := ParseMonth(c.Query("month"))
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *Handler) Forecast(c *gin.Context) {
 
 	month, err := ParseMonth(c.Query("month"))
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 

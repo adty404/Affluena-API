@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"affluena-api/internal/httpx"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +31,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 		return
 	}
 	if !from.IsZero() && !to.IsZero() && from.After(to) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "from must be before or equal to to"})
+		httpx.Error(c, http.StatusBadRequest, "from must be before or equal to to")
 		return
 	}
 	opts.From = from
@@ -37,7 +39,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 
 	csvData, err := h.useCase.GenerateCSVData(c.Request.Context(), userID, opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -58,7 +60,7 @@ func parseExportTime(c *gin.Context, key string) (time.Time, bool) {
 	}
 	parsed, err := time.Parse(time.RFC3339, value)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": key + " must be RFC3339"})
+		httpx.Error(c, http.StatusBadRequest, key+" must be RFC3339")
 		return time.Time{}, false
 	}
 	return parsed.UTC(), true

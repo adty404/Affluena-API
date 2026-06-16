@@ -2,7 +2,6 @@ package budget
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -50,7 +49,7 @@ func (h *Handler) Create(c *gin.Context) {
 		LimitMinor: req.LimitMinor,
 	})
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, budget)
@@ -68,11 +67,7 @@ func (h *Handler) List(c *gin.Context) {
 	}
 	result, err := h.usecase.List(c.Request.Context(), userID, c.Query("month"), pagination)
 	if err != nil {
-		if errors.Is(err, ErrInvalidBudgetMonth) {
-			httpx.Error(c, http.StatusBadRequest, err.Error())
-			return
-		}
-		httpx.Error(c, http.StatusInternalServerError, "list category budgets failed")
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, gin.H{"budgets": result.Items, "pagination": result.Pagination})
@@ -92,10 +87,14 @@ func (h *Handler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	budget, err := h.usecase.Get(c.Request.Context(), userID, c.Param("id"))
+	budget, err := h.usecase.Get(c.Request.Context(), userID, id)
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, budget)
@@ -106,19 +105,23 @@ func (h *Handler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	req, ok := bindBudgetRequest(c)
 	if !ok {
 		return
 	}
 
-	budget, err := h.usecase.Update(c.Request.Context(), userID, c.Param("id"), UpdateBudgetInput{
+	budget, err := h.usecase.Update(c.Request.Context(), userID, id, UpdateBudgetInput{
 		CategoryID: req.CategoryID,
 		Month:      req.Month,
 		LimitMinor: req.LimitMinor,
 	})
 	if err != nil {
-		writeError(c, err)
+		httpx.WriteError(c, err)
 		return
 	}
 	httpx.JSON(c, http.StatusOK, budget)
@@ -129,9 +132,13 @@ func (h *Handler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	if err := h.usecase.Delete(c.Request.Context(), userID, c.Param("id")); err != nil {
-		writeError(c, err)
+	if err := h.usecase.Delete(c.Request.Context(), userID, id); err != nil {
+		httpx.WriteError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -144,12 +151,4 @@ func bindBudgetRequest(c *gin.Context) (budgetRequest, bool) {
 		return budgetRequest{}, false
 	}
 	return req, true
-}
-
-func writeError(c *gin.Context, err error) {
-	if NotFound(err) {
-		httpx.Error(c, http.StatusNotFound, "category budget not found")
-		return
-	}
-	httpx.Error(c, http.StatusBadRequest, err.Error())
 }
