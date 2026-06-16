@@ -3018,7 +3018,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Food Updated {{$timestamp}}\",\n    \"type\": \"expense\",\n    \"parent_id\": null\n}"
+                            "raw": "{\n  \"name\": \"Food Updated\",\n  \"type\": \"expense\",\n  \"parent_id\": null\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
@@ -5050,7 +5050,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"wallet_id\": \"<<wallet_id>>\",\n  \"category_id\": \"<<food_category_id>>\",\n  \"total_amount_minor\": 300000,\n  \"note\": \"Dinner with friends\",\n  \"splits\": [\n    {\n      \"counterparty_name\": \"Budi\",\n      \"amount_minor\": 100000,\n      \"disbursement_category_id\": \"<<piutang_expense_cat_id>>\",\n      \"payment_category_id\": \"<<piutang_income_cat_id>>\"\n    },\n    {\n      \"counterparty_name\": \"Citra\",\n      \"amount_minor\": 100000,\n      \"disbursement_category_id\": \"<<piutang_expense_cat_id>>\",\n      \"payment_category_id\": \"<<piutang_income_cat_id>>\"\n    }\n  ]\n}",
+                            "raw": "{\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 300000,\n  \"transaction_at\": \"2026-06-16T10:00:00Z\",\n  \"note\": \"Dinner split\",\n  \"tag_ids\": [],\n  \"splits\": [\n    {\n      \"counterparty_name\": \"Budi\",\n      \"amount_minor\": 150000,\n      \"disbursement_category_id\": \"{{expense_category_id}}\",\n      \"payment_category_id\": \"{{expense_category_id}}\"\n    }\n  ]\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -8520,7 +8520,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Wedding Fund\",\n    \"target_amount_minor\": 50000000,\n    \"deadline\": \"2027-01-01T00:00:00Z\"\n}",
+                            "raw": "{\n  \"name\": \"Emergency Fund\",\n  \"target_amount_minor\": 10000000,\n  \"deadline\": \"2026-12-31T00:00:00Z\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
