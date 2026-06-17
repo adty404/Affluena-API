@@ -3,6 +3,7 @@ package wallet
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"affluena-api/internal/httpx"
 	"affluena-api/internal/page"
@@ -22,6 +23,8 @@ type walletUseCase interface {
 	Delete(ctx context.Context, userID string, id string) error
 	InviteMember(ctx context.Context, userID string, id string, input InviteMemberInput) error
 	RespondInvite(ctx context.Context, userID string, id string, memberID string, input RespondInviteInput) error
+	GetMembers(ctx context.Context, userID string, walletID string) ([]WalletMember, error)
+	GetAnalytics(ctx context.Context, userID string, walletID string, month string) (WalletAnalytics, error)
 }
 
 func NewHandler(usecase walletUseCase) *Handler {
@@ -33,12 +36,16 @@ type createWalletRequest struct {
 	Type         string `json:"type" binding:"required"`
 	CurrencyCode string `json:"currency_code"`
 	BalanceMinor int64  `json:"balance_minor"`
+	Color        string `json:"color"`
+	Description  string `json:"description"`
 }
 
 type updateWalletRequest struct {
 	Name         string `json:"name" binding:"required"`
 	Type         string `json:"type" binding:"required"`
 	CurrencyCode string `json:"currency_code" binding:"required"`
+	Color        string `json:"color"`
+	Description  string `json:"description"`
 }
 
 func (h *Handler) Create(c *gin.Context) {
@@ -57,6 +64,8 @@ func (h *Handler) Create(c *gin.Context) {
 		Type:         req.Type,
 		CurrencyCode: req.CurrencyCode,
 		BalanceMinor: req.BalanceMinor,
+		Color:        req.Color,
+		Description:  req.Description,
 	})
 	if err != nil {
 		httpx.WriteError(c, err)
@@ -131,6 +140,8 @@ func (h *Handler) Update(c *gin.Context) {
 		Name:         req.Name,
 		Type:         req.Type,
 		CurrencyCode: req.CurrencyCode,
+		Color:        req.Color,
+		Description:  req.Description,
 	})
 	if err != nil {
 		httpx.WriteError(c, err)
@@ -206,4 +217,66 @@ func (h *Handler) RespondInvite(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *Handler) ListMembers(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	members, err := h.usecase.GetMembers(c.Request.Context(), userID, id)
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	httpx.JSON(c, http.StatusOK, gin.H{"members": members})
+}
+
+func (h *Handler) Analytics(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	month := c.Query("month")
+	if month == "" {
+		month = time.Now().UTC().Format("2006-01")
+	}
+	if !isValidYearMonth(month) {
+		httpx.Error(c, http.StatusBadRequest, "invalid month format, expected YYYY-MM")
+		return
+	}
+
+	analytics, err := h.usecase.GetAnalytics(c.Request.Context(), userID, id, month)
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	httpx.JSON(c, http.StatusOK, analytics)
+}
+
+func isValidYearMonth(s string) bool {
+	if len(s) != 7 || s[4] != '-' {
+		return false
+	}
+	for i := 0; i < 7; i++ {
+		if i == 4 {
+			continue
+		}
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
