@@ -79,6 +79,20 @@ func (f *fakeWalletRepository) GetAccessLevel(ctx context.Context, userID string
 	return AccessOwner, nil
 }
 
+func (f *fakeWalletRepository) GetMembers(ctx context.Context, walletID string) ([]WalletMember, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return nil, nil
+}
+
+func (f *fakeWalletRepository) GetAnalytics(ctx context.Context, userID string, walletID string, month string) (WalletAnalytics, error) {
+	if f.err != nil {
+		return WalletAnalytics{}, f.err
+	}
+	return WalletAnalytics{WalletID: walletID, Month: month}, nil
+}
+
 func TestWalletUseCaseCreateDefaultsCurrency(t *testing.T) {
 	repo := &fakeWalletRepository{created: Wallet{ID: "wallet-1"}}
 	uc := NewUseCase(repo, nil)

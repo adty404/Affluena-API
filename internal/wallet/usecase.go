@@ -18,6 +18,8 @@ type RepositoryPort interface {
 	FindUserByEmail(ctx context.Context, email string) (string, error)
 	RespondInvite(ctx context.Context, walletID string, userID string, status string) error
 	GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error)
+	GetMembers(ctx context.Context, walletID string) ([]WalletMember, error)
+	GetAnalytics(ctx context.Context, userID string, walletID string, month string) (WalletAnalytics, error)
 }
 
 type UseCase struct {
@@ -124,4 +126,23 @@ func (u *UseCase) RespondInvite(ctx context.Context, userID string, id string, m
 // GetAccessLevel returns user's access level for a wallet.
 func (u *UseCase) GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error) {
 	return u.repo.GetAccessLevel(ctx, userID, walletID)
+}
+
+// GetMembers returns the member list (owner + invitees) for a wallet.
+// Caller must have access (owner or joined member).
+func (u *UseCase) GetMembers(ctx context.Context, userID string, walletID string) ([]WalletMember, error) {
+	access, err := u.repo.GetAccessLevel(ctx, userID, walletID)
+	if err != nil {
+		return nil, err
+	}
+	if access == AccessNone {
+		return nil, ErrNotFound
+	}
+	return u.repo.GetMembers(ctx, walletID)
+}
+
+// GetAnalytics returns monthly inflow/outflow + last activity for a wallet.
+// Caller must have access.
+func (u *UseCase) GetAnalytics(ctx context.Context, userID string, walletID string, month string) (WalletAnalytics, error) {
+	return u.repo.GetAnalytics(ctx, userID, walletID, month)
 }
