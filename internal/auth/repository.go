@@ -170,3 +170,27 @@ func (r *Repository) ConsumeRefreshToken(ctx context.Context, tokenHash string, 
 	}
 	return userID, err
 }
+
+func (r *Repository) CreatePasswordResetToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+	`, userID, tokenHash, expiresAt)
+	return err
+}
+
+func (r *Repository) ConsumePasswordResetToken(ctx context.Context, tokenHash string, now time.Time) (string, error) {
+	var userID string
+	err := r.pool.QueryRow(ctx, `
+		UPDATE password_reset_tokens
+		SET used_at = now()
+		WHERE token_hash = $1
+			AND used_at IS NULL
+			AND expires_at > $2
+		RETURNING user_id::text
+	`, tokenHash, now).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrInvalidResetToken
+	}
+	return userID, err
+}

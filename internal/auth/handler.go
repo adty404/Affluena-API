@@ -23,6 +23,8 @@ type authUseCase interface {
 	ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) error
 	ListSessions(ctx context.Context, userID string) ([]Session, error)
 	RevokeSession(ctx context.Context, userID string, sessionID string) error
+	RequestPasswordReset(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token string, newPassword string) error
 }
 
 func NewHandler(service authUseCase) *Handler {
@@ -203,6 +205,48 @@ func (h *Handler) RevokeSession(c *gin.Context) {
 			return
 		}
 		httpx.Error(c, http.StatusInternalServerError, "revoke session failed")
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req forgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Always 204 to prevent email enumeration
+	_ = h.service.RequestPasswordReset(c.Request.Context(), req.Email)
+	c.Status(http.StatusNoContent)
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req resetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	err := h.service.ResetPassword(c.Request.Context(), req.Token, req.NewPassword)
+	if err != nil {
+		if errors.Is(err, ErrInvalidResetToken) {
+			httpx.Error(c, http.StatusBadRequest, "invalid or expired reset token")
+			return
+		}
+		if errors.Is(err, ErrPasswordTooWeak) {
+			httpx.Error(c, http.StatusBadRequest, "password must be at least 8 characters")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, "reset password failed")
 		return
 	}
 	c.Status(http.StatusNoContent)

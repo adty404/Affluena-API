@@ -105,6 +105,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	authGroup.POST("/register", authHandler.Register)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/refresh", authHandler.Refresh)
+	authGroup.POST("/forgot-password", authHandler.ForgotPassword)
+	authGroup.POST("/reset-password", authHandler.ResetPassword)
 
 	protected := v1.Group("")
 	protected.Use(auth.AuthMiddleware(tokenManager))
