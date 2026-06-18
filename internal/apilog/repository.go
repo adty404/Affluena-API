@@ -9,6 +9,7 @@ import (
 
 type Repository interface {
 	SaveLog(ctx context.Context, logEntry APILog) error
+	ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error)
 }
 
 type repository struct {
@@ -17,6 +18,34 @@ type repository struct {
 
 func NewRepository(pool *pgxpool.Pool) Repository {
 	return &repository{pool: pool}
+}
+
+func (r *repository) ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	query := `
+		SELECT id, method, path, status_code, latency_ms, client_ip, user_agent, user_id, request_payload, response_payload, created_at
+		FROM api_logs
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`
+	rows, err := r.pool.Query(ctx, query, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []APILog
+	for rows.Next() {
+		var log APILog
+		if err := rows.Scan(&log.ID, &log.Method, &log.Path, &log.StatusCode, &log.LatencyMs, &log.ClientIP, &log.UserAgent, &log.UserID, &log.RequestPayload, &log.ResponsePayload, &log.CreatedAt); err != nil {
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+	return logs, rows.Err()
 }
 
 func (r *repository) SaveLog(ctx context.Context, logEntry APILog) error {
