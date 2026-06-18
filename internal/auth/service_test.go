@@ -86,6 +86,32 @@ func (f *fakeAuthRepository) ConsumeRefreshToken(ctx context.Context, tokenHash 
 	return f.createdUser.ID, nil
 }
 
+func (f *fakeAuthRepository) UpdateUserProfile(ctx context.Context, userID string, name string, avatarURL string) (User, error) {
+	if f.err != nil {
+		return User{}, f.err
+	}
+	f.createdUser.ID = userID
+	f.createdUser.Name = name
+	f.createdUser.AvatarURL = avatarURL
+	return f.createdUser, nil
+}
+
+func (f *fakeAuthRepository) ChangePassword(ctx context.Context, userID string, newPasswordHash string) error {
+	return f.err
+}
+
+func (f *fakeAuthRepository) RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error {
+	return f.err
+}
+
+func (f *fakeAuthRepository) ListSessions(ctx context.Context, userID string) ([]Session, error) {
+	return nil, nil
+}
+
+func (f *fakeAuthRepository) RevokeSessionByID(ctx context.Context, userID string, sessionID string) error {
+	return f.err
+}
+
 func TestServiceUsesRepositoryPort(t *testing.T) {
 	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 

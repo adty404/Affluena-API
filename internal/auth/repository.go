@@ -22,18 +22,18 @@ func (r *Repository) CreateUser(ctx context.Context, email string, passwordHash 
 	err := r.pool.QueryRow(ctx, `
 		INSERT INTO users (email, password_hash)
 		VALUES ($1, $2)
-		RETURNING id::text, email, password_hash, created_at, updated_at
-	`, email, passwordHash).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+		RETURNING id::text, email, name, avatar_url, password_hash, created_at, updated_at
+	`, email, passwordHash).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	return user, err
 }
 
 func (r *Repository) UserByEmail(ctx context.Context, email string) (User, error) {
 	var user User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id::text, email, password_hash, created_at, updated_at
+		SELECT id::text, email, name, avatar_url, password_hash, created_at, updated_at
 		FROM users
 		WHERE email = $1
-	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	`, email).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrInvalidCredentials
 	}
@@ -43,11 +43,81 @@ func (r *Repository) UserByEmail(ctx context.Context, email string) (User, error
 func (r *Repository) UserByID(ctx context.Context, userID string) (User, error) {
 	var user User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id::text, email, password_hash, created_at, updated_at
+		SELECT id::text, email, name, avatar_url, password_hash, created_at, updated_at
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	`, userID).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	return user, err
+}
+
+func (r *Repository) UpdateUserProfile(ctx context.Context, userID string, name string, avatarURL string) (User, error) {
+	var user User
+	err := r.pool.QueryRow(ctx, `
+		UPDATE users
+		SET name = $2, avatar_url = $3, updated_at = now()
+		WHERE id = $1
+		RETURNING id::text, email, name, avatar_url, password_hash, created_at, updated_at
+	`, userID, name, avatarURL).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	return user, err
+}
+
+func (r *Repository) ChangePassword(ctx context.Context, userID string, newPasswordHash string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE users
+		SET password_hash = $2, password_changed_at = now(), updated_at = now()
+		WHERE id = $1
+	`, userID, newPasswordHash)
+	return err
+}
+
+func (r *Repository) RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE refresh_tokens
+		SET revoked_at = now()
+		WHERE user_id = $1 AND revoked_at IS NULL AND token_hash != $2
+	`, userID, exceptTokenHash)
+	return err
+}
+
+func (r *Repository) ListSessions(ctx context.Context, userID string) ([]Session, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, user_id::text,
+			SUBSTRING(token_hash FROM 1 FOR 12) AS token_suffix,
+			user_agent, ip_address, expires_at, created_at, revoked_at, last_used_at
+		FROM refresh_tokens
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 100
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.UserID, &s.TokenSuffix, &s.UserAgent, &s.IPAddress, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt, &s.LastUsedAt); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+	return sessions, rows.Err()
+}
+
+func (r *Repository) RevokeSessionByID(ctx context.Context, userID string, sessionID string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE refresh_tokens
+		SET revoked_at = now()
+		WHERE user_id = $1 AND id = $2 AND revoked_at IS NULL
+	`, userID, sessionID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSessionNotFound
+	}
+	return nil
 }
 
 func (r *Repository) StoreRefreshToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error {
