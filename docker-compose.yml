@@ -20,20 +20,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      APP_ENV: development
-      HTTP_ADDR: :8080
+      # Force the database URL to point at the docker-compose service name.
       DATABASE_URL: postgres://affluena_api:affluena_api@postgres:5432/affluena_api?sslmode=disable
-      JWT_SECRET: replace-with-a-long-random-secret
       RUN_MIGRATIONS: "true"
-      RECURRING_SCHEDULER_ENABLED: "true"
-      RECURRING_SCHEDULER_INTERVAL: 1m
-      RECURRING_SCHEDULER_BATCH_SIZE: "20"
-      SMTP_HOST: sandbox.smtp.mailtrap.io
-      SMTP_PORT: "2525"
-      SMTP_USER: ""
-      SMTP_PASS: ""
-      SMTP_FROM: noreply@affluena.com
     ports:
       - "8080:8080"
 
