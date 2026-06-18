@@ -11,6 +11,7 @@ type RepositoryPort interface {
 	CreateWithOwnerWallet(ctx context.Context, userID string, input CreateGoalInput) (Goal, error)
 	List(ctx context.Context, userID string) ([]Goal, error)
 	Get(ctx context.Context, userID string, id string) (Goal, error)
+	Update(ctx context.Context, userID string, id string, input UpdateGoalInput) (Goal, error)
 	AddMember(ctx context.Context, goalID string, userID string, status string) error
 	FindUserByEmail(ctx context.Context, email string) (string, error)
 	RespondInvite(ctx context.Context, goalID string, userID string, status string) error
@@ -39,6 +40,21 @@ func (u *Usecase) List(ctx context.Context, userID string) ([]Goal, error) {
 
 func (u *Usecase) Get(ctx context.Context, userID string, id string) (Goal, error) {
 	return u.repo.Get(ctx, userID, id)
+}
+
+func (u *Usecase) Update(ctx context.Context, userID string, id string, input UpdateGoalInput) (Goal, error) {
+	current, err := u.repo.Get(ctx, userID, id)
+	if err != nil {
+		return Goal{}, err
+	}
+	if current.UserID != userID {
+		return Goal{}, ErrNotAuthorized
+	}
+	g, err := u.repo.Update(ctx, userID, id, input)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "GOAL", &g.ID, "Memperbarui tabungan bersama: "+input.Name)
+	}
+	return g, err
 }
 
 func (u *Usecase) InviteMember(ctx context.Context, userID string, id string, input InviteMemberInput) error {

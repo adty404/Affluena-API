@@ -52,6 +52,27 @@ func (r *Repository) CreateWithOwnerWallet(ctx context.Context, userID string, i
 	return r.Get(ctx, userID, goal.ID)
 }
 
+func (r *Repository) Update(ctx context.Context, userID string, id string, input UpdateGoalInput) (Goal, error) {
+	var goal Goal
+	err := r.pool.QueryRow(ctx, `
+		UPDATE goals
+		SET name = $3, target_amount_minor = $4, deadline = $5, updated_at = now()
+		WHERE user_id = $1 AND id = $2
+		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, created_at, updated_at
+	`, userID, id, input.Name, input.TargetAmountMinor, input.Deadline).Scan(
+		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Goal{}, ErrNotFound
+	}
+	if err != nil {
+		return Goal{}, err
+	}
+	goal.CollectedAmountMinor, _ = r.getCollectedAmount(ctx, goal.ID)
+	goal.Members, _ = r.GetMembers(ctx, goal.ID)
+	return goal, nil
+}
+
 func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at

@@ -65,6 +65,13 @@ func (f *fakeGoalRepository) RespondInvite(ctx context.Context, goalID string, u
 	return f.respondErr
 }
 
+func (f *fakeGoalRepository) Update(ctx context.Context, userID string, id string, input UpdateGoalInput) (Goal, error) {
+	if f.getErr != nil {
+		return Goal{}, f.getErr
+	}
+	return Goal{ID: id, UserID: userID, Name: input.Name, TargetAmountMinor: input.TargetAmountMinor}, nil
+}
+
 func TestGoalUsecaseCreateUsesAtomicRepositoryWorkflow(t *testing.T) {
 	repo := &fakeGoalRepository{createdGoal: Goal{ID: "goal-1", Name: "Wedding"}}
 	uc := NewUsecase(repo, nil)

@@ -68,6 +68,28 @@ func (h *Handler) Get(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, goal)
 }
 
+func (h *Handler) Update(c *gin.Context) {
+	var input UpdateGoalInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	goal, err := h.usecase.Update(c.Request.Context(), userID, id, input)
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	httpx.JSON(c, http.StatusOK, goal)
+}
+
 func (h *Handler) InviteMember(c *gin.Context) {
 	var input InviteMemberInput
 	if err := c.ShouldBindJSON(&input); err != nil {
