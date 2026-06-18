@@ -109,6 +109,10 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected := v1.Group("")
 	protected.Use(auth.AuthMiddleware(tokenManager))
 	protected.GET("/auth/me", authHandler.Me)
+	protected.PUT("/auth/account", authHandler.UpdateAccount)
+	protected.PUT("/auth/password", authHandler.ChangePassword)
+	protected.GET("/auth/sessions", authHandler.ListSessions)
+	protected.DELETE("/auth/sessions/:session_id", authHandler.RevokeSession)
 
 	protected.GET("/dashboard/summary", dashboardHandler.Summary)
 	protected.GET("/dashboard/cashflow-trend", dashboardHandler.CashflowTrend)
