@@ -14,14 +14,22 @@ import (
 var (
 	ErrInvalidCredentials  = errors.New("invalid email or password")
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrInvalidResetToken   = errors.New("invalid or expired reset token")
 	ErrSessionNotFound     = errors.New("session not found")
 	ErrPasswordTooWeak     = errors.New("password must be at least 8 characters")
 )
+
+type MailerPort interface {
+	Send(ctx context.Context, to string, subject string, htmlBody string) error
+}
 
 type Service struct {
 	repo       RepositoryPort
 	tokens     *TokenManager
 	activityUC activity.UseCase
+	mailer     MailerPort
+	fromEmail  string
+	appBaseURL string
 }
 
 type RepositoryPort interface {
@@ -37,10 +45,16 @@ type RepositoryPort interface {
 	RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error
 	ListSessions(ctx context.Context, userID string) ([]Session, error)
 	RevokeSessionByID(ctx context.Context, userID string, sessionID string) error
+	CreatePasswordResetToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error
+	ConsumePasswordResetToken(ctx context.Context, tokenHash string, now time.Time) (string, error)
 }
 
 func NewService(repo RepositoryPort, tokens *TokenManager, activityUC activity.UseCase) *Service {
 	return &Service{repo: repo, tokens: tokens, activityUC: activityUC}
+}
+
+func NewServiceWithMailer(repo RepositoryPort, tokens *TokenManager, activityUC activity.UseCase, mailer MailerPort, fromEmail string, appBaseURL string) *Service {
+	return &Service{repo: repo, tokens: tokens, activityUC: activityUC, mailer: mailer, fromEmail: fromEmail, appBaseURL: appBaseURL}
 }
 
 func (s *Service) Register(ctx context.Context, email string, password string) (User, TokenPair, error) {
@@ -160,6 +174,53 @@ func (s *Service) RevokeSession(ctx context.Context, userID string, sessionID st
 		s.activityUC.LogActivity(ctx, userID, "REVOKE", "AUTH_SESSION", nil, "Mencabut sesi: "+sessionID)
 	}
 	return err
+}
+
+// RequestPasswordReset always returns nil error to avoid leaking whether the email exists.
+func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+	email = NormalizeEmail(email)
+	user, err := s.repo.UserByEmail(ctx, email)
+	if err != nil {
+		return nil // swallow not-found to prevent email enumeration
+	}
+
+	token, hash, expiresAt, err := s.tokens.IssuePasswordResetToken(time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	if err := s.repo.CreatePasswordResetToken(ctx, user.ID, hash, expiresAt); err != nil {
+		return err
+	}
+
+	if s.mailer != nil {
+		resetURL := s.appBaseURL + "/reset-password?token=" + token
+		html := "<p>Permintaan reset password diterima.</p><p>Klik link berikut untuk mengganti password: <a href=\"" + resetURL + "\">" + resetURL + "</a></p><p>Link berlaku 1 jam.</p>"
+		_ = s.mailer.Send(ctx, user.Email, "Reset Password Affluena", html)
+	}
+
+	return nil
+}
+
+func (s *Service) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	if len(newPassword) < 8 {
+		return ErrPasswordTooWeak
+	}
+	hash := HashRefreshToken(token)
+	userID, err := s.repo.ConsumePasswordResetToken(ctx, hash, time.Now().UTC())
+	if err != nil {
+		return ErrInvalidResetToken
+	}
+	pwHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.ChangePassword(ctx, userID, pwHash); err != nil {
+		return err
+	}
+	if s.activityUC != nil {
+		s.activityUC.LogActivity(ctx, userID, "UPDATE", "AUTH", nil, "Reset password via email")
+	}
+	return nil
 }
 
 func (s *Service) issuePair(ctx context.Context, user User) (TokenPair, error) {

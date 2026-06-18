@@ -112,6 +112,17 @@ func (f *fakeAuthRepository) RevokeSessionByID(ctx context.Context, userID strin
 	return f.err
 }
 
+func (f *fakeAuthRepository) CreatePasswordResetToken(ctx context.Context, userID string, tokenHash string, expiresAt time.Time) error {
+	return f.err
+}
+
+func (f *fakeAuthRepository) ConsumePasswordResetToken(ctx context.Context, tokenHash string, now time.Time) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.createdUser.ID, nil
+}
+
 func TestServiceUsesRepositoryPort(t *testing.T) {
 	service := NewService(&fakeAuthRepository{}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 

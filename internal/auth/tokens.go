@@ -86,3 +86,14 @@ func HashRefreshToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
+
+// IssuePasswordResetToken generates a random opaque token, its hash, and expiry.
+// TTL is 1 hour.
+func (m *TokenManager) IssuePasswordResetToken(now time.Time) (string, string, time.Time, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", "", time.Time{}, err
+	}
+	token := base64.RawURLEncoding.EncodeToString(raw)
+	return token, HashRefreshToken(token), now.Add(time.Hour), nil
+}
