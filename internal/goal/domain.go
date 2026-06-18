@@ -43,6 +43,12 @@ type CreateGoalInput struct {
 	Deadline          *time.Time `json:"deadline" binding:"required"`
 }
 
+type UpdateGoalInput struct {
+	Name              string     `json:"name" binding:"required"`
+	TargetAmountMinor int64      `json:"target_amount_minor" binding:"required,gt=0"`
+	Deadline          *time.Time `json:"deadline" binding:"required"`
+}
+
 type InviteMemberInput struct {
 	Email string `json:"email" binding:"required,email"`
 }

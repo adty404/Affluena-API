@@ -175,6 +175,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.POST("/goals", goalHandler.Create)
 	protected.GET("/goals", goalHandler.List)
 	protected.GET("/goals/:id", goalHandler.Get)
+	protected.PUT("/goals/:id", goalHandler.Update)
 	protected.POST("/goals/:id/members", goalHandler.InviteMember)
 	protected.PUT("/goals/:id/members/:user_id/respond", goalHandler.RespondInvite)
 
