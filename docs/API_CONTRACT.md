@@ -32,7 +32,13 @@ This document serves as the primary contract for frontend integration (React UI/
 - `POST /api/v1/auth/login` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`
 - `POST /api/v1/auth/refresh` - `{ refresh_token }` -> `{ user: { id, email, created_at, updated_at }, tokens: { access_token, refresh_token } }`
 - `GET /api/v1/auth/me` - Profile data -> `{ user: { id, email, created_at, updated_at } }`
-- *Note:* Logout/Revoke is handled purely client-side (token deletion) currently.
+- `PUT /api/v1/auth/account` - Update account -> `{ name, avatar_url }` -> `{ user }`
+- `PUT /api/v1/auth/password` - Change password -> `{ current_password, new_password }`
+- `GET /api/v1/auth/sessions` - List sessions -> `{ sessions: [...] }`
+- `DELETE /api/v1/auth/sessions/:id` - Revoke session
+- `POST /api/v1/auth/forgot-password` - `{ email }` -> 204
+- `POST /api/v1/auth/reset-password` - `{ token, new_password }` -> 204
+- *Note:* Logout is handled client-side (token deletion). Session revocation is available via `DELETE /api/v1/auth/sessions/:id`.
 
 ### Dashboard
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` - Summary stats including net worth, cashflow, budgets, upcoming trackers.
@@ -115,7 +121,7 @@ This document serves as the primary contract for frontend integration (React UI/
 - `POST /api/v1/subscriptions/:id/pay` - `{ paid_at, note }` (Amount is inferred from subscription configuration.)
 
 ### Recurring
-- `POST /api/v1/recurring-transactions` - `{ name, type, wallet_id, to_wallet_id, category_id, amount_minor, frequency: "daily"|"weekly"|"monthly", interval_count, next_run_at, end_at, status: "active"|"paused", note }`
+- `POST /api/v1/recurring-transactions` - `{ name, type, wallet_id, to_wallet_id, category_id, amount_minor, frequency: "weekly"|"monthly", interval_count, next_run_at, end_at, status: "active"|"paused", note }`
 - `GET /api/v1/recurring-transactions`
 - `GET /api/v1/recurring-transactions/:id`
 - `PUT /api/v1/recurring-transactions/:id` - Same as POST.

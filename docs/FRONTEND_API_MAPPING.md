@@ -7,8 +7,8 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | **Foundation/Auth** | | | | | | | | |
 | `/login` | Submit Login | `/api/v1/auth/login` | POST | form data | `tokens`, `user` | disable btn | show alert | - |
 | `/register` | Submit Register | `/api/v1/auth/register` | POST | form data | `tokens`, `user` | disable btn | show alert | - |
-| `/forgot-password` | - | - | - | - | - | - | - | **Backend gap**: Auth only supports login/register |
-| `/reset-password` | - | - | - | - | - | - | - | **Backend gap**: Needs product decision |
+| `/forgot-password` | Request reset | `/api/v1/auth/forgot-password` | POST | `{ email }` | - | disable btn | show alert | Returns 204 always (anti-enumeration) |
+| `/reset-password` | Reset password | `/api/v1/auth/reset-password` | POST | `{ token, new_password }` | - | disable btn | show alert | Token from email link |
 | `/onboarding` | Setup initial | Multiple | POST | form data | `wallet`, `category` | multi-step | inline error | Chain calls (e.g., Wallet -> Category) |
 | **Dashboard** | | | | | | | | |
 | `/dashboard` | View metrics | `/api/v1/dashboard/summary` | GET | `?month=` | stats, list | skeletons | retry btn | Combines multiple domains |
@@ -71,7 +71,7 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | `/goals` | List goals | `/api/v1/goals` | GET | none | `[...]` array | grid skeleton | empty state | Array, no pagination metadata |
 | `/goals/new` | Create goal | `/api/v1/goals` | POST | form data | `goal` | disable btn | inline error | - |
 | `/goals/:id` | View goal | `/api/v1/goals/:id` | GET | path param | `goal` | skeleton | 404 page | - |
-| `/goals/:id/edit` | Update goal | `/api/v1/goals` | PUT | - | - | - | - | **Backend gap**: Goal update endpoint missing |
+| `/goals/:id/edit` | Update goal | `/api/v1/goals/:id` | PUT | form data | `goal` | disable btn | inline error | - |
 | `/goals/:id/contribute`| Contribute | `/api/v1/transactions` | POST | form data | `transaction` | disable btn | inline error | Transfer to goal wallet. |
 | `/goals/:id/members` | Manage members | `/api/v1/goals/:id/members` | POST | form data | `goal` | disable btn | inline error | Accept via PUT `.../respond` |
 | **Reports/System** | | | | | | | | |
@@ -83,7 +83,7 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | `/system-logs` | - | - | - | - | - | - | - | **Backend gap**: Internal apilog not exposed to users |
 | **Settings** | | | | | | | | |
 | `/settings/profile` | View profile | `/api/v1/auth/me` | GET | none | `user` | skeleton | error alert | - |
-| `/settings/account` | Update account | - | - | - | - | - | - | **Backend gap**: No user update endpoint |
-| `/settings/security` | Update password| - | - | - | - | - | - | **Backend gap**: No password change endpoint |
-| `/settings/sessions` | - | - | - | - | - | - | - | **Backend gap**: No session management |
+| `/settings/account` | Update account | `/api/v1/auth/account` | PUT | `{ name, avatar_url }` | `user` | disable btn | inline error | - |
+| `/settings/security` | Update password| `/api/v1/auth/password` | PUT | `{ current_password, new_password }` | - | disable btn | inline error | - |
+| `/settings/sessions` | List sessions | `/api/v1/auth/sessions` | GET | none | `sessions` | list skeleton | empty state | Revoke via `DELETE /auth/sessions/:id` |
 | `/settings/preferences`| - | - | - | - | - | - | - | **Frontend-only**: Store locally |
