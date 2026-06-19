@@ -187,7 +187,7 @@ Current notable API decisions:
 - Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
-- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), and shared-wallet compatibility migrations through debt records (`000016`-`000019`).
+- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), and notification rules (`000025`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Git Rules
