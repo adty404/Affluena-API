@@ -3,6 +3,7 @@ package export
 import (
 	"encoding/csv"
 	"net/http"
+	"strconv"
 	"time"
 
 	"affluena-api/internal/httpx"
@@ -39,6 +40,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 
 	csvData, err := h.useCase.GenerateCSVData(c.Request.Context(), userID, opts)
 	if err != nil {
+		_, _ = h.useCase.RecordJob(c.Request.Context(), userID, "CSV", opts, 0, "failed")
 		httpx.WriteError(c, err)
 		return
 	}
@@ -48,9 +50,69 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 
 	writer := csv.NewWriter(c.Writer)
 	if err := writer.WriteAll(csvData); err != nil {
+		_, _ = h.useCase.RecordJob(c.Request.Context(), userID, "CSV", opts, 0, "failed")
 		// Cannot write JSON response if headers were already sent, so just log or ignore
 		return
 	}
+
+	// Record success
+	// rowCount is len(csvData) - 1 (excluding header)
+	rowCount := len(csvData) - 1
+	if rowCount < 0 {
+		rowCount = 0
+	}
+	_, _ = h.useCase.RecordJob(c.Request.Context(), userID, "CSV", opts, rowCount, "completed")
+}
+
+func (h *Handler) ListJobs(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	limitStr := c.DefaultQuery("limit", "100")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 100
+	}
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	jobs, total, err := h.useCase.ListJobs(c.Request.Context(), userID, limit, offset)
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"jobs": jobs,
+		"pagination": gin.H{
+			"limit":  limit,
+			"offset": offset,
+			"total":  total,
+		},
+	})
+}
+
+func (h *Handler) GetJob(c *gin.Context) {
+	userID := c.GetString("user_id")
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	job, err := h.useCase.GetJob(c.Request.Context(), userID, id)
+	if err != nil {
+		if err == ErrJobNotFound {
+			httpx.Error(c, http.StatusNotFound, "job not found")
+			return
+		}
+		httpx.WriteError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, job)
 }
 
 func parseExportTime(c *gin.Context, key string) (time.Time, bool) {

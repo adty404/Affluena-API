@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -87,4 +88,99 @@ func (r *Repository) GetCSVRows(ctx context.Context, userID string, opts ExportO
 	}
 
 	return result, nil
+}
+
+func (r *Repository) CreateJob(ctx context.Context, userID string, format string, fromAt *time.Time, toAt *time.Time, rowCount int, status string) (ExportJob, error) {
+	query := `
+		INSERT INTO export_jobs (user_id, format, from_at, to_at, row_count, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id::text, user_id::text, format, from_at, to_at, row_count, status, created_at
+	`
+	var job ExportJob
+	err := r.pool.QueryRow(ctx, query, userID, format, fromAt, toAt, rowCount, status).Scan(
+		&job.ID,
+		&job.UserID,
+		&job.Format,
+		&job.FromAt,
+		&job.ToAt,
+		&job.RowCount,
+		&job.Status,
+		&job.CreatedAt,
+	)
+	return job, err
+}
+
+func (r *Repository) ListJobs(ctx context.Context, userID string, limit, offset int) ([]ExportJob, int, error) {
+	var total int
+	err := r.pool.QueryRow(ctx, "SELECT count(*) FROM export_jobs WHERE user_id = $1", userID).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query := `
+		SELECT id::text, user_id::text, format, from_at, to_at, row_count, status, created_at
+		FROM export_jobs
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := r.pool.Query(ctx, query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var jobs []ExportJob
+	for rows.Next() {
+		var job ExportJob
+		if err := rows.Scan(
+			&job.ID,
+			&job.UserID,
+			&job.Format,
+			&job.FromAt,
+			&job.ToAt,
+			&job.RowCount,
+			&job.Status,
+			&job.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		jobs = append(jobs, job)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	if jobs == nil {
+		jobs = []ExportJob{}
+	}
+
+	return jobs, total, nil
+}
+
+func (r *Repository) GetJob(ctx context.Context, userID, id string) (ExportJob, error) {
+	query := `
+		SELECT id::text, user_id::text, format, from_at, to_at, row_count, status, created_at
+		FROM export_jobs
+		WHERE user_id = $1 AND id = $2
+	`
+	var job ExportJob
+	err := r.pool.QueryRow(ctx, query, userID, id).Scan(
+		&job.ID,
+		&job.UserID,
+		&job.Format,
+		&job.FromAt,
+		&job.ToAt,
+		&job.RowCount,
+		&job.Status,
+		&job.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return ExportJob{}, ErrJobNotFound
+		}
+		return ExportJob{}, err
+	}
+	return job, nil
 }

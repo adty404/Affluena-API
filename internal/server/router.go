@@ -127,6 +127,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/dashboard/forecast", dashboardHandler.Forecast)
 
 	protected.GET("/export/csv", exportHandler.ExportCSV)
+	protected.GET("/export/jobs", exportHandler.ListJobs)
+	protected.GET("/export/jobs/:id", exportHandler.GetJob)
 
 	protected.GET("/system-logs", apilogHandler.List)
 	protected.GET("/system-logs/:id", apilogHandler.GetLog)
