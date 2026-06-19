@@ -17,6 +17,8 @@ type Handler struct {
 type budgetUseCase interface {
 	Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error)
 	List(ctx context.Context, userID string, monthValue string, pagination page.Params) (page.Result[BudgetSummary], error)
+	Alerts(ctx context.Context, userID string, monthValue string) ([]BudgetAlert, error)
+	Report(ctx context.Context, userID string, monthValue string) ([]BudgetReportItem, BudgetReportSummary, error)
 	Get(ctx context.Context, userID string, id string) (Budget, error)
 	Update(ctx context.Context, userID string, id string, input UpdateBudgetInput) (Budget, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -71,6 +73,34 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 	httpx.JSON(c, http.StatusOK, gin.H{"budgets": result.Items, "pagination": result.Pagination})
+}
+
+func (h *Handler) Alerts(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	alerts, err := h.usecase.Alerts(c.Request.Context(), userID, c.Query("month"))
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	httpx.JSON(c, http.StatusOK, gin.H{"alerts": alerts})
+}
+
+func (h *Handler) Report(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	items, summary, err := h.usecase.Report(c.Request.Context(), userID, c.Query("month"))
+	if err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	httpx.JSON(c, http.StatusOK, gin.H{"report": items, "summary": summary})
 }
 
 var budgetSorts = map[string]struct{}{

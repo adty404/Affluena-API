@@ -134,6 +134,8 @@ Protected with `Authorization: Bearer <access_token>`:
 - `POST /api/v1/quick-entry-templates/:id/execute`
 - `POST /api/v1/category-budgets`
 - `GET /api/v1/category-budgets?month=YYYY-MM[&limit=100&offset=0&sort=created_at_desc]`
+- `GET /api/v1/category-budgets/alerts?month=YYYY-MM`
+- `GET /api/v1/category-budgets/report?month=YYYY-MM`
 - `GET /api/v1/category-budgets/:id`
 - `PUT /api/v1/category-budgets/:id`
 - `DELETE /api/v1/category-budgets/:id`

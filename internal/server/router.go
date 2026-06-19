@@ -168,6 +168,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected.POST("/category-budgets", budgetHandler.Create)
 	protected.GET("/category-budgets", budgetHandler.List)
+	protected.GET("/category-budgets/alerts", budgetHandler.Alerts)
+	protected.GET("/category-budgets/report", budgetHandler.Report)
 	protected.GET("/category-budgets/:id", budgetHandler.Get)
 	protected.PUT("/category-budgets/:id", budgetHandler.Update)
 	protected.DELETE("/category-budgets/:id", budgetHandler.Delete)
