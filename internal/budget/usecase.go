@@ -12,6 +12,8 @@ import (
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, input CreateBudgetInput) (Budget, error)
 	List(ctx context.Context, userID string, month time.Time, pagination page.Params) (page.Result[BudgetSummary], error)
+	ListAlerts(ctx context.Context, userID string, month time.Time) ([]BudgetAlert, error)
+	ListReport(ctx context.Context, userID string, month time.Time) ([]BudgetReportItem, BudgetReportSummary, error)
 	Get(ctx context.Context, userID string, id string) (Budget, error)
 	Update(ctx context.Context, userID string, id string, input UpdateBudgetInput) (Budget, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -48,6 +50,22 @@ func (u *UseCase) List(ctx context.Context, userID string, monthValue string, pa
 		return page.Result[BudgetSummary]{}, err
 	}
 	return u.repo.List(ctx, userID, month, pagination)
+}
+
+func (u *UseCase) Alerts(ctx context.Context, userID string, monthValue string) ([]BudgetAlert, error) {
+	month, err := ParseBudgetMonth(monthValue)
+	if err != nil {
+		return nil, err
+	}
+	return u.repo.ListAlerts(ctx, userID, month)
+}
+
+func (u *UseCase) Report(ctx context.Context, userID string, monthValue string) ([]BudgetReportItem, BudgetReportSummary, error) {
+	month, err := ParseBudgetMonth(monthValue)
+	if err != nil {
+		return nil, BudgetReportSummary{}, err
+	}
+	return u.repo.ListReport(ctx, userID, month)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Budget, error) {

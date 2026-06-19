@@ -14,6 +14,9 @@ type fakeBudgetRepository struct {
 	created     Budget
 	listPage    page.Params
 	listed      []BudgetSummary
+	alerts      []BudgetAlert
+	reportItems []BudgetReportItem
+	reportSum   BudgetReportSummary
 	got         Budget
 	updated     Budget
 	deletedID   string
@@ -34,6 +37,20 @@ func (f *fakeBudgetRepository) List(ctx context.Context, userID string, month ti
 		return page.Result[BudgetSummary]{}, f.err
 	}
 	return page.NewResult(f.listed, pagination, len(f.listed)), nil
+}
+
+func (f *fakeBudgetRepository) ListAlerts(ctx context.Context, userID string, month time.Time) ([]BudgetAlert, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.alerts, nil
+}
+
+func (f *fakeBudgetRepository) ListReport(ctx context.Context, userID string, month time.Time) ([]BudgetReportItem, BudgetReportSummary, error) {
+	if f.err != nil {
+		return nil, BudgetReportSummary{}, f.err
+	}
+	return f.reportItems, f.reportSum, nil
 }
 
 func (f *fakeBudgetRepository) Get(ctx context.Context, userID string, id string) (Budget, error) {
@@ -110,6 +127,25 @@ func TestBudgetUseCaseDelegatesReadAndDelete(t *testing.T) {
 	}
 	if repo.deletedID != "budget-1" {
 		t.Fatalf("expected delete id budget-1, got %q", repo.deletedID)
+	}
+}
+
+func TestBudgetUseCaseAlertsAndReport(t *testing.T) {
+	repo := &fakeBudgetRepository{
+		alerts:      []BudgetAlert{{ID: "alert-1"}},
+		reportItems: []BudgetReportItem{{BudgetSummary: BudgetSummary{Budget: Budget{ID: "budget-1"}}}},
+		reportSum:   BudgetReportSummary{TotalLimitMinor: 1000},
+	}
+	uc := NewUseCase(repo, nil)
+
+	alerts, err := uc.Alerts(context.Background(), "user-1", "2026-06")
+	if err != nil || len(alerts) != 1 || alerts[0].ID != "alert-1" {
+		t.Fatalf("unexpected Alerts result %+v err=%v", alerts, err)
+	}
+
+	items, summary, err := uc.Report(context.Background(), "user-1", "2026-06")
+	if err != nil || len(items) != 1 || items[0].ID != "budget-1" || summary.TotalLimitMinor != 1000 {
+		t.Fatalf("unexpected Report result %+v %+v err=%v", items, summary, err)
 	}
 }
 

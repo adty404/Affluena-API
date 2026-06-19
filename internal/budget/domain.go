@@ -24,6 +24,40 @@ type BudgetSummary struct {
 	UsagePercent   float64 `json:"usage_percent"`
 }
 
+type BudgetAlert struct {
+	ID           string  `json:"id"`
+	BudgetID     string  `json:"budget_id"`
+	CategoryID   string  `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	Title        string  `json:"title"`
+	Message      string  `json:"message"`
+	Threshold    int     `json:"threshold"`
+	Severity     string  `json:"severity"`
+	UsagePercent float64 `json:"usage_percent"`
+	SpentMinor   int64   `json:"spent_minor"`
+	LimitMinor   int64   `json:"limit_minor"`
+	NotifiedAt   *string `json:"notified_at"`
+	Month        string  `json:"month"`
+}
+
+type BudgetReportItem struct {
+	BudgetSummary
+	VarianceMinor       int64  `json:"variance_minor"`
+	DailyAllowanceMinor int64  `json:"daily_allowance_minor"`
+	Recommendation      string `json:"recommendation"`
+}
+
+type BudgetReportSummary struct {
+	TotalLimitMinor     int64 `json:"total_limit_minor"`
+	TotalSpentMinor     int64 `json:"total_spent_minor"`
+	TotalRemainingMinor int64 `json:"total_remaining_minor"`
+	SafeCount           int   `json:"safe_count"`
+	WarningCount        int   `json:"warning_count"`
+	ExceededCount       int   `json:"exceeded_count"`
+	DailyAllowanceMinor int64 `json:"daily_allowance_minor"`
+	ForecastMinor       int64 `json:"forecast_minor"`
+}
+
 type CreateBudgetInput struct {
 	CategoryID string
 	Month      string

@@ -5984,6 +5984,70 @@
                     ]
                 },
                 {
+                    "name": "List Budget Alerts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets/alerts?month=2026-06",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets",
+                                "alerts"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2026-06"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Budget Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/category-budgets/report?month=2026-06",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "category-budgets",
+                                "report"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2026-06"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
                     "name": "Get Category Budget",
                     "request": {
                         "method": "GET",
