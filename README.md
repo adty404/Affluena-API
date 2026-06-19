@@ -102,6 +102,11 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/system-logs[?limit=100]`
 - `GET /api/v1/system-logs/:id`
 
+### 🔔 Alerts Feed
+- `GET /api/v1/alerts[?month=YYYY-MM]`
+- `GET /api/v1/alerts/:id`
+
+
 - `GET /api/v1/wallets[?limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id`

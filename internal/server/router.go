@@ -76,6 +76,10 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 		alertUC = alert.NewUseCase(alert.NewRepository(pool), budgetUC, smtpMailer)
 	}
 
+	feedRepo := alert.NewFeedRepository(pool)
+	feedUC := alert.NewFeedUseCase(feedRepo, budgetUC)
+	feedHandler := alert.NewFeedHandler(feedUC)
+
 	transactionRepo := transaction.NewRepository(pool)
 	transactionUC := transaction.NewUseCase(transactionRepo, activityUC, alertUC, walletRepo)
 	transactionHandler := transaction.NewHandler(transactionUC)
@@ -126,6 +130,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected.GET("/system-logs", apilogHandler.List)
 	protected.GET("/system-logs/:id", apilogHandler.GetLog)
+
+	protected.GET("/alerts", feedHandler.List)
+	protected.GET("/alerts/:id", feedHandler.Get)
 
 	protected.GET("/activities", activityHandler.ListActivities)
 	protected.GET("/activities/:id", activityHandler.GetActivity)
