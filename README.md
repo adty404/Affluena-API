@@ -409,6 +409,14 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 - `RECURRING_SCHEDULER_INTERVAL`
 - `RECURRING_SCHEDULER_BATCH_SIZE`
 
+### 📈 Reports
+- `GET /api/v1/reports/income?month=YYYY-MM`
+- `GET /api/v1/reports/expense?month=YYYY-MM`
+- `GET /api/v1/reports/cashflow?month=YYYY-MM`
+- `GET /api/v1/reports/debt?month=YYYY-MM`
+- `GET /api/v1/reports/goal?month=YYYY-MM`
+- `GET /api/v1/reports/overview?month=YYYY-MM`
+
 ### 📊 Dashboard & Analytics
 - `GET /api/v1/dashboard/summary` - Get monthly financial overview.
 - `GET /api/v1/dashboard/cashflow-trend?months=6` - Get income/expense trends over time. `months` must be between 1 and 12.

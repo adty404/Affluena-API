@@ -20,6 +20,7 @@ import (
 	"affluena-api/internal/mailer"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
+	"affluena-api/internal/report"
 	"affluena-api/internal/splitbill"
 	"affluena-api/internal/tag"
 	"affluena-api/internal/tracker"
@@ -97,6 +98,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 		activityUC,
 	))
 	exportHandler := export.NewHandler(export.NewUseCase(export.NewRepository(pool)))
+	reportHandler := report.NewHandler(report.NewUseCase(report.NewRepository(pool)))
 
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -129,6 +131,13 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.GET("/export/csv", exportHandler.ExportCSV)
 	protected.GET("/export/jobs", exportHandler.ListJobs)
 	protected.GET("/export/jobs/:id", exportHandler.GetJob)
+
+	protected.GET("/reports/income", reportHandler.Income)
+	protected.GET("/reports/expense", reportHandler.Expense)
+	protected.GET("/reports/cashflow", reportHandler.Cashflow)
+	protected.GET("/reports/debt", reportHandler.Debt)
+	protected.GET("/reports/goal", reportHandler.Goal)
+	protected.GET("/reports/overview", reportHandler.Overview)
 
 	protected.GET("/system-logs", apilogHandler.List)
 	protected.GET("/system-logs/:id", apilogHandler.GetLog)
