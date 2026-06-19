@@ -18,6 +18,7 @@ import (
 	"affluena-api/internal/goal"
 	"affluena-api/internal/httpx"
 	"affluena-api/internal/mailer"
+	"affluena-api/internal/notification"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/report"
@@ -99,6 +100,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	))
 	exportHandler := export.NewHandler(export.NewUseCase(export.NewRepository(pool)))
 	reportHandler := report.NewHandler(report.NewUseCase(report.NewRepository(pool)))
+	notificationHandler := notification.NewHandler(notification.NewUseCase(notification.NewRepository(pool)))
 
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -141,6 +143,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected.GET("/system-logs", apilogHandler.List)
 	protected.GET("/system-logs/:id", apilogHandler.GetLog)
+
+	protected.GET("/notifications/rules", notificationHandler.List)
+	protected.PUT("/notifications/rules/:id", notificationHandler.Update)
 
 	protected.GET("/alerts", feedHandler.List)
 	protected.GET("/alerts/:id", feedHandler.Get)
