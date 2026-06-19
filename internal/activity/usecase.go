@@ -124,3 +124,7 @@ func (u *useCase) cleanupDedupe() {
 func (u *useCase) ListActivities(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error) {
 	return u.repo.List(ctx, userID, limit, offset, sort)
 }
+
+func (u *useCase) GetActivity(ctx context.Context, userID string, id string) (*Activity, error) {
+	return u.repo.GetByID(ctx, userID, id)
+}

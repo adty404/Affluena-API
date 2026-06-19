@@ -1,8 +1,11 @@
 package apilog
 
 import (
+	"errors"
 	"time"
 )
+
+var ErrNotFound = errors.New("api log not found")
 
 type APILog struct {
 	ID              string    `json:"id"`

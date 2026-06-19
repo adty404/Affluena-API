@@ -2,8 +2,10 @@ package activity
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -89,4 +91,29 @@ func activityOrderBy(sort string) string {
 	default:
 		return "created_at DESC"
 	}
+}
+
+func (r *repository) GetByID(ctx context.Context, userID string, id string) (*Activity, error) {
+	query := `
+		SELECT id, user_id, action_type, entity_type, entity_id, description, created_at
+		FROM user_activities
+		WHERE id = $1 AND user_id = $2
+	`
+	var a Activity
+	err := r.pool.QueryRow(ctx, query, id, userID).Scan(
+		&a.ID,
+		&a.UserID,
+		&a.ActionType,
+		&a.EntityType,
+		&a.EntityID,
+		&a.Description,
+		&a.CreatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
 }

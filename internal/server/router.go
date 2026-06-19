@@ -37,6 +37,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	}
 
 	apilogRepo := apilog.NewRepository(pool)
+	apilogHandler := apilog.NewHandler(apilogRepo)
 	router := gin.New()
 	router.Use(gin.Recovery())
 
@@ -123,7 +124,11 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected.GET("/export/csv", exportHandler.ExportCSV)
 
+	protected.GET("/system-logs", apilogHandler.List)
+	protected.GET("/system-logs/:id", apilogHandler.GetLog)
+
 	protected.GET("/activities", activityHandler.ListActivities)
+	protected.GET("/activities/:id", activityHandler.GetActivity)
 
 	protected.POST("/wallets", walletHandler.Create)
 	protected.GET("/wallets", walletHandler.List)

@@ -192,3 +192,11 @@ func TestLogActivityConcurrency(t *testing.T) {
 
 	wg.Wait()
 }
+
+func (m *fakeRepository) GetByID(ctx context.Context, userID string, id string) (*Activity, error) {
+	return nil, nil
+}
+
+func (m *delayedEntityReadRepository) GetByID(ctx context.Context, userID string, id string) (*Activity, error) {
+	return nil, nil
+}

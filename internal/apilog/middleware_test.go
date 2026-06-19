@@ -214,3 +214,11 @@ func TestAPILogMiddleware_ExactBoundaryRequestBodyPassthrough(t *testing.T) {
 		t.Errorf("expected exact payload logged, but it was truncated or altered")
 	}
 }
+
+func (m *mockRepo) GetLogByID(ctx context.Context, userID string, id string) (*APILog, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error) {
+	return nil, nil
+}

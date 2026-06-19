@@ -62,11 +62,11 @@ type UpdateWalletInput struct {
 }
 
 type WalletAnalytics struct {
-	WalletID         string `json:"wallet_id"`
-	Month            string `json:"month"`
-	InflowMinor      int64  `json:"inflow_minor"`
-	OutflowMinor     int64  `json:"outflow_minor"`
-	TransactionCount int64  `json:"transaction_count"`
+	WalletID         string     `json:"wallet_id"`
+	Month            string     `json:"month"`
+	InflowMinor      int64      `json:"inflow_minor"`
+	OutflowMinor     int64      `json:"outflow_minor"`
+	TransactionCount int64      `json:"transaction_count"`
 	LastActivityAt   *time.Time `json:"last_activity_at,omitempty"`
 }
 

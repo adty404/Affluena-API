@@ -2,8 +2,11 @@ package apilog
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
+
+	"affluena-api/internal/httpx"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,4 +36,29 @@ func (h *Handler) List(c *gin.Context) {
 		logs = []APILog{}
 	}
 	c.JSON(http.StatusOK, gin.H{"logs": logs})
+}
+
+func (h *Handler) GetLog(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	log, err := h.repo.GetLogByID(c.Request.Context(), userID, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.Error(c, http.StatusNotFound, "api log not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, "failed to get api log")
+		return
+	}
+
+	c.JSON(http.StatusOK, log)
 }
