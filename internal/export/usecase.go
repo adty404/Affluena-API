@@ -3,10 +3,14 @@ package export
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type ExportRepository interface {
 	GetCSVRows(ctx context.Context, userID string, opts ExportOptions) ([]TransactionExportRow, error)
+	CreateJob(ctx context.Context, userID string, format string, fromAt *time.Time, toAt *time.Time, rowCount int, status string) (ExportJob, error)
+	ListJobs(ctx context.Context, userID string, limit, offset int) ([]ExportJob, int, error)
+	GetJob(ctx context.Context, userID, id string) (ExportJob, error)
 }
 
 type UseCase struct {
@@ -54,4 +58,23 @@ func (u *UseCase) GenerateCSVData(ctx context.Context, userID string, opts Expor
 	}
 
 	return csvData, nil
+}
+
+func (u *UseCase) RecordJob(ctx context.Context, userID string, format string, opts ExportOptions, rowCount int, status string) (ExportJob, error) {
+	var fromAt, toAt *time.Time
+	if !opts.From.IsZero() {
+		fromAt = &opts.From
+	}
+	if !opts.To.IsZero() {
+		toAt = &opts.To
+	}
+	return u.repo.CreateJob(ctx, userID, format, fromAt, toAt, rowCount, status)
+}
+
+func (u *UseCase) ListJobs(ctx context.Context, userID string, limit, offset int) ([]ExportJob, int, error) {
+	return u.repo.ListJobs(ctx, userID, limit, offset)
+}
+
+func (u *UseCase) GetJob(ctx context.Context, userID, id string) (ExportJob, error) {
+	return u.repo.GetJob(ctx, userID, id)
 }

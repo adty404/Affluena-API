@@ -130,6 +130,8 @@ Protected with `Authorization: Bearer <access_token>`:
 - `DELETE /api/v1/transactions/:id`
 ### 📤 Export
 - `GET /api/v1/export/csv[?from=YYYY-MM-DDTHH:MM:SSZ&to=YYYY-MM-DDTHH:MM:SSZ]` (`from` and `to` must be RFC3339, and `from` must be before or equal to `to`)
+- `GET /api/v1/export/jobs[?limit=100&offset=0]`
+- `GET /api/v1/export/jobs/:id`
 
 - `POST /api/v1/quick-entry-templates`
 - `GET /api/v1/quick-entry-templates[?limit=100&offset=0&sort=name_asc]`
