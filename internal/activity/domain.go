@@ -2,8 +2,11 @@ package activity
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrNotFound = errors.New("activity not found")
 
 type Activity struct {
 	ID          string    `json:"id"`
@@ -18,9 +21,11 @@ type Activity struct {
 type Repository interface {
 	Create(ctx context.Context, activity Activity) error
 	List(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error)
+	GetByID(ctx context.Context, userID string, id string) (*Activity, error)
 }
 
 type UseCase interface {
 	LogActivity(ctx context.Context, userID, actionType, entityType string, entityID *string, description string)
 	ListActivities(ctx context.Context, userID string, limit, offset int, sort string) ([]Activity, int, error)
+	GetActivity(ctx context.Context, userID string, id string) (*Activity, error)
 }

@@ -1108,6 +1108,32 @@
                             "body": "{\n  \"error\": \"invalid sort\"\n}"
                         }
                     ]
+                },
+                {
+                    "name": "Get Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/activities/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "activities",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "00000000-0000-0000-0000-000000000000"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
                 }
             ]
         },
@@ -9563,6 +9589,62 @@
                 }
             ],
             "description": "### Modul Label (Tags)\nMemberikan kebebasan ekstra bagi pengguna untuk menandai transaksi dengan label custom (seperti `#liburan-bali`, `#kesehatan`) agar lebih mudah saat penyaringan atau _filtering_ data."
+        },
+        {
+            "name": "System Logs",
+            "item": [
+                {
+                    "name": "List System Logs",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/system-logs?limit=100",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "system-logs"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get System Log",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/system-logs/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "system-logs",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "00000000-0000-0000-0000-000000000000"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
         }
     ]
 }

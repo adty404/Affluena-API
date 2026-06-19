@@ -2,14 +2,17 @@ package apilog
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository interface {
 	SaveLog(ctx context.Context, logEntry APILog) error
 	ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error)
+	GetLogByID(ctx context.Context, userID string, id string) (*APILog, error)
 }
 
 type repository struct {
@@ -69,4 +72,25 @@ func (r *repository) SaveLog(ctx context.Context, logEntry APILog) error {
 		return err
 	}
 	return nil
+}
+
+func (r *repository) GetLogByID(ctx context.Context, userID string, id string) (*APILog, error) {
+	query := `
+		SELECT id, method, path, status_code, latency_ms, client_ip, user_agent, user_id, request_payload, response_payload, created_at
+		FROM api_logs
+		WHERE id = $1 AND user_id = $2
+	`
+	var log APILog
+	err := r.pool.QueryRow(ctx, query, id, userID).Scan(
+		&log.ID, &log.Method, &log.Path, &log.StatusCode, &log.LatencyMs,
+		&log.ClientIP, &log.UserAgent, &log.UserID, &log.RequestPayload,
+		&log.ResponsePayload, &log.CreatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
 }

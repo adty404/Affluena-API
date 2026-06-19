@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -48,4 +49,29 @@ func (h *Handler) ListActivities(c *gin.Context) {
 var activitySorts = map[string]struct{}{
 	"created_at_desc": {},
 	"created_at_asc":  {},
+}
+
+func (h *Handler) GetActivity(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	activity, err := h.uc.GetActivity(c.Request.Context(), userID.(string), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.Error(c, http.StatusNotFound, "activity not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, "failed to get activity")
+		return
+	}
+
+	c.JSON(http.StatusOK, activity)
 }
