@@ -1,0 +1,127 @@
+name: API CI/CD
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: affluena-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Test API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: affluena_api
+          POSTGRES_USER: affluena_api
+          POSTGRES_PASSWORD: affluena_api
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U affluena_api -d affluena_api"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
+      AFFLUENA_API_TEST_DATABASE_URL: postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
+      JWT_SECRET: ci-test-secret-minimum-32-characters
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check formatting
+        run: |
+          unformatted="$(find . -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -l)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            echo "Run gofmt on the files above." >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: go test ./... -count=1
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Build API
+        run: go build -o /tmp/affluena-api ./cmd/api
+
+      - name: Validate Postman collection
+        run: python3 -m json.tool postman/Affluena-API.postman_collection.json >/tmp/affluena-api-postman-validated.json
+
+  deploy:
+    name: Deploy API
+    needs: ci
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_DEPLOY_ROOT: ${{ secrets.VPS_DEPLOY_ROOT || '/opt/affluena' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+
+    steps:
+      - name: Validate deploy secrets
+        run: |
+          test -n "$VPS_HOST" || { echo "Missing VPS_HOST secret"; exit 1; }
+          test -n "$VPS_USER" || { echo "Missing VPS_USER secret"; exit 1; }
+          test -n "$VPS_SSH_KEY" || { echo "Missing VPS_SSH_KEY secret"; exit 1; }
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy API on VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "DEPLOY_ROOT='$VPS_DEPLOY_ROOT' bash -se" <<'REMOTE'
+          set -euo pipefail
+
+          cd "$DEPLOY_ROOT/Affluena-API"
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "Affluena-API has local tracked changes; refusing to deploy."
+            git status --short --untracked-files=no
+            exit 1
+          fi
+
+          git fetch origin master
+          git checkout master
+          git pull --ff-only origin master
+
+          cd "$DEPLOY_ROOT/deploy"
+
+          DOCKER="docker"
+          if ! docker ps >/dev/null 2>&1; then
+            DOCKER="sudo -n docker"
+          fi
+
+          $DOCKER compose -f docker-compose.prod.yml up -d --build api
+          $DOCKER compose -f docker-compose.prod.yml ps
+          curl -fsS http://127.0.0.1:8080/healthz
+          REMOTE
