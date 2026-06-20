@@ -43,6 +43,7 @@ verify.log
 # Environment (use .env.example instead)
 .env
 .env.local
+.env.production
 .env.*.local
 
 # Temporary files
