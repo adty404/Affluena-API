@@ -45,8 +45,8 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | `/budgets/new` | Create budget | `/api/v1/category-budgets` | POST | form data | `budget` | disable btn | inline error | - |
 | `/budgets/:id` | View budget | `/api/v1/category-budgets/:id` | GET | path param | `budget` | skeleton | 404 page | - |
 | `/budgets/:id/edit` | Update budget | `/api/v1/category-budgets/:id` | PUT | form data | `budget` | disable btn | inline error | - |
-| `/budgets/alerts` | List alerts | `/api/v1/activities` | GET | URL params | `resource array` | list skeleton | empty state | **Available via existing endpoint**: Activities log alerts |
-| `/budgets/report` | View report | `/api/v1/dashboard/summary` | GET | URL params | stats | skeleton | empty state | Handled via dashboard endpoints |
+| `/budgets/alerts` | List alerts | `/api/v1/category-budgets/alerts` | GET | `?month=` | `{ alerts: BudgetAlert[] }` | list skeleton | empty state | Get budget alerts for a specific month |
+| `/budgets/report` | View report | `/api/v1/category-budgets/report` | GET | `?month=` | `{ report: BudgetReportItem[], summary: BudgetReportSummary }` | skeleton | empty state | Get budget report for a specific month |
 | **Debt & Tracker** | | | | | | | | |
 | `/tracker` | View tracker | Multiple | GET | URL params | `resource array` | list skeleton | empty state | Fetches installments and subscriptions |
 | `/debts` | List debts | `/api/v1/debts` | GET | URL params | `resource array` | list skeleton | empty state | - |
@@ -76,14 +76,23 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | `/goals/:id/members` | Manage members | `/api/v1/goals/:id/members` | POST | form data | `goal` | disable btn | inline error | Accept via PUT `.../respond` |
 | **Reports/System** | | | | | | | | |
 | `/reports` | Overview | Multiple Dashboard APIs | GET | URL params | datasets | skeletons | empty state | Uses dashboard/summary endpoints |
+| `/reports/income` | View income report | `/api/v1/reports/income` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get income report |
+| `/reports/expense` | View expense report | `/api/v1/reports/expense` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get expense report |
+| `/reports/cashflow` | View cashflow report | `/api/v1/reports/cashflow` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get cashflow report |
+| `/reports/debt` | View debt report | `/api/v1/reports/debt` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get debt report |
+| `/reports/goal` | View goal report | `/api/v1/reports/goal` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get goal report |
+| `/reports/overview` | View overview report | `/api/v1/reports/overview` | GET | `?month=` | `{ metrics, rows }` | skeleton | empty state | Get overview report |
 | `/exports` | Trigger export | `/api/v1/export/csv` | GET | `?from=&to=` | CSV stream | disable btn | error alert | Direct download |
-| `/exports/history` | - | - | - | - | - | - | - | **Frontend-only**: Export history not saved in DB |
+| `/exports/history` | List export jobs | `/api/v1/export/jobs` | GET | `?limit=&offset=` | `{ jobs: ExportJob[], pagination }` | list skeleton | empty state | View export jobs history |
+| `/exports/:id` | View export job | `/api/v1/export/jobs/:id` | GET | path param | `ExportJob` | skeleton | 404 page | Get export job detail |
 | `/activities` | List activities| `/api/v1/activities` | GET | URL params | `resource array` | list skeleton | empty state | - |
-| `/alerts` | Inbox alerts | `/api/v1/activities` | GET | - | `resource array` | list skeleton | empty state | **Available via existing endpoint**: activities log alerts |
-| `/system-logs` | - | - | - | - | - | - | - | **Backend gap**: Internal apilog not exposed to users |
+| `/activities/:id` | View activity detail | `/api/v1/activities/:id` | GET | path param | `Activity` | skeleton | 404 page | Get activity detail |
+| `/alerts` | Inbox alerts | `/api/v1/alerts` | GET | `?month=` | `{ alerts: Alert[] }` | list skeleton | empty state | Get alerts feed for a specific month |
+| `/system-logs` | List system logs | `/api/v1/system-logs` | GET | `?limit=` | `{ logs: SystemLog[] }` | list skeleton | empty state | View system logs |
 | **Settings** | | | | | | | | |
 | `/settings/profile` | View profile | `/api/v1/auth/me` | GET | none | `user` | skeleton | error alert | - |
 | `/settings/account` | Update account | `/api/v1/auth/account` | PUT | `{ name, avatar_url }` | `user` | disable btn | inline error | - |
 | `/settings/security` | Update password| `/api/v1/auth/password` | PUT | `{ current_password, new_password }` | - | disable btn | inline error | - |
 | `/settings/sessions` | List sessions | `/api/v1/auth/sessions` | GET | none | `sessions` | list skeleton | empty state | Revoke via `DELETE /auth/sessions/:id` |
+| `/settings/notifications`| Manage notification rules | `/api/v1/notifications/rules` | GET/PUT | `{ enabled, channel }` | `{ rules: NotificationRule[] }` or `NotificationRule` | skeleton | inline error | Manage notification rules |
 | `/settings/preferences`| - | - | - | - | - | - | - | **Frontend-only**: Store locally |
