@@ -1,6 +1,6 @@
-# Frontend Integration Plan
+# Frontend Integration Status
 
-This document outlines the recommended sequencing for integrating the frontend UI (Stage 1-10) with the Affluena API backend.
+This document records the completed sequencing used to integrate Affluena-WEB with the Affluena API backend. Web pages use the API client/hooks for the main app surface, and Affluena-QA contains the broader Playwright E2E suite.
 
 ## Phase 1: Core Foundation
 
@@ -169,4 +169,6 @@ This document outlines the recommended sequencing for integrating the frontend U
 
 ## Summary
 
-All 19 integration steps complete. 17 new endpoints. 186 QA tests pass. Zero mock data remaining (except 3 legit static files).
+All 19 integration steps are implemented in the current API/Web/QA codebases. The current QA repo contains 79 Playwright spec files and 189 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings.
+
+Latest local cleanup verification from 2026-06-20: the full `Affluena-QA` Playwright suite passed all 189 runnable tests against the local API and Vite dev server.

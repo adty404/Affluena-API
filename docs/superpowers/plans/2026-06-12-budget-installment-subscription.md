@@ -1,5 +1,7 @@
 # Budget Installment Subscription Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. Category budgets, budget alerts/report, installments, subscriptions, shared-wallet tracker support, and tracker payment flows are implemented. Use `../../API_CONTRACT.md`, `../../system_map.md`, and `internal/budget`/`internal/tracker` for current context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add category budgeting plus installment and subscription trackers with manual payment triggers that create expense transactions.

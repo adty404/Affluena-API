@@ -1,5 +1,7 @@
 # Debt Loan Manager Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. Debt endpoints, shared-wallet debt permissions, payment lifecycle, and rollback tests are implemented. Use `../../API_CONTRACT.md`, `../../system_map.md`, and `internal/debt` for current context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add Debt & Loan Manager endpoints for receivables and payables with atomic wallet balance updates.

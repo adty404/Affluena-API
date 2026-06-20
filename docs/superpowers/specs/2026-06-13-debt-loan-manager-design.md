@@ -1,5 +1,7 @@
 # Debt & Loan Manager Design
 
+> **Current status (2026-06-20):** Historical design artifact. Debt, payable/receivable payment lifecycle, soft-cancel behavior, shared-wallet debt support, and integration tests are implemented. Use `../../API_CONTRACT.md`, `../../system_map.md`, and `internal/debt` as the current source of truth.
+
 ## Scope
 
 Implement an API-first Debt & Loan Manager for both money owed to the user and money owed by the user.

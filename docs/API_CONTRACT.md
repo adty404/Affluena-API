@@ -1,6 +1,6 @@
 # Affluena API Contract
 
-This document serves as the primary contract for frontend integration (React UI/Stage 1-10). It details the conventions, endpoints, request shapes, and business rules of the Affluena API.
+This document serves as the primary contract for the Affluena web app, QA suite, Postman collection, and any other API consumers. It details the current conventions, endpoints, request shapes, and business rules implemented by `internal/server/router.go`.
 
 ## General Conventions
 
@@ -35,7 +35,7 @@ This document serves as the primary contract for frontend integration (React UI/
 - `PUT /api/v1/auth/account` - Update account -> `{ name, avatar_url }` -> `{ user }`
 - `PUT /api/v1/auth/password` - Change password -> `{ current_password, new_password }`
 - `GET /api/v1/auth/sessions` - List sessions -> `{ sessions: [...] }`
-- `DELETE /api/v1/auth/sessions/:id` - Revoke session
+- `DELETE /api/v1/auth/sessions/:session_id` - Revoke session
 - `POST /api/v1/auth/forgot-password` - `{ email }` -> 204
 - `POST /api/v1/auth/reset-password` - `{ token, new_password }` -> 204
 - *Note:* Logout is handled client-side (token deletion). Session revocation is available via `DELETE /api/v1/auth/sessions/:id`.
@@ -54,6 +54,8 @@ This document serves as the primary contract for frontend integration (React UI/
 - `DELETE /api/v1/wallets/:id` - Soft archive behavior based on constraints.
 - `POST /api/v1/wallets/:id/invites` - Share wallet. `{ email }`
 - `PATCH /api/v1/wallets/:id/members/:member_id` - `{ status: "joined"|"rejected" }`
+- `GET /api/v1/wallets/:id/members` - List wallet members.
+- `GET /api/v1/wallets/:id/analytics?month=YYYY-MM` - Wallet-level income/expense analytics.
 - *Note:* Direct writes to `type="goal"` wallets are rejected. Supported types: `cash`, `bank`, `e_wallet`, `investment`. `goal_id` is not sent by frontend when creating a wallet; goal wallets are created and managed internally by the goal module.
 
 ### Category
@@ -169,7 +171,7 @@ This document serves as the primary contract for frontend integration (React UI/
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
 - `POST /api/v1/installments/:id/pay` - `{ paid_at, note }` (Amount is inferred from installment configuration.)
-- `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "monthly"|"yearly", next_due_date, status, note }`
+- `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "weekly"|"monthly", next_due_date, status, note }`
 - `GET /api/v1/subscriptions`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
@@ -188,6 +190,7 @@ This document serves as the primary contract for frontend integration (React UI/
 - `POST /api/v1/goals` - `{ name, target_amount_minor, deadline }`
 - `GET /api/v1/goals` - Array format (not wrapped in pagination).
 - `GET /api/v1/goals/:id`
+- `PUT /api/v1/goals/:id` - Update goal metadata.
 - `POST /api/v1/goals/:id/members` - Invite to goal. `{ email }`
 - `PUT /api/v1/goals/:id/members/:user_id/respond` - `{ status: "joined" }`.
 - *Note:* Collected amount is calculated from the goal wallet balance. Contributions are made via `POST /api/v1/transactions` with `type=transfer` and `to_wallet_id=<goal_wallet_id>`. There is no dedicated `/goals/:id/contribute` endpoint.

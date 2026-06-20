@@ -1,6 +1,6 @@
 # Affluena-API
 
-Affluena-API is an API-first personal finance backend. It implements native auth, wallets, categories, transactions, quick entry templates, budgeting, trackers, recurring transactions, and debt/loan tracking.
+Affluena-API is an API-first personal finance backend. It implements native auth, profile/session settings, wallets and shared wallets, categories, tags, transactions, quick entry templates, budgeting, trackers, recurring transactions, debt/loan tracking, goals, reports, exports, alerts, notifications, activity audit, and system log inspection.
 
 ## Stack
 
@@ -86,34 +86,61 @@ The verify script checks Go formatting, unit tests, `go vet`, API build, Postman
 
 ## Endpoints
 
-Public:
+The current Gin router registers 100 routes including `GET /healthz`: 5 public auth routes and 94 protected API routes under `/api/v1`.
 
 - `GET /healthz`
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
 
 Protected with `Authorization: Bearer <access_token>`:
 
 - `GET /api/v1/auth/me`
+- `PUT /api/v1/auth/account`
+- `PUT /api/v1/auth/password`
+- `GET /api/v1/auth/sessions`
+- `DELETE /api/v1/auth/sessions/:session_id`
+
+### Dashboard, Reports, Export, Activity, Alerts, Notifications
+
 - `GET /api/v1/dashboard/summary?month=YYYY-MM`
+- `GET /api/v1/dashboard/cashflow-trend?months=6`
+- `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM`
+- `GET /api/v1/dashboard/forecast?month=YYYY-MM`
+- `GET /api/v1/reports/income?month=YYYY-MM`
+- `GET /api/v1/reports/expense?month=YYYY-MM`
+- `GET /api/v1/reports/cashflow?month=YYYY-MM`
+- `GET /api/v1/reports/debt?month=YYYY-MM`
+- `GET /api/v1/reports/goal?month=YYYY-MM`
+- `GET /api/v1/reports/overview?month=YYYY-MM`
+- `GET /api/v1/export/csv[?from=YYYY-MM-DDTHH:MM:SSZ&to=YYYY-MM-DDTHH:MM:SSZ]`
+- `GET /api/v1/export/jobs[?limit=100&offset=0]`
+- `GET /api/v1/export/jobs/:id`
 - `GET /api/v1/activities[?limit=100&offset=0&sort=created_at_desc]`
 - `GET /api/v1/activities/:id`
 - `GET /api/v1/system-logs[?limit=100]`
 - `GET /api/v1/system-logs/:id`
-
-### 🔔 Alerts Feed & Notifications
 - `GET /api/v1/alerts[?month=YYYY-MM]`
 - `GET /api/v1/alerts/:id`
 - `GET /api/v1/notifications/rules`
 - `PUT /api/v1/notifications/rules/:id`
 
+### Wallets
 
 - `GET /api/v1/wallets[?limit=100&offset=0&sort=created_at_desc]`
+- `POST /api/v1/wallets`
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
-### 📂 Categories (Up to 3 Levels)
+- `POST /api/v1/wallets/:id/invites`
+- `PATCH /api/v1/wallets/:id/members/:member_id`
+- `GET /api/v1/wallets/:id/members`
+- `GET /api/v1/wallets/:id/analytics?month=YYYY-MM`
+
+### Categories, Tags, Transactions
+
 - `POST /api/v1/categories` (Supports same-user, same-type `parent_id` for nesting)
 - `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=type_name_asc]`
 - `GET /api/v1/categories/:id`
@@ -130,10 +157,8 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`
-### 📤 Export
-- `GET /api/v1/export/csv[?from=YYYY-MM-DDTHH:MM:SSZ&to=YYYY-MM-DDTHH:MM:SSZ]` (`from` and `to` must be RFC3339, and `from` must be before or equal to `to`)
-- `GET /api/v1/export/jobs[?limit=100&offset=0]`
-- `GET /api/v1/export/jobs/:id`
+
+### Quick Entry, Budgets, Debts, Trackers, Recurring, Goals
 
 - `POST /api/v1/quick-entry-templates`
 - `GET /api/v1/quick-entry-templates[?limit=100&offset=0&sort=name_asc]`
@@ -175,6 +200,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `POST /api/v1/goals`
 - `GET /api/v1/goals`
 - `GET /api/v1/goals/:id`
+- `PUT /api/v1/goals/:id`
 - `POST /api/v1/goals/:id/members`
 - `PUT /api/v1/goals/:id/members/:user_id/respond`
 
@@ -429,7 +455,7 @@ Recurring transactions are executed atomically too. Each occurrence stores a uni
 
 ## API Documentation & Contract
 
-For frontend integration (Stage 1-10), refer to the official API Contract documentation:
+For frontend, QA, and Postman integration, refer to the official API contract documentation:
 
 - [API_CONTRACT.md](docs/API_CONTRACT.md)
 - [FRONTEND_API_MAPPING.md](docs/FRONTEND_API_MAPPING.md)

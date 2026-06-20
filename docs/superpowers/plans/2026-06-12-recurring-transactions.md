@@ -1,5 +1,7 @@
 # Recurring Transactions Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. Recurring rules, manual execution, scheduler idempotency, and shared-wallet recurring support are implemented. Use `../../API_CONTRACT.md`, `../../system_map.md`, and `internal/recurring` for current context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add recurring transaction rules, manual execution, and a native Go scheduler that creates transactions automatically without duplicate charges.

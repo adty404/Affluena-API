@@ -2,9 +2,9 @@
 
 **Project Name:** Affluena-API
 **Phase:** Minimum Viable Product (MVP)
-**Tech Stack:** Go (Fiber/Gin), PostgreSQL, Docker.
+**Tech Stack:** Go 1.26, Gin, PostgreSQL, Docker Compose.
 **Auth:** Native JWT Authentication (Golang).
-**Background Tasks:** Native Go Scheduler (e.g., `gocron` / `robfig/cron`).
+**Background Tasks:** Native Go scheduler implemented in `internal/recurring`.
 
 ## 1. Product Overview
 
@@ -15,7 +15,7 @@
 - Membangun fondasi _backend_ (API) yang _scalable_, aman, dan konsisten (ACID compliant).
 - Menyistemasi autentikasi dan manajemen otorisasi sepenuhnya di level aplikasi (Go) tanpa dependensi _third-party_ seperti Keycloak.
 - Menyederhanakan infrastruktur dengan menggunakan _native scheduler_ di Go untuk mengeksekusi _background jobs_ (menggantikan RabbitMQ).
-- Menyediakan _endpoint_ API yang siap dikonsumsi oleh Progressive Web App (PWA) di masa depan.
+- Menyediakan _endpoint_ API yang dikonsumsi oleh Affluena-WEB dan diuji end-to-end oleh Affluena-QA.
 - Menciptakan transparansi dan _auditability_ sistem melalui pencatatan log lengkap (hingga payload request/response).
 
 ## 3. Core Features & Use Cases (MVP)
@@ -54,7 +54,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
 ### 3.5. Recurring Transactions (Native Automated Logging)
 
-- **Fitur:** Menggunakan ekosistem _native cron job_ di dalam Go (`gocron` atau modul serupa) yang berjalan di _background goroutine_ untuk mengeksekusi transaksi otomatis.
+- **Fitur:** Menggunakan scheduler native di dalam Go yang berjalan di _background goroutine_ untuk mengeksekusi transaksi otomatis.
 - **Use Case:** Setiap tanggal 1, _scheduler_ internal otomatis memotong saldo _wallet_ utama untuk tagihan tetap seperti internet atau sewa tempat tinggal, mencatat baris transaksi baru secara presisi tanpa intervensi manual.
 
 ### 3.6. Debt & Loan Manager (Hutang Piutang)
@@ -92,7 +92,7 @@ Pelacakan pengeluaran yang memiliki tenor berjangka atau siklus berulang.
 
 ## 5. Out of Scope (For MVP)
 
-- Antarmuka pengguna visual (Frontend/UI/PWA).
+- Antarmuka pengguna visual berada di repository terpisah (`Affluena-WEB`), bukan di repository API ini.
 - Integrasi _payment gateway_ pihak ketiga atau akses mutasi API Bank _direct_.
 - Fitur OCR (_Optical Character Recognition_) untuk _scan_ struk otomatis.
 
@@ -112,4 +112,3 @@ Sistem menyediakan analitik mendalam untuk memantau tren dan status keuangan.
 - **Cashflow Trend**: Mendapatkan data income dan expense selama 1-12 bulan ke belakang untuk melihat pergerakan cashflow.
 - **Expense Distribution**: Melihat distribusi pengeluaran berdasarkan kategori dalam bentuk persentase.
 - **Spend Forecasting**: Sistem menghitung rata-rata harian pengeluaran dan memprediksi total pengeluaran di akhir bulan, serta memberikan peringatan ("overbudget") jika prediksi melewati batas budget yang dianggarkan. Jika belum ada budget pada bulan tersebut, status tetap "safe".
-a bulan tersebut, status tetap "safe".

@@ -1,5 +1,7 @@
 # Clean Architecture Refactor Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. The current architecture is the package-per-feature layered style documented in `../../system_map.md` and `../../../AGENTS.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Refactor all Affluena-API backend modules toward Clean Architecture one by one without changing API behavior or business logic.
