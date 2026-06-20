@@ -125,3 +125,41 @@ jobs:
           $DOCKER compose -f docker-compose.prod.yml ps
           curl -fsS http://127.0.0.1:8080/healthz
           REMOTE
+
+  notify:
+    name: Notify Telegram
+    needs:
+      - ci
+      - deploy
+    if: always() && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      CI_RESULT: ${{ needs.ci.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Send Telegram notification
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets are not configured; skipping notification."
+            exit 0
+          fi
+
+          status="SUCCESS"
+          title="Affluena API deploy selesai"
+          if [ "$CI_RESULT" != "success" ] || [ "$DEPLOY_RESULT" != "success" ]; then
+            status="FAILED"
+            title="Affluena API deploy gagal"
+          fi
+
+          short_sha="${GITHUB_SHA::7}"
+          message="$(printf '[%s] %s\nRepository: %s\nBranch: %s\nCommit: %s\nCI: %s\nDeploy: %s\nRun: %s\n' \
+            "$status" "$title" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$short_sha" "$CI_RESULT" "$DEPLOY_RESULT" "$RUN_URL")"
+
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${message}"
