@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.5 — 16 Juni 2026
-> **Total Source Code:** ~10.450 baris (91 file `.go`) | **Test Code:** ~7.550 baris (51 file `*_test.go`)
+> **Versi:** v2.6 — 20 Juni 2026
+> **Total Go Code:** ~23.950 baris (170 file `.go`) | **Test Code:** ~10.320 baris (65 file `*_test.go`)
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
@@ -11,7 +11,7 @@
 ```mermaid
 graph TB
     subgraph Client["🌐 Client Layer"]
-        PWA["Progressive Web App (Future)"]
+        WEB["Affluena-WEB React App"]
         Postman["Postman / cURL"]
     end
 
@@ -41,6 +41,8 @@ graph TB
         TAG["tag"]
         DASHBOARD["dashboard"]
         EXPORT["export"]
+        REPORT["report"]
+        NOTIFICATION["notification"]
     end
 
     subgraph CrossCutting["⚙️ Cross-Cutting Concerns"]
@@ -76,17 +78,18 @@ graph TB
 
 ---
 
-## 2. Peta Modul (24 Modul)
+## 2. Peta Modul (27 Paket Internal)
 
 ### 2.1. Infrastruktur & Utilitas
 
 | Modul | Lokasi | Deskripsi | Dependensi |
 |-------|--------|-----------|------------|
 | **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 16 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
-| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (19 file SQL). | pgx |
+| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (25 file SQL). | pgx |
 | **page** | `internal/page/` | Struct generik `Result[T]` untuk pagination (`limit`, `offset`, `total`). | stdlib |
 | **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `GetUUIDParam`, `ParsePage`, `BindOptionalJSON`, `WriteError` (error mapping), `Error`, `JSON`, `InternalError`, `PublicError`, `RateLimiter` (auth/API rate limiting). | page, gin, golang.org/x/time/rate |
 | **caldate** | `internal/caldate/` | Fungsi `AddMonthsClamped` — menambah bulan dengan clamping hari ke akhir bulan target. | stdlib |
+| **async** | `internal/async/` | Helper `SafeGo` untuk menjalankan goroutine dengan panic recovery. | stdlib |
 
 ### 2.2. Core Domain
 
@@ -111,6 +114,8 @@ graph TB
 | **tag** | `internal/tag/` | 4 src | 329 | Label lintas-kategori (Many-to-Many dengan transactions). |
 | **dashboard** | `internal/dashboard/` | 5 src | 613 | Summary, Cashflow Trend, Expense Distribution, Spend Forecast. |
 | **export** | `internal/export/` | 4 src | 235 | Ekspor transaksi ke file CSV. |
+| **report** | `internal/report/` | 4 src + 1 test | varies | Laporan income, expense, cashflow, debt, goal, dan overview. |
+| **notification** | `internal/notification/` | 4 src + 1 test | varies | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`). |
 
 ### 2.4. Cross-Cutting Concerns
 
@@ -221,7 +226,7 @@ graph LR
 
 ---
 
-## 4. Skema Database (20 Tabel)
+## 4. Skema Database (24 Tabel)
 
 ```mermaid
 erDiagram
@@ -233,6 +238,9 @@ erDiagram
     users ||--o{ goals : creates
     users ||--o{ user_activities : logs
     users ||--o{ api_logs : optional
+    users ||--o{ password_reset_tokens : has
+    users ||--o{ export_jobs : has
+    users ||--o{ notification_rules : has
 
     wallets ||--o{ transactions : "wallet_id"
     wallets ||--o{ wallet_shares : shared_with
@@ -284,8 +292,11 @@ erDiagram
 | 19 | `api_logs` | id, method, path, status_code, latency_ms, client_ip, user_agent, user_id, request_payload, response_payload | Index on created_at |
 | 20 | `user_activities` | id, user_id, action_type, entity_type, entity_id, description | Index on (user_id, created_at DESC) |
 | 21 | `sent_alerts` | user_id, category_id, month_value, alert_type, sent_at | PK(user_id, category_id, month_value, alert_type) — prevents duplicate alerts |
+| 22 | `password_reset_tokens` | id, user_id, token_hash, expires_at, used_at | Password reset lifecycle |
+| 23 | `export_jobs` | id, user_id, format, from_at, to_at, row_count, status, created_at | CSV export audit trail |
+| 24 | `notification_rules` | id, user_id, rule_key, title, enabled, channel | UNIQUE(user_id, rule_key), CHECK channel in email/in-app/both |
 
-### 4.2. Migrasi (21 File)
+### 4.2. Migrasi (25 File)
 
 | File | Deskripsi |
 |------|-----------|
@@ -309,6 +320,11 @@ erDiagram
 | `000018_wallet_share_trackers.sql` | Shared wallet support for trackers |
 | `000019_wallet_share_debts.sql` | Shared wallet support for debts |
 | `000020_sent_alerts.sql` | sent_alerts table for budget alert deduplication |
+| `000021_wallet_color_description.sql` | Adds wallet color and description fields |
+| `000022_user_profile.sql` | Adds account profile fields |
+| `000023_password_reset_tokens.sql` | Password reset token storage |
+| `000024_export_jobs.sql` | Export job audit table |
+| `000025_notification_rules.sql` | User notification rule preferences |
 
 ### 4.3. Scripts (Development)
 
@@ -318,9 +334,9 @@ erDiagram
 
 ---
 
-## 5. API Route Map (74 Endpoint)
+## 5. API Route Map (100 Registered Routes)
 
-### 5.1. Public Routes (4)
+### 5.1. Public Routes (6)
 
 | Method | Path | Handler | Deskripsi |
 |--------|------|---------|-----------|
@@ -328,13 +344,19 @@ erDiagram
 | POST | `/api/v1/auth/register` | auth.Register | Registrasi user baru |
 | POST | `/api/v1/auth/login` | auth.Login | Login & dapatkan token |
 | POST | `/api/v1/auth/refresh` | auth.Refresh | Refresh access token |
+| POST | `/api/v1/auth/forgot-password` | auth.ForgotPassword | Request password reset |
+| POST | `/api/v1/auth/reset-password` | auth.ResetPassword | Complete password reset |
 
-### 5.2. Protected Routes (70) — Semua membutuhkan `Authorization: Bearer <token>`
+### 5.2. Protected Routes (94) — Semua membutuhkan `Authorization: Bearer <token>`
 
 #### Auth & Profile
 | Method | Path | Handler |
 |--------|------|---------|
 | GET | `/api/v1/auth/me` | auth.Me |
+| PUT | `/api/v1/auth/account` | auth.UpdateAccount |
+| PUT | `/api/v1/auth/password` | auth.ChangePassword |
+| GET | `/api/v1/auth/sessions` | auth.ListSessions |
+| DELETE | `/api/v1/auth/sessions/:session_id` | auth.RevokeSession |
 
 #### Dashboard & Analytics
 | Method | Path | Handler |
@@ -354,6 +376,8 @@ erDiagram
 | DELETE | `/api/v1/wallets/:id` | wallet.Delete |
 | POST | `/api/v1/wallets/:id/invites` | wallet.InviteMember |
 | PATCH | `/api/v1/wallets/:id/members/:member_id` | wallet.RespondInvite |
+| GET | `/api/v1/wallets/:id/members` | wallet.ListMembers |
+| GET | `/api/v1/wallets/:id/analytics` | wallet.Analytics |
 
 #### Categories (CRUD + Hierarchy)
 | Method | Path | Handler |
@@ -398,6 +422,8 @@ erDiagram
 |--------|------|---------|
 | POST | `/api/v1/category-budgets` | budget.Create |
 | GET | `/api/v1/category-budgets` | budget.List |
+| GET | `/api/v1/category-budgets/alerts` | budget.Alerts |
+| GET | `/api/v1/category-budgets/report` | budget.Report |
 | GET | `/api/v1/category-budgets/:id` | budget.Get |
 | PUT | `/api/v1/category-budgets/:id` | budget.Update |
 | DELETE | `/api/v1/category-budgets/:id` | budget.Delete |
@@ -418,6 +444,7 @@ erDiagram
 | POST | `/api/v1/goals` | goal.Create |
 | GET | `/api/v1/goals` | goal.List |
 | GET | `/api/v1/goals/:id` | goal.Get |
+| PUT | `/api/v1/goals/:id` | goal.Update |
 | POST | `/api/v1/goals/:id/members` | goal.InviteMember |
 | PUT | `/api/v1/goals/:id/members/:user_id/respond` | goal.RespondInvite |
 
@@ -451,11 +478,26 @@ erDiagram
 | DELETE | `/api/v1/recurring-transactions/:id` | recurring.Delete |
 | POST | `/api/v1/recurring-transactions/:id/run` | recurring.RunManual |
 
-#### Export & Activities
+#### Reports, Export, Activities, Logs, Alerts, Notifications
 | Method | Path | Handler |
 |--------|------|---------|
+| GET | `/api/v1/reports/income` | report.Income |
+| GET | `/api/v1/reports/expense` | report.Expense |
+| GET | `/api/v1/reports/cashflow` | report.Cashflow |
+| GET | `/api/v1/reports/debt` | report.Debt |
+| GET | `/api/v1/reports/goal` | report.Goal |
+| GET | `/api/v1/reports/overview` | report.Overview |
 | GET | `/api/v1/export/csv` | export.ExportCSV |
+| GET | `/api/v1/export/jobs` | export.ListJobs |
+| GET | `/api/v1/export/jobs/:id` | export.GetJob |
 | GET | `/api/v1/activities` | activity.ListActivities |
+| GET | `/api/v1/activities/:id` | activity.GetActivity |
+| GET | `/api/v1/system-logs` | apilog.List |
+| GET | `/api/v1/system-logs/:id` | apilog.GetLog |
+| GET | `/api/v1/alerts` | alert.List |
+| GET | `/api/v1/alerts/:id` | alert.Get |
+| GET | `/api/v1/notifications/rules` | notification.List |
+| PUT | `/api/v1/notifications/rules/:id` | notification.Update |
 
 ---
 
@@ -588,7 +630,7 @@ internal/server/
 
 ## 9. Testing Map
 
-### 9.1. Unit Tests (16 modul)
+### 9.1. Unit Tests (65 test files, 209 `Test*` functions)
 
 | Modul | File Test | Lines | Fokus |
 |-------|-----------|-------|-------|
@@ -609,7 +651,9 @@ internal/server/
 | transaction | service_test.go, usecase_test.go | 360 | BalanceDeltas, all 4 types |
 | wallet | usecase_test.go | 201 | CRUD, type validation |
 
-### 9.2. Integration Tests (20 file, 33 test functions)
+### 9.2. Integration Tests (31 server files; 72 DB/server/debt integration `Test*` functions)
+
+The table below highlights high-value integration coverage. It is representative, not a complete inventory of every current test file.
 
 | File | Test Function(s) | Skenario Kunci |
 |------|-------------------|----------------|

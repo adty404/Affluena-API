@@ -1,10 +1,73 @@
-# Seed Data for Frontend Integration
+# Seed Data for Frontend and QA Integration
 
-Currently, there is no automated Go or SQL seed script integrated into the Affluena API environment setup. The recommended approach for staging and frontend integration is to use the provided Postman collection to quickly bootstrap testing data.
+Affluena-API now includes an idempotent Go seed command for local frontend review and QA exploration.
+
+## Automated Demo Seed
+
+Start PostgreSQL/API dependencies, then run:
+
+```bash
+docker compose up -d
+make seed
+```
+
+`make seed` builds and runs `cmd/seed/main.go`. The command uses `DATABASE_URL`, then `AFFLUENA_API_TEST_DATABASE_URL`, and finally falls back to:
+
+```text
+postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
+```
+
+The seed deletes any existing demo user with the same email, then recreates a fresh data set.
+
+Login credentials:
+
+```text
+Email:    demo@affluena.com
+Password: password123
+```
+
+Seeded data:
+
+- 3 wallets: cash, bank, and e-wallet.
+- 9 categories: 3 income and 6 expense.
+- 2 tags.
+- 10 transactions: 2 income, 7 expense, 1 transfer.
+- 4 category budgets for the current month.
+- 1 payable debt.
+- 1 subscription.
+- 1 installment.
+- 1 recurring rule.
+- 1 financial goal with a goal wallet.
+- 1 quick entry template.
+
+## Stable Demo Identifiers
+
+The seed uses fixed UUIDs for core lookup data so local UI and QA checks can be deterministic.
+
+| UUID | Type | Name |
+|------|------|------|
+| `22222222-2222-2222-2222-222222220001` | Wallet | Cash Wallet |
+| `22222222-2222-2222-2222-222222220002` | Wallet | BCA Primary |
+| `22222222-2222-2222-2222-222222220003` | Wallet | GoPay |
+| `33333333-3333-3333-3333-333333330001` | Income category | Salary |
+| `33333333-3333-3333-3333-333333330002` | Income category | Freelance |
+| `33333333-3333-3333-3333-333333330003` | Income category | Loan Repayment |
+| `44444444-4444-4444-4444-444444440001` | Expense category | Food & Dining |
+| `44444444-4444-4444-4444-444444440002` | Expense category | Transportation |
+| `44444444-4444-4444-4444-444444440003` | Expense category | Entertainment |
+| `44444444-4444-4444-4444-444444440004` | Expense category | Bills & Utilities |
+| `44444444-4444-4444-4444-444444440005` | Expense category | Shopping |
+| `44444444-4444-4444-4444-444444440006` | Expense category | Loan Given |
+| `55555555-5555-5555-5555-555555550001` | Tag | #BaliTrip |
+| `55555555-5555-5555-5555-555555550002` | Tag | #MonthlyBill |
+
+The seeded quick entry template is `Daily Coffee`; it stores `wallet_id=22222222-2222-2222-2222-222222220003` and `category_id=44444444-4444-4444-4444-444444440001`, which resolve to `GoPay` and `Food & Dining`.
+
+## Manual Postman Bootstrap
 
 ## Bootstrap Recommendations
 
-Until a `scripts/seed-dev.go` is implemented, follow these steps to seed an empty database using Postman:
+Use the Postman collection when you need custom test data instead of the standard demo seed:
 
 1. **Create Dev User**:
    - Open the Postman collection.
@@ -40,10 +103,7 @@ Until a `scripts/seed-dev.go` is implemented, follow these steps to seed an empt
    - Use the remaining endpoints in Postman (Budgets, Debts, Installments, Recurring, Goals) utilizing the UUIDs generated from steps 2-5.
 
 ## Expected Initial State
-After completing the above, the `/api/v1/dashboard/summary` should reflect:
-- Total Net Worth: `9,950,000`
-- Cashflow: `+9,950,000` (Income 10m - Expense 50k)
-- 3 Wallets with varying balances.
+After running `make seed`, `/api/v1/dashboard/summary` should show non-empty wallet, cashflow, budget, debt, tracker, recurring, and goal data for `demo@affluena.com`. The exact monthly values depend on the current date because the seed uses `time.Now()` for current-month transactions and due dates.
 
 ## Shared Wallet Scenario
 If testing shared wallets:

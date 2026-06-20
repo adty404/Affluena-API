@@ -2,6 +2,8 @@
 
 This document provides a testing checklist for QA and Frontend engineers to ensure that the Affluena UI adheres to the backend's strict business rules.
 
+Current automated E2E coverage lives in `Affluena-QA`: 79 Playwright spec files with 189 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings. Use this matrix as the business-rule checklist; use `Affluena-QA/tests/**` as the executable suite.
+
 ## Foundation & Auth
 | Flow | Action | Expected Result | Edge Cases |
 |------|--------|-----------------|------------|
@@ -36,7 +38,7 @@ This document provides a testing checklist for QA and Frontend engineers to ensu
 | **Create Budget**| Submit budget for Category A | 201 Created. | Duplicate category budget in same month rejected. |
 | **Expense vs Budget**| Submit personal expense in Category A| Dashboard/Budget view shows budget utilized. | - |
 | **Shared Wallet Budget**| Shared member submits expense in Category A| Owner's personal budget is NOT decremented. | Budgets are isolated to personal categories. |
-| **Alerts** | Expense exceeds budget limit | Alert generated in Activity Log. | - |
+| **Alerts** | Expense exceeds budget limit | Alert is visible through budget alerts and the unified alerts feed. | - |
 
 ## Debt
 | Flow | Action | Expected Result | Edge Cases |

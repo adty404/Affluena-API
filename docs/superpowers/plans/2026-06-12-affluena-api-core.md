@@ -1,5 +1,7 @@
 # Affluena-API Core API Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. The API now includes the core slice plus profile/session settings, shared wallets, tags, budgets, trackers, recurring, debts, goals, reports, export jobs, alerts, notifications, activity, and system logs. Use `../../API_CONTRACT.md`, `../../system_map.md`, and `../../../README.md` for current context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the first usable Affluena-API backend slice: auth, wallet, category, transaction, and quick entry APIs.

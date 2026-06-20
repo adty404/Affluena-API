@@ -1,6 +1,6 @@
 # Frontend API Mapping
 
-This document maps the proposed frontend routes/pages (Stage 1-10) to the existing Affluena API endpoints.
+This document maps the current Affluena-WEB routes/pages to the Affluena API endpoints implemented in `internal/server/router.go`.
 
 | Frontend Route/Page | UI Action | Backend Endpoint | Method | Request Source | Response Data Needed | Loading State | Error State | Notes |
 |---------------------|-----------|------------------|--------|----------------|----------------------|---------------|-------------|-------|
@@ -66,7 +66,7 @@ This document maps the proposed frontend routes/pages (Stage 1-10) to the existi
 | `/recurring/:id` | View recur | `/api/v1/recurring-transactions/:id` | GET | path param | `recurring` | skeleton | 404 page | - |
 | `/recurring/:id/edit` | Update recur | `/api/v1/recurring-transactions/:id` | PUT | form data | `recurring` | disable btn | inline error | - |
 | `/recurring/:id/run` | Manual run | `/api/v1/recurring-transactions/:id/run`| POST | empty body | `transaction` | disable btn | inline error | - |
-| `/recurring/:id/history`| View history | `/api/v1/transactions` | GET | query param | `resource array` | list skeleton | empty state | **Available via existing endpoint**: Filter txns by `source=recurring` (needs frontend correlation) |
+| `/recurring/:id/history`| View history | `/api/v1/recurring-transactions/:id` | GET | path param | `recurring` | list skeleton | empty state | Current API returns the rule and manual-run endpoint response; there is no separate list-runs endpoint yet, so the page renders an empty DataTable until run history is exposed. |
 | **Goals** | | | | | | | | |
 | `/goals` | List goals | `/api/v1/goals` | GET | none | `[...]` array | grid skeleton | empty state | Array, no pagination metadata |
 | `/goals/new` | Create goal | `/api/v1/goals` | POST | form data | `goal` | disable btn | inline error | - |

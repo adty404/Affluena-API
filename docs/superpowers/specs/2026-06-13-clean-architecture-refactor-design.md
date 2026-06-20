@@ -1,5 +1,7 @@
 # Clean Architecture Refactor Design
 
+> **Current status (2026-06-20):** Historical design artifact. The API now follows the package-per-feature layered style documented in `../../system_map.md` and `../../../AGENTS.md`; it is not a strict textbook Clean Architecture rewrite.
+
 ## Goal
 
 Refactor Affluena-API's backend modules one by one toward Clean Architecture while preserving API routes, request/response JSON, database schema, and business behavior.

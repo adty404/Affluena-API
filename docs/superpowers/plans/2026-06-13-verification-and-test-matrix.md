@@ -1,5 +1,7 @@
 # Verification and Test Matrix Implementation Plan
 
+> **Current status (2026-06-20):** Historical implementation plan. The current verification gate is `make verify` via `scripts/verify.sh`; the current suite has 65 Go test files and 209 `Test*` functions. Use `../../system_map.md` and `../../../AGENTS.md` for current verification context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Expand Affluena-API's test suite around financial invariants, user isolation, and cross-module data integrity, then add a single `make verify` gate for pre-commit and pre-push checks.
