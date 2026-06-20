@@ -95,6 +95,62 @@ This document serves as the primary contract for frontend integration (React UI/
 - `GET /api/v1/category-budgets/:id`
 - `PUT /api/v1/category-budgets/:id` - `{ limit_minor }`
 - `DELETE /api/v1/category-budgets/:id`
+- `GET /api/v1/category-budgets/alerts?month=YYYY-MM` - Get budget alerts for a specific month.
+  Response shape:
+  ```json
+  {
+    "alerts": [
+      {
+        "id": "string",
+        "budget_id": "string",
+        "category_id": "string",
+        "category_name": "string",
+        "title": "string",
+        "message": "string",
+        "threshold": 80,
+        "severity": "warning",
+        "usage_percent": 85.5,
+        "spent_minor": 85000,
+        "limit_minor": 100000,
+        "notified_at": "string",
+        "month": "string"
+      }
+    ]
+  }
+  ```
+- `GET /api/v1/category-budgets/report?month=YYYY-MM` - Get budget report for a specific month.
+  Response shape:
+  ```json
+  {
+    "report": [
+      {
+        "id": "string",
+        "user_id": "string",
+        "category_id": "string",
+        "month": "string",
+        "limit_minor": 100000,
+        "created_at": "string",
+        "updated_at": "string",
+        "spent_minor": 85000,
+        "remaining_minor": 15000,
+        "usage_percent": 85.5,
+        "variance_minor": 15000,
+        "daily_allowance_minor": 3225,
+        "recommendation": "string"
+      }
+    ],
+    "summary": {
+      "total_limit_minor": 100000,
+      "total_spent_minor": 85000,
+      "total_remaining_minor": 15000,
+      "safe_count": 1,
+      "warning_count": 0,
+      "exceeded_count": 0,
+      "daily_allowance_minor": 3225,
+      "forecast_minor": 95000
+    }
+  }
+  ```
 - *Note:* Budgets are personal. Shared wallet expenses by other members do not decrement the owner's personal category budget.
 
 ### Debt
@@ -136,13 +192,217 @@ This document serves as the primary contract for frontend integration (React UI/
 - `PUT /api/v1/goals/:id/members/:user_id/respond` - `{ status: "joined" }`.
 - *Note:* Collected amount is calculated from the goal wallet balance. Contributions are made via `POST /api/v1/transactions` with `type=transfer` and `to_wallet_id=<goal_wallet_id>`. There is no dedicated `/goals/:id/contribute` endpoint.
 
-### Reports / Export
+### Reports, Export & Jobs
 - `GET /api/v1/export/csv?from=2026-06-01T00:00:00Z&to=2026-06-30T23:59:59Z`
+- `GET /api/v1/export/jobs?limit=10&offset=0` - List export jobs.
+  Response shape:
+  ```json
+  {
+    "jobs": [
+      {
+        "id": "string",
+        "user_id": "string",
+        "format": "csv",
+        "from_at": "string",
+        "to_at": "string",
+        "row_count": 100,
+        "status": "completed",
+        "created_at": "string"
+      }
+    ],
+    "pagination": { "total": 1, "limit": 10, "offset": 0 }
+  }
+  ```
+- `GET /api/v1/export/jobs/:id` - Get export job detail.
+  Response shape:
+  ```json
+  {
+    "id": "string",
+    "user_id": "string",
+    "format": "csv",
+    "from_at": "string",
+    "to_at": "string",
+    "row_count": 100,
+    "status": "completed",
+    "created_at": "string"
+  }
+  ```
 - *Note:* `from` and `to` query parameters must be in valid RFC3339 format (e.g. `2026-06-01T00:00:00Z`).
-- *Note:* Response is raw CSV bytes, `Content-Type: text/csv`.
+- *Note:* Response for `/export/csv` is raw CSV bytes, `Content-Type: text/csv`.
+- *Note:* Triggering `/export/csv` now records an audit row in the `export_jobs` table with status "completed" or "failed".
+
+### Reports
+- `GET /api/v1/reports/income?month=YYYY-MM` - Get income report.
+- `GET /api/v1/reports/expense?month=YYYY-MM` - Get expense report.
+- `GET /api/v1/reports/cashflow?month=YYYY-MM` - Get cashflow report.
+- `GET /api/v1/reports/debt?month=YYYY-MM` - Get debt report.
+- `GET /api/v1/reports/goal?month=YYYY-MM` - Get goal report.
+- `GET /api/v1/reports/overview?month=YYYY-MM` - Get overview report.
+  Response shape:
+  ```json
+  {
+    "metrics": [
+      {
+        "id": "string",
+        "label": "string",
+        "value_minor": 100000,
+        "helper": "string",
+        "tone": "string"
+      }
+    ],
+    "rows": [
+      {
+        "id": "string",
+        "name": "string",
+        "category": "string",
+        "amount_minor": 100000,
+        "previous_amount_minor": 90000,
+        "change_percent": 11.1,
+        "wallet": "string",
+        "status": "healthy"
+      }
+    ]
+  }
+  ```
+- *Note:* Previous-period comparison is provided via `change_percent`. If the user has no data, empty arrays `[]` are returned instead of null.
 
 ### Activity
 - `GET /api/v1/activities` - Pagination list of user activities.
+- `GET /api/v1/activities/:id` - Get activity detail.
+  Response shape:
+  ```json
+  {
+    "id": "string",
+    "user_id": "string",
+    "action_type": "string",
+    "entity_type": "string",
+    "entity_id": "string",
+    "description": "string",
+    "created_at": "string"
+  }
+  ```
+
+### System Logs
+- `GET /api/v1/system-logs?limit=N` - List system logs.
+  Response shape:
+  ```json
+  {
+    "logs": [
+      {
+        "id": "string",
+        "method": "string",
+        "path": "string",
+        "status_code": 200,
+        "latency_ms": 15,
+        "client_ip": "string",
+        "user_agent": "string",
+        "user_id": "string",
+        "request_payload": "string",
+        "response_payload": "string",
+        "created_at": "string"
+      }
+    ]
+  }
+  ```
+- `GET /api/v1/system-logs/:id` - Get system log detail.
+  Response shape:
+  ```json
+  {
+    "id": "string",
+    "method": "string",
+    "path": "string",
+    "status_code": 200,
+    "latency_ms": 15,
+    "client_ip": "string",
+    "user_agent": "string",
+    "user_id": "string",
+    "request_payload": "string",
+    "response_payload": "string",
+    "created_at": "string"
+  }
+  ```
+
+### Alerts
+- `GET /api/v1/alerts?month=YYYY-MM` - Get alerts feed for a specific month.
+  Response shape:
+  ```json
+  {
+    "alerts": [
+      {
+        "id": "string",
+        "type": "budget",
+        "title": "string",
+        "module": "string",
+        "description": "string",
+        "severity": "warning",
+        "created_at": "string",
+        "action_path": "string"
+      }
+    ]
+  }
+  ```
+- `GET /api/v1/alerts/:id` - Get alert detail.
+  Response shape:
+  ```json
+  {
+    "id": "string",
+    "type": "budget",
+    "title": "string",
+    "module": "string",
+    "description": "string",
+    "severity": "warning",
+    "created_at": "string",
+    "action_path": "string"
+  }
+  ```
+- *Note:* Alerts are computed dynamically. They compose budget overruns (>=80% warning, >=100% danger), overdue payable debts, and recent recurring-run activities (last 24 hours).
+
+### Notifications
+- `GET /api/v1/notifications/rules` - Get notification rules.
+  Response shape:
+  ```json
+  {
+    "rules": [
+      {
+        "id": "string",
+        "user_id": "string",
+        "rule_key": "budget-alert",
+        "title": "string",
+        "description": "string",
+        "enabled": true,
+        "channel": "email",
+        "tone": "string",
+        "created_at": "string",
+        "updated_at": "string"
+      }
+    ]
+  }
+  ```
+- `PUT /api/v1/notifications/rules/:id` - Update notification rule.
+  Request body:
+  ```json
+  {
+    "enabled": true,
+    "channel": "email"
+  }
+  ```
+  Response shape:
+  ```json
+  {
+    "id": "string",
+    "user_id": "string",
+    "rule_key": "budget-alert",
+    "title": "string",
+    "description": "string",
+    "enabled": true,
+    "channel": "email",
+    "tone": "string",
+    "created_at": "string",
+    "updated_at": "string"
+  }
+  ```
+- *Note:* The system lazy-seeds 5 default rules for each user: `budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, and `weekly-summary`.
+- *Note:* Supported channels are `email`, `in-app`, and `both`.
 
 ## HTTP Status Codes
 - `200 OK` - Success, reading data, or updates.
