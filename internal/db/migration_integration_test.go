@@ -3,11 +3,75 @@ package db
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestMigrateSerializesConcurrentRunners(t *testing.T) {
+	databaseURL := os.Getenv("AFFLUENA_API_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("AFFLUENA_API_TEST_DATABASE_URL is not set")
+	}
+
+	ctx := context.Background()
+	adminPool, err := Open(ctx, databaseURL)
+	if err != nil {
+		t.Fatalf("open integration database: %v", err)
+	}
+	t.Cleanup(adminPool.Close)
+
+	schemaName := "migration_lock_" + time.Now().UTC().Format("20060102150405000000000")
+	schemaIdent := pgx.Identifier{schemaName}.Sanitize()
+
+	if _, err := adminPool.Exec(ctx, `CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public`); err != nil {
+		t.Fatalf("create pgcrypto extension: %v", err)
+	}
+	if _, err := adminPool.Exec(ctx, `CREATE SCHEMA `+schemaIdent); err != nil {
+		t.Fatalf("create isolated migration schema: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = adminPool.Exec(context.Background(), `DROP SCHEMA IF EXISTS `+schemaIdent+` CASCADE`)
+	})
+
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		t.Fatalf("parse integration database URL: %v", err)
+	}
+	config.MaxConns = 4
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, `SET search_path TO `+schemaIdent+`, public`)
+		return err
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		t.Fatalf("open isolated migration pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	const runners = 4
+	errs := make(chan error, runners)
+	var wg sync.WaitGroup
+	for range runners {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := Migrate(ctx, pool, integrationMigrationsDir()); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent migrate: %v", err)
+	}
+}
 
 func TestOwnershipForeignKeysExist(t *testing.T) {
 	pool := openMigrationIntegrationPool(t)
