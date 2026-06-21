@@ -2,6 +2,8 @@
 
 This project uses GitHub Actions for deployment to the VPS.
 
+For the complete beginner-friendly manual deploy and CI/CD guide, read [`DEPLOYMENT_VPS_STEP_BY_STEP.md`](DEPLOYMENT_VPS_STEP_BY_STEP.md).
+
 Important: GitHub secrets are created one by one. Do not create one big secret that contains all values.
 
 ## 1. Where To Add Secrets
