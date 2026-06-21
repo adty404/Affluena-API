@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.6 — 20 Juni 2026
-> **Total Go Code:** ~23.950 baris (170 file `.go`) | **Test Code:** ~10.320 baris (65 file `*_test.go`)
+> **Versi:** v2.7 — 21 Juni 2026
+> **Go Files:** 172 total (105 source + 67 test) | **Source Code:** ~13.640 baris | **Test Code:** ~10.540 baris
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
@@ -12,6 +12,7 @@
 graph TB
     subgraph Client["🌐 Client Layer"]
         WEB["Affluena-WEB React App"]
+        MOBILE["Affluena Mobile App (Flutter companion)"]
         Postman["Postman / cURL"]
     end
 
@@ -76,6 +77,8 @@ graph TB
     ACTIVITY --> PG
 ```
 
+**Client consumer note:** API ini adalah kontrak bersama untuk web dashboard dan Flutter mobile companion. Web tetap cocok untuk dashboard besar, audit, report, export, dan admin-like workflows. Mobile companion diposisikan untuk daily flows: login/session, dashboard ringkas, quick entry, transaksi, wallets, categories, notification rules, dan profile/security.
+
 ---
 
 ## 2. Peta Modul (27 Paket Internal)
@@ -95,35 +98,35 @@ graph TB
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **auth** | `internal/auth/` | 6 src + 2 test | 469 + 241 | Registrasi, login, refresh token (JWT HS256 + bcrypt). Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
-| **wallet** | `internal/wallet/` | 5 src + 1 test | 715 + 201 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. Access control: `AccessLevel`, `CheckOwnerAccess`, `CheckMemberAccess`. |
-| **category** | `internal/category/` | 4 src + 1 test | 490 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
-| **transaction** | `internal/transaction/` | 5 src + 3 test | 883 + 360 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
+| **auth** | `internal/auth/` | 6 src + 2 test | 870 + 287 | Registrasi, login, refresh token (JWT HS256 + bcrypt), forgot/reset password, profile, password change, dan session revocation. Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
+| **wallet** | `internal/wallet/` | 5 src + 2 test | 918 + 313 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. Access control: `AccessLevel`, `CheckOwnerAccess`, `CheckMemberAccess`, dan `AccessChecker` untuk shared-wallet-aware checks. |
+| **category** | `internal/category/` | 4 src + 1 test | 489 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
+| **transaction** | `internal/transaction/` | 5 src + 3 test | 982 + 376 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
 
 ### 2.3. Feature Modules
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **budget** | `internal/budget/` | 5 src + 2 test | 507 + 192 | Limit pengeluaran per kategori per bulan. Recursive CTE untuk hierarki. |
-| **debt** | `internal/debt/` | 5 src + 3 test | 946 + 500 | Hutang-piutang (payable/receivable) dengan disbursement & payment otomatis. Delete adalah soft-cancel (status → cancelled) untuk audit trail. |
-| **tracker** | `internal/tracker/` | 7 src + 2 test | 1180 + 388 | Cicilan (installment) & langganan (subscription). Status transitions. |
-| **recurring** | `internal/recurring/` | 6 src + 2 test | 970 + 254 | Transaksi berulang via native Go scheduler (weekly/monthly). `SKIP LOCKED`. |
-| **quickentry** | `internal/quickentry/` | 4 src + 1 test | 540 + 209 | Template transaksi instan satu-klik. Execute = buat transaksi sungguhan. |
-| **splitbill** | `internal/splitbill/` | 3 src | 228 | Macro endpoint — 1 request = 1 expense + N piutang (receivable debts). Mendukung full split (total split == amount) dan partial split. |
-| **goal** | `internal/goal/` | 4 src + 1 test | 518 + 146 | Target tabungan kolaboratif. Invite member → auto-create goal wallet. |
-| **tag** | `internal/tag/` | 4 src | 329 | Label lintas-kategori (Many-to-Many dengan transactions). |
+| **budget** | `internal/budget/` | 5 src + 2 test | 783 + 227 | Limit pengeluaran per kategori per bulan. Recursive CTE untuk hierarki. Alerts dan report membaca kategori turunan. |
+| **debt** | `internal/debt/` | 5 src + 3 test | 954 + 500 | Hutang-piutang (payable/receivable) dengan disbursement & payment otomatis. Delete adalah soft-cancel (status → cancelled) untuk audit trail. |
+| **tracker** | `internal/tracker/` | 7 src + 2 test | 1226 + 387 | Cicilan (installment) & langganan (subscription). Status transitions, `account_detail`, dan shared-wallet payments. |
+| **recurring** | `internal/recurring/` | 6 src + 2 test | 993 + 253 | Transaksi berulang via native Go scheduler (weekly/monthly). `SKIP LOCKED`, idempotency run rows, manual run endpoint. |
+| **quickentry** | `internal/quickentry/` | 4 src + 1 test | 555 + 209 | Template transaksi instan satu-klik. Execute = buat transaksi sungguhan. |
+| **splitbill** | `internal/splitbill/` | 3 src + 1 test | 219 + 108 | Macro endpoint — 1 request = 1 expense + N piutang (receivable debts). Mendukung full split (total split == amount) dan partial split. |
+| **goal** | `internal/goal/` | 4 src + 1 test | 576 + 153 | Target tabungan kolaboratif. Invite member → auto-create goal wallet. |
+| **tag** | `internal/tag/` | 4 src | 341 | Label lintas-kategori (Many-to-Many dengan transactions). |
 | **dashboard** | `internal/dashboard/` | 5 src | 613 | Summary, Cashflow Trend, Expense Distribution, Spend Forecast. |
-| **export** | `internal/export/` | 4 src | 235 | Ekspor transaksi ke file CSV. |
-| **report** | `internal/report/` | 4 src + 1 test | varies | Laporan income, expense, cashflow, debt, goal, dan overview. |
-| **notification** | `internal/notification/` | 4 src + 1 test | varies | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`). |
+| **export** | `internal/export/` | 4 src | 432 | Ekspor transaksi ke CSV dan audit `export_jobs`. |
+| **report** | `internal/report/` | 4 src + 2 test | 779 + 129 | Laporan income, expense, cashflow, debt, goal, dan overview. |
+| **notification** | `internal/notification/` | 4 src + 2 test | 230 + 197 | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`). |
 
 ### 2.4. Cross-Cutting Concerns
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **activity** | `internal/activity/` | 4 src + 1 test | 278 + 178 | Audit trail aktivitas user. Fire-and-forget goroutine (5s timeout). Description truncation (500 char), deduplication (5-min window). |
-| **apilog** | `internal/apilog/` | 3 src + 1 test | 198 + 108 | Middleware pencatatan HTTP request/response ke DB. Masking auth payload, sensitive field redaction, 32KB payload limit, skip response logging untuk export endpoints. |
-| **alert** | `internal/alert/` | 2 src + 1 test | 195 + 125 | Cek budget threshold (≥80%/≥100%) → kirim email peringatan. Deduplication via `sent_alerts` table prevents duplicate notifications. |
+| **activity** | `internal/activity/` | 4 src + 1 test | 357 + 202 | Audit trail aktivitas user. Fire-and-forget goroutine (5s timeout). Description truncation (500 char), deduplication (5-min window). |
+| **apilog** | `internal/apilog/` | 4 src + 1 test | 434 + 239 | Middleware pencatatan HTTP request/response ke DB. Masking auth payload, sensitive field redaction, 32KB payload limit, skip response logging untuk export endpoints. |
+| **alert** | `internal/alert/` | 6 src + 2 test | 579 + 378 | Budget alert feed dan email threshold (≥80%/≥100%). Deduplication via `sent_alerts` table prevents duplicate notifications. |
 | **mailer** | `internal/mailer/` | 1 src | 61 | Interface `Mailer` + implementasi `SMTPMailer` (net/smtp). |
 
 ---
@@ -138,6 +141,7 @@ graph LR
         page
         httpx
         caldate
+        async
     end
 
     subgraph Core["Core Domain"]
@@ -158,6 +162,8 @@ graph LR
         tag
         dashboard
         export
+        report
+        notification
     end
 
     subgraph Cross["Cross-Cutting"]
@@ -216,9 +222,13 @@ graph LR
     tag --> activity
     dashboard --> httpx
     export -.-> httpx
+    export --> page
+    report --> httpx
+    notification --> httpx
 
     %% Cross-cutting deps
     transaction --> alert
+    activity --> async
     alert --> budget
     alert --> mailer
     alert --> page
@@ -330,7 +340,9 @@ erDiagram
 
 | File | Deskripsi |
 |------|-----------|
-| `scripts/seed.sql` | Seeder dummy data komprehensif (Wallets, Transactions, Debts, Subscriptions, dll) untuk testing frontend |
+| `cmd/seed` | Seeder Go idempotent untuk demo user `demo@affluena.com`, fixed UUID demo wallets/categories/tags, transaksi, budget, debt, subscription, installment, recurring rule, goal, dan quick entry template. |
+| `scripts/seed.sql` | Seeder SQL dummy data komprehensif untuk testing frontend/manual DB fixture. |
+| `scripts/verify.sh` | Full verification gate yang dipanggil oleh `make verify`. |
 
 ---
 
@@ -630,28 +642,33 @@ internal/server/
 
 ## 9. Testing Map
 
-### 9.1. Unit Tests (65 test files, 209 `Test*` functions)
+### 9.1. Automated Tests (67 test files, 213 `Test*` functions)
 
 | Modul | File Test | Lines | Fokus |
 |-------|-----------|-------|-------|
-| activity | usecase_test.go | 178 | Goroutine safety, EntityID copy |
-| alert | usecase_test.go | 125 | Threshold 80%/100%, mock mailer |
-| apilog | middleware_test.go | 108 | Masking, health check skip |
-| auth | middleware_test.go, service_test.go | 241 | JWT validation, registration, login |
-| budget | service_test.go, usecase_test.go | 192 | UsageSummary calc, month parsing |
+| activity | usecase_test.go | 202 | Goroutine safety, EntityID copy |
+| alert | feed_usecase_test.go, usecase_test.go | 378 | Alert feed, threshold 80%/100%, mock mailer, sent alert dedup |
+| apilog | middleware_test.go | 239 | Masking, health check skip, payload capture |
+| async | async_test.go | 39 | SafeGo panic recovery |
+| auth | middleware_test.go, service_test.go | 287 | JWT validation, registration, login, profile/session flows |
+| budget | service_test.go, usecase_test.go | 227 | UsageSummary calc, month parsing, budget report |
 | caldate | month_test.go | 33 | Clamping (Jan 31→Feb 28) |
 | category | usecase_test.go | 267 | Hierarchy depth, cycle detection |
-| config | config_test.go | 59 | Env var parsing, defaults |
-| debt | service_test.go, usecase_test.go | 362 | ApplyPayment, ResolveStatus, overpayment |
-| goal | usecase_test.go | 146 | Create, invite, respond |
-| httpx | context_test.go, request_test.go, response_test.go, ratelimit_test.go | 147 | UserID context, bind, error mapping, UUID validation, rate limiting |
+| config | config_test.go | 108 | Env var parsing, defaults, validation |
+| db | migration_integration_test.go | 367 | Migration constraints and DB invariants |
+| debt | repository_integration_test.go, service_test.go, usecase_test.go | 500 | ApplyPayment, ResolveStatus, overpayment, repository lifecycle |
+| goal | usecase_test.go | 153 | Create, invite, respond |
+| httpx | context_test.go, param_test.go, request_test.go, response_test.go, ratelimit_test.go | 371 | UserID context, bind, error mapping, UUID validation, rate limiting |
+| notification | handler_test.go, usecase_test.go | 197 | Rule list/update, defaults, channel validation |
 | quickentry | usecase_test.go | 209 | Template validation, execute |
-| recurring | service_test.go, usecase_test.go | 254 | AdvanceNextRunAt, NextState |
-| tracker | service_test.go, usecase_test.go | 388 | Installment plan validation, payment |
-| transaction | service_test.go, usecase_test.go | 360 | BalanceDeltas, all 4 types |
-| wallet | usecase_test.go | 201 | CRUD, type validation |
+| recurring | service_test.go, usecase_test.go | 253 | AdvanceNextRunAt, NextState |
+| report | handler_test.go, usecase_test.go | 129 | Report handlers and month-scoped aggregation behavior |
+| splitbill | usecase_test.go | 108 | Split validation and participant share behavior |
+| tracker | service_test.go, usecase_test.go | 387 | Installment plan validation, payment |
+| transaction | service_test.go, usecase_test.go, test_helpers_test.go | 376 | BalanceDeltas, all 4 types |
+| wallet | access_test.go, usecase_test.go | 313 | CRUD, type validation, access helper behavior |
 
-### 9.2. Integration Tests (31 server files; 72 DB/server/debt integration `Test*` functions)
+### 9.2. Integration Tests (31 server files; 73 DB/server/debt integration `Test*` functions)
 
 The table below highlights high-value integration coverage. It is representative, not a complete inventory of every current test file.
 
@@ -772,6 +789,7 @@ sequenceDiagram
 11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
 12. **UUID Path Parameters** — Gunakan `httpx.GetUUIDParam()` untuk validasi UUID dari path parameters. Menulis 400 error otomatis jika format invalid.
 13. **Rate Limiting** — Endpoint auth (`/auth/*`) dilindungi oleh `AuthLimiter` (5 req/s, burst 10). Gunakan `APILimiter` untuk endpoint lain jika diperlukan.
+14. **Shared API Contract** — Jangan membuat kontrak endpoint khusus web atau khusus mobile tanpa kebutuhan nyata. Web React dan Flutter companion harus memakai `/api/v1` contract yang sama agar behavior, pagination, auth, dan error handling tetap konsisten.
 
 ---
 
@@ -780,3 +798,4 @@ sequenceDiagram
 Fitur berikut masih dalam status pengembangan atau tertunda (*pending*):
 
 1. **Due Date Reminders** — *Background scheduler* harian untuk memeriksa `subscriptions` dan `installments` yang aktif, lalu mengirimkan email pengingat (via `mailer` module) tepat **H-3** sebelum jatuh tempo.
+2. **Flutter Mobile Companion** — First-class mobile consumer untuk daily flows. Prioritas API usage: auth/session, dashboard summary, quick entry, wallets, categories, transactions, notification rules, profile/password, dan eventually push/biometric-adjacent session policy. Jangan tambah endpoint mobile-specific sebelum ada gap kontrak yang terbukti dari app flow.
