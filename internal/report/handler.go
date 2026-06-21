@@ -1,16 +1,28 @@
 package report
 
 import (
+	"context"
 	"net/http"
+
+	"affluena-api/internal/httpx"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	uc *UseCase
+	uc reportUseCase
 }
 
-func NewHandler(uc *UseCase) *Handler {
+type reportUseCase interface {
+	IncomeReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+	ExpenseReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+	CashflowReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+	DebtReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+	GoalReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+	OverviewReport(ctx context.Context, userID string, monthStr string) (ReportResponse, error)
+}
+
+func NewHandler(uc reportUseCase) *Handler {
 	return &Handler{uc: uc}
 }
 
@@ -20,7 +32,7 @@ func (h *Handler) Income(c *gin.Context) {
 
 	resp, err := h.uc.IncomeReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -33,7 +45,7 @@ func (h *Handler) Expense(c *gin.Context) {
 
 	resp, err := h.uc.ExpenseReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -46,7 +58,7 @@ func (h *Handler) Cashflow(c *gin.Context) {
 
 	resp, err := h.uc.CashflowReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -59,7 +71,7 @@ func (h *Handler) Debt(c *gin.Context) {
 
 	resp, err := h.uc.DebtReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -72,7 +84,7 @@ func (h *Handler) Goal(c *gin.Context) {
 
 	resp, err := h.uc.GoalReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -85,7 +97,7 @@ func (h *Handler) Overview(c *gin.Context) {
 
 	resp, err := h.uc.OverviewReport(c.Request.Context(), userID, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 

@@ -13,17 +13,33 @@ import (
 )
 
 type mockRepo struct {
-	lastLog APILog
+	saved chan APILog
+}
+
+func newMockRepo() *mockRepo {
+	return &mockRepo{saved: make(chan APILog, 1)}
 }
 
 func (m *mockRepo) SaveLog(ctx context.Context, logEntry APILog) error {
-	m.lastLog = logEntry
+	m.saved <- logEntry
 	return nil
+}
+
+func (m *mockRepo) waitLog(t *testing.T) APILog {
+	t.Helper()
+
+	select {
+	case logEntry := <-m.saved:
+		return logEntry
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for api log")
+		return APILog{}
+	}
 }
 
 func TestAPILogMiddleware_CapturesPayloads(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -39,21 +55,20 @@ func TestAPILogMiddleware_CapturesPayloads(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Wait for async goroutine to finish
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
-	if repo.lastLog.RequestPayload == nil || *repo.lastLog.RequestPayload != `{"key":"value"}` {
-		t.Errorf("expected request payload `{\"key\":\"value\"}`, got %v", repo.lastLog.RequestPayload)
+	if logEntry.RequestPayload == nil || *logEntry.RequestPayload != `{"key":"value"}` {
+		t.Errorf("expected request payload `{\"key\":\"value\"}`, got %v", logEntry.RequestPayload)
 	}
 
-	if repo.lastLog.ResponsePayload == nil || *repo.lastLog.ResponsePayload != `{"status":"ok"}` {
-		t.Errorf("expected response payload `{\"status\":\"ok\"}`, got %v", repo.lastLog.ResponsePayload)
+	if logEntry.ResponsePayload == nil || *logEntry.ResponsePayload != `{"status":"ok"}` {
+		t.Errorf("expected response payload `{\"status\":\"ok\"}`, got %v", logEntry.ResponsePayload)
 	}
 }
 
 func TestAPILogMiddleware_MasksPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -69,16 +84,16 @@ func TestAPILogMiddleware_MasksPassword(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
-	if repo.lastLog.RequestPayload == nil || *repo.lastLog.RequestPayload != `{"masked": true}` {
-		t.Errorf("expected masked request payload, got %v", repo.lastLog.RequestPayload)
+	if logEntry.RequestPayload == nil || *logEntry.RequestPayload != `{"masked": true}` {
+		t.Errorf("expected masked request payload, got %v", logEntry.RequestPayload)
 	}
 }
 
 func TestAPILogMiddleware_MasksAuthResponseTokens(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -98,19 +113,19 @@ func TestAPILogMiddleware_MasksAuthResponseTokens(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
-	if repo.lastLog.ResponsePayload == nil {
+	if logEntry.ResponsePayload == nil {
 		t.Fatal("expected response payload to be captured")
 	}
-	if *repo.lastLog.ResponsePayload != `{"masked": true}` {
-		t.Fatalf("expected masked auth response payload, got %s", *repo.lastLog.ResponsePayload)
+	if *logEntry.ResponsePayload != `{"masked": true}` {
+		t.Fatalf("expected masked auth response payload, got %s", *logEntry.ResponsePayload)
 	}
 }
 
 func TestAPILogMiddleware_LargeRequestBodyPassthrough(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -131,24 +146,24 @@ func TestAPILogMiddleware_LargeRequestBodyPassthrough(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
 	if handlerReadSize != largePayloadSize {
 		t.Errorf("handler read %d bytes, expected %d", handlerReadSize, largePayloadSize)
 	}
 
-	if repo.lastLog.RequestPayload == nil {
+	if logEntry.RequestPayload == nil {
 		t.Fatal("expected request payload to be logged as truncated")
 	}
 	expectedTruncated := `{"truncated": true, "reason": "payload exceeds log limit"}`
-	if *repo.lastLog.RequestPayload != expectedTruncated {
-		t.Errorf("expected %s, got %s", expectedTruncated, *repo.lastLog.RequestPayload)
+	if *logEntry.RequestPayload != expectedTruncated {
+		t.Errorf("expected %s, got %s", expectedTruncated, *logEntry.RequestPayload)
 	}
 }
 
 func TestAPILogMiddleware_ExportResponseSkip(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -165,20 +180,20 @@ func TestAPILogMiddleware_ExportResponseSkip(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
 	if w.Body.Len() != largeResponseSize {
 		t.Errorf("client received %d bytes, expected %d", w.Body.Len(), largeResponseSize)
 	}
 
-	if repo.lastLog.ResponsePayload != nil {
-		t.Errorf("expected response payload to be nil (skipped) for export path, got %s", *repo.lastLog.ResponsePayload)
+	if logEntry.ResponsePayload != nil {
+		t.Errorf("expected response payload to be nil (skipped) for export path, got %s", *logEntry.ResponsePayload)
 	}
 }
 
 func TestAPILogMiddleware_ExactBoundaryRequestBodyPassthrough(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	repo := &mockRepo{}
+	repo := newMockRepo()
 
 	router := gin.New()
 	router.Use(APILogMiddleware(repo))
@@ -199,18 +214,18 @@ func TestAPILogMiddleware_ExactBoundaryRequestBodyPassthrough(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	time.Sleep(50 * time.Millisecond)
+	logEntry := repo.waitLog(t)
 
 	if handlerReadSize != exactPayloadSize {
 		t.Errorf("handler read %d bytes, expected %d", handlerReadSize, exactPayloadSize)
 	}
 
-	if repo.lastLog.RequestPayload == nil {
+	if logEntry.RequestPayload == nil {
 		t.Fatal("expected request payload to be logged")
 	}
 	// It should NOT be truncated, so it should equal the exact body string
 	expectedPayload := string(exactBody)
-	if *repo.lastLog.RequestPayload != expectedPayload {
+	if *logEntry.RequestPayload != expectedPayload {
 		t.Errorf("expected exact payload logged, but it was truncated or altered")
 	}
 }

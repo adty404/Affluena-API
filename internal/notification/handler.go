@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -25,7 +24,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	rules, err := h.uc.List(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
@@ -46,21 +45,13 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var update NotificationRuleUpdate
 	if err := c.ShouldBindJSON(&update); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	rule, err := h.uc.Update(c.Request.Context(), userID, id, update)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		if err.Error() == "invalid channel" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		httpx.WriteError(c, err)
 		return
 	}
 
