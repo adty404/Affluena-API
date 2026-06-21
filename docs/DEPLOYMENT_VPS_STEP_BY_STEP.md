@@ -37,6 +37,46 @@ Pastikan sudah punya:
 
 Jangan pernah kirim private key ke chat. Jika private key pernah terlanjur dikirim ke tempat publik atau chat, anggap key itu bocor dan buat key baru.
 
+## 0.1 Pilih Pakai IP atau Domain
+
+Kamu bisa deploy dengan IP dulu. Domain tidak wajib untuk awal.
+
+Jika belum punya domain, pakai IP:
+
+| Kebutuhan | Isi dengan |
+| --- | --- |
+| URL browser | `http://VPS_PUBLIC_IP` |
+| Health check publik | `http://VPS_PUBLIC_IP/healthz` |
+| API base URL untuk Web | `http://VPS_PUBLIC_IP` |
+| `CORS_ALLOWED_ORIGINS` API | `http://VPS_PUBLIC_IP` |
+| Nginx `server_name` | `_` |
+| Certbot/HTTPS | Skip dulu |
+
+Jika sudah punya domain, pakai domain:
+
+| Kebutuhan | Isi dengan |
+| --- | --- |
+| URL browser | `https://your-domain.com` |
+| Health check publik | `https://your-domain.com/healthz` |
+| API base URL untuk Web | `https://your-domain.com` |
+| `CORS_ALLOWED_ORIGINS` API | `https://your-domain.com` |
+| Nginx `server_name` | `your-domain.com` |
+| Certbot/HTTPS | Jalankan setelah DNS mengarah ke VPS |
+
+Untuk CI/CD Web, nilai ini disimpan di GitHub repository variable:
+
+```text
+VITE_API_BASE_URL=http://VPS_PUBLIC_IP
+```
+
+atau jika sudah pakai domain:
+
+```text
+VITE_API_BASE_URL=https://your-domain.com
+```
+
+Catatan penting: `VITE_API_BASE_URL` dibaca saat `npm run build`. Jika build dilakukan oleh GitHub Actions, yang dipakai adalah GitHub repository variable. Jika build manual di VPS, yang dipakai adalah `.env.production` di VPS.
+
 ## 1. Buka Firewall Provider dan UFW
 
 Di dashboard provider VPS, buka inbound rules:
@@ -562,12 +602,41 @@ Affluena-API/.github/workflows/deploy.yml
 Affluena-WEB/.github/workflows/deploy.yml
 ```
 
+Jadi kamu tidak perlu membuat workflow baru dari GitHub UI. Yang perlu dilakukan adalah memastikan file workflow sudah ada di repo, lalu menyiapkan secrets, variable, SSH key, dan permission VPS.
+
 Alur CI/CD:
 
 1. Push ke `master`.
 2. API workflow menjalankan test, vet, build, lalu deploy API ke VPS.
 3. Web workflow menjalankan test dan build di GitHub Actions, lalu upload `dist` ke VPS.
 4. Telegram mengirim notifikasi jika secret Telegram diisi.
+
+Checklist CI/CD:
+
+| Item | Tempat | Wajib? | Keterangan |
+| --- | --- | --- | --- |
+| `.github/workflows/deploy.yml` API | Repo `Affluena-API` | Wajib | Sudah ada di repo. Menjalankan test, build, deploy API, dan notif Telegram. |
+| `.github/workflows/deploy.yml` Web | Repo `Affluena-WEB` | Wajib | Sudah ada di repo. Menjalankan test, build, upload `dist`, reload Nginx, dan notif Telegram. |
+| SSH deploy key | Local + VPS + GitHub Secrets | Wajib | Public key masuk `authorized_keys`, private key masuk secret `VPS_SSH_KEY`. |
+| Repository secrets API | GitHub repo `Affluena-API` | Wajib | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PORT`, `VPS_DEPLOY_ROOT`. |
+| Repository secrets Web | GitHub repo `Affluena-WEB` | Wajib | Sama seperti API. |
+| Repository variable Web | GitHub repo `Affluena-WEB` | Wajib | `VITE_API_BASE_URL`. |
+| Docker permission | VPS | Wajib | User deploy harus bisa menjalankan `docker ps`. |
+| Nginx reload permission | VPS | Wajib untuk Web | User deploy harus bisa menjalankan `sudo -n nginx -t` dan `sudo -n systemctl reload nginx`. |
+| Telegram secrets | Kedua repo | Opsional | `TELEGRAM_BOT_TOKEN` dan `TELEGRAM_CHAT_ID`. |
+
+Urutan setup CI/CD yang aman:
+
+1. Pastikan manual deploy API dan Web sudah bisa diakses lewat IP atau domain.
+2. Buat SSH deploy key khusus CI/CD.
+3. Tambahkan public key ke VPS.
+4. Tes SSH dari local memakai key baru.
+5. Buat GitHub repository secrets satu per satu di `Affluena-API`.
+6. Buat GitHub repository secrets satu per satu di `Affluena-WEB`.
+7. Buat GitHub repository variable `VITE_API_BASE_URL` di `Affluena-WEB`.
+8. Prepare permission Docker dan Nginx di VPS.
+9. Run workflow API dulu.
+10. Jika API sukses, run workflow Web.
 
 ## 16. Buat SSH Deploy Key Khusus CI/CD
 
