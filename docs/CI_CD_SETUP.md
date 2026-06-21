@@ -22,19 +22,19 @@ Create these secrets one by one in the `Affluena-API` repository.
 
 | Name | Secret value example | Notes |
 | --- | --- | --- |
-| `VPS_HOST` | `123.123.123.123` | VPS public IP only. Do not include `http://` or `https://`. |
+| `VPS_HOST` | `203.0.113.10` | VPS public IP only. Do not include `http://` or `https://`. |
 | `VPS_USER` | `ubuntu` | SSH user on the VPS. |
 | `VPS_SSH_KEY` | `-----BEGIN OPENSSH PRIVATE KEY----- ...` | Full private deploy key, including begin/end lines. |
 | `VPS_PORT` | `22` | SSH port. Optional, but recommended to set. |
 | `VPS_DEPLOY_ROOT` | `/opt/affluena` | App root on the VPS. Optional, but recommended to set. |
-| `TELEGRAM_BOT_TOKEN` | `123456:ABC...` | Optional. Bot token from `@BotFather`. |
-| `TELEGRAM_CHAT_ID` | `-1001234567890` | Optional. Telegram group/channel/user chat id. |
+| `TELEGRAM_BOT_TOKEN` | `<telegram bot token>` | Optional. Bot token from `@BotFather`. |
+| `TELEGRAM_CHAT_ID` | `<telegram chat id>` | Optional. Telegram group/channel/user chat id. |
 
 Example form input:
 
 ```text
 Name: VPS_HOST
-Secret: 123.123.123.123
+Secret: 203.0.113.10
 ```
 
 Then click `Add secret`, and create the next one:
@@ -52,13 +52,13 @@ Create these secrets one by one in the `Affluena-WEB` repository too.
 
 | Name | Secret value example | Notes |
 | --- | --- | --- |
-| `VPS_HOST` | `123.123.123.123` | VPS public IP only. Do not include `http://` or `https://`. |
+| `VPS_HOST` | `203.0.113.10` | VPS public IP only. Do not include `http://` or `https://`. |
 | `VPS_USER` | `ubuntu` | SSH user on the VPS. |
 | `VPS_SSH_KEY` | `-----BEGIN OPENSSH PRIVATE KEY----- ...` | Full private deploy key, including begin/end lines. |
 | `VPS_PORT` | `22` | SSH port. Optional, but recommended to set. |
 | `VPS_DEPLOY_ROOT` | `/opt/affluena` | App root on the VPS. Optional, but recommended to set. |
-| `TELEGRAM_BOT_TOKEN` | `123456:ABC...` | Optional. Bot token from `@BotFather`. |
-| `TELEGRAM_CHAT_ID` | `-1001234567890` | Optional. Telegram group/channel/user chat id. |
+| `TELEGRAM_BOT_TOKEN` | `<telegram bot token>` | Optional. Bot token from `@BotFather`. |
+| `TELEGRAM_CHAT_ID` | `<telegram chat id>` | Optional. Telegram group/channel/user chat id. |
 
 ## 4. Affluena-WEB Repository Variable
 
@@ -70,13 +70,13 @@ Repository -> Settings -> Secrets and variables -> Actions -> Variables -> New r
 
 | Name | Value example | Notes |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://123.123.123.123` | Use the VPS IP first. Change to `https://your-domain.com` after domain and HTTPS are ready. |
+| `VITE_API_BASE_URL` | `http://203.0.113.10` | Use the VPS IP first. Change to `https://your-domain.com` after domain and HTTPS are ready. |
 
 Example form input:
 
 ```text
 Name: VITE_API_BASE_URL
-Value: http://123.123.123.123
+Value: http://203.0.113.10
 ```
 
 ## 5. Telegram Chat ID

@@ -15,9 +15,9 @@ Ganti semua placeholder berikut dengan data milikmu:
 
 | Placeholder | Contoh | Keterangan |
 | --- | --- | --- |
-| `VPS_PUBLIC_IP` | `43.133.147.101` | IP publik VPS. |
+| `VPS_PUBLIC_IP` | `203.0.113.10` | IP publik VPS. Ini contoh IP dokumentasi, ganti dengan IP VPS asli milikmu. |
 | `VPS_USER` | `ubuntu` | User SSH VPS. |
-| `your-domain.com` | `affluena.com` | Domain, opsional. |
+| `your-domain.com` | `example.com` | Domain, opsional. |
 
 Label command:
 
@@ -700,7 +700,7 @@ Contoh form pertama:
 
 ```text
 Name: VPS_HOST
-Secret: 43.133.147.101
+Secret: 203.0.113.10
 ```
 
 Klik `Add secret`, lalu buat secret berikutnya.
@@ -888,14 +888,14 @@ Settings -> Secrets and variables -> Actions -> Secrets -> Repository secrets
 `VPS_HOST` harus IP saja:
 
 ```text
-43.133.147.101
+203.0.113.10
 ```
 
 Jangan:
 
 ```text
-http://43.133.147.101/
-ubuntu@43.133.147.101
+http://203.0.113.10/
+ubuntu@203.0.113.10
 ```
 
 ### SSH `Permission denied (publickey)`
