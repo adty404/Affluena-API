@@ -47,6 +47,9 @@ type UpdateGoalInput struct {
 	Name              string     `json:"name" binding:"required"`
 	TargetAmountMinor int64      `json:"target_amount_minor" binding:"required,gt=0"`
 	Deadline          *time.Time `json:"deadline" binding:"required"`
+	// Status is optional. When provided it transitions the goal lifecycle
+	// (active/achieved/cancelled); when omitted the current status is kept.
+	Status string `json:"status" binding:"omitempty,oneof=active achieved cancelled"`
 }
 
 type InviteMemberInput struct {

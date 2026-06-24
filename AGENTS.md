@@ -180,6 +180,7 @@ Current notable API decisions:
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` returns spend forecasting and overbudget warnings.
 - Subscriptions accept and return optional `account_detail`.
 - `POST /api/v1/goals`, `GET /api/v1/goals`, `GET /api/v1/goals/:id`, `POST /api/v1/goals/:id/members`, and `PUT /api/v1/goals/:id/members/:user_id/respond` implement financial goals and invitations. Contributions to goals are made via `transfer` transactions to the goal wallet.
+- `PUT /api/v1/goals/:id` updates name/target/deadline and accepts an optional `status` (`active`/`achieved`/`cancelled`) to transition the goal lifecycle. The owner-only update writes status via `COALESCE`, so a status-less update preserves the current value; invalid status values are rejected with 400.
 
 ## Database Migration Rules
 
