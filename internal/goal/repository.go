@@ -54,12 +54,17 @@ func (r *Repository) CreateWithOwnerWallet(ctx context.Context, userID string, i
 
 func (r *Repository) Update(ctx context.Context, userID string, id string, input UpdateGoalInput) (Goal, error) {
 	var goal Goal
+	var status *string
+	if input.Status != "" {
+		status = &input.Status
+	}
 	err := r.pool.QueryRow(ctx, `
 		UPDATE goals
-		SET name = $3, target_amount_minor = $4, deadline = $5, updated_at = now()
+		SET name = $3, target_amount_minor = $4, deadline = $5,
+		    status = COALESCE($6, status), updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, created_at, updated_at
-	`, userID, id, input.Name, input.TargetAmountMinor, input.Deadline).Scan(
+	`, userID, id, input.Name, input.TargetAmountMinor, input.Deadline, status).Scan(
 		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {

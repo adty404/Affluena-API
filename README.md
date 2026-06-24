@@ -200,7 +200,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `POST /api/v1/goals`
 - `GET /api/v1/goals`
 - `GET /api/v1/goals/:id`
-- `PUT /api/v1/goals/:id`
+- `PUT /api/v1/goals/:id` (accepts an optional `status` of `active`, `achieved`, or `cancelled` to transition the goal lifecycle; omit it to keep the current status)
 - `POST /api/v1/goals/:id/members`
 - `PUT /api/v1/goals/:id/members/:user_id/respond`
 
