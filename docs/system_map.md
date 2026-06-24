@@ -1,6 +1,6 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.7 — 21 Juni 2026
+> **Versi:** v2.8 — 24 Juni 2026
 > **Go Files:** 172 total (105 source + 67 test) | **Source Code:** ~13.640 baris | **Test Code:** ~10.540 baris
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
@@ -82,6 +82,8 @@ graph TB
 ---
 
 ## 2. Peta Modul (27 Paket Internal)
+
+> Tabel di bawah merinci **26 paket domain/infrastruktur**. Paket ke-27 adalah `internal/server` — composition root (dependency injection + route registration di `router.go`) sekaligus rumah seluruh integration test; pola dan isinya dijelaskan di [§8 Pola Arsitektur Per-Modul](#8-pola-arsitektur-per-modul) dan [§9 Testing Map](#9-testing-map).
 
 ### 2.1. Infrastruktur & Utilitas
 
@@ -295,7 +297,7 @@ erDiagram
 | 12 | `subscriptions` | id, user_id, name, wallet_id, category_id, amount_minor, billing_cycle, next_due_date, status, account_detail | CHECK status ∈ {active,paused,cancelled} |
 | 13 | `recurring_transaction_rules` | id, user_id, name, type, wallet_id, frequency, interval_count, next_run_at, end_at, status | Partial index on active+due, CHECK status ∈ {active,paused,cancelled} |
 | 14 | `recurring_transaction_runs` | id, rule_id, user_id, scheduled_for, transaction_id, run_type | UNIQUE(rule_id, scheduled_for) — idempotency guard |
-| 15 | `debts` | id, user_id, type, counterparty_name, wallet_id, principal/paid_amount_minor, status | CHECK paid ≤ principal, CHECK type ∈ {receivable,payable} |
+| 15 | `debts` | id, user_id, type, counterparty_name, wallet_id, principal/paid_amount_minor, status | CHECK paid ≤ principal, CHECK type ∈ {receivable,payable}, CHECK status ∈ {open,partial,paid_off,cancelled} |
 | 16 | `debt_payments` | id, user_id, debt_id, transaction_id, amount_minor, paid_at | CASCADE on debt delete |
 | 17 | `goals` | id, user_id, name, target_amount_minor, deadline, status | CHECK target > 0, CHECK status ∈ {active,achieved,cancelled} |
 | 18 | `goal_members` | goal_id, user_id, status | PK(goal_id, user_id), CHECK status ∈ {pending,joined,rejected} |
