@@ -72,7 +72,7 @@ The application is configured via environment variables. Copy `.env.example` to 
 - The application will fail to start if `JWT_SECRET` is unset, empty, too short, or uses the default placeholder
 
 **Migration Safety Note:**
-The internal migration runner (`internal/db/migrate.go`) is currently basic and sufficient for MVP/Development environments. However, for Production environments, it lacks advanced safety mechanisms such as checksum validation, dirty-state handling, and migration locking. It is highly recommended to integrate tools like `golang-migrate`, `goose`, `tern`, or `atlas` for production deployments.
+The internal migration runner (`internal/db/migrate.go`) is currently basic and sufficient for MVP/Development environments. It is forward-only (no down migrations) and serializes concurrent runners via a `pg_advisory_lock` (`migrate.go:23`). However, for Production environments it still lacks advanced safety mechanisms such as checksum validation and dirty-state handling. In particular, applied migrations are tracked by version only (`migrate.go:48`), so editing an already-applied migration file is **silently skipped** rather than detected — never modify a migration that has already run; always add a new one. It is highly recommended to integrate tools like `golang-migrate`, `goose`, `tern`, or `atlas` for production deployments.
 
 ## Verify
 
