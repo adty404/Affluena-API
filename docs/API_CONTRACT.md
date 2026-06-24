@@ -81,7 +81,7 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - `DELETE /api/v1/transactions/:id`
 - `POST /api/v1/transactions/split` - `{ wallet_id, category_id, total_amount_minor, transaction_at, note, tag_ids, splits: [{ counterparty_name, amount_minor, disbursement_category_id, payment_category_id }] }`
 - *Note:* `type` must be `income`, `expense`, `transfer`, or `adjustment`. Adjustments fix balance drifts. Transfers require `to_wallet_id`. Category belongs to the user regardless of shared wallet.
-- *Split Bill Rules:* Parent transaction uses `total_amount_minor`, decreasing wallet balance by the total bill. Splits create `payable`/`receivable` debts. Full split is valid if total split == total amount. Over split is invalid. Transaction amount cannot be 0.
+- *Split Bill Rules:* Parent transaction uses `total_amount_minor`, decreasing wallet balance by the total bill. Each split creates a `receivable` debt (the participant owes the user). Full split is valid if total split == total amount. Over split is invalid. Transaction amount cannot be 0.
 
 ### Quick Entry
 - `POST /api/v1/quick-entry-templates` - `{ name, type, amount_minor, category_id, wallet_id, to_wallet_id, note, tag_ids }`
@@ -205,7 +205,7 @@ This document serves as the primary contract for the Affluena web app, QA suite,
       {
         "id": "string",
         "user_id": "string",
-        "format": "csv",
+        "format": "CSV",
         "from_at": "string",
         "to_at": "string",
         "row_count": 100,
@@ -222,7 +222,7 @@ This document serves as the primary contract for the Affluena web app, QA suite,
   {
     "id": "string",
     "user_id": "string",
-    "format": "csv",
+    "format": "CSV",
     "from_at": "string",
     "to_at": "string",
     "row_count": 100,
