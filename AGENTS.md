@@ -190,6 +190,13 @@ Current notable API decisions:
 - Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), sent alerts (`000020`), wallet display metadata (`000021`), user profile fields (`000022`), password reset tokens (`000023`), export jobs (`000024`), and notification rules (`000025`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
+## Known Tech Debt
+
+These are tracked, intentionally-deferred issues. They are **not** live bugs today — do not "fix" them with a large unprompted refactor, but be aware when touching the area.
+
+- **HTTP status mapping is partly string-based** (`internal/httpx/response.go`). `WriteError` resolves status via typed sentinels/`PublicError` **and** fragile fallbacks that match error message text (e.g. `strings.Contains(msg, "already exists") -> 409`, prefix `"invalid" -> 400`). Today the messages happen to contain the matched substrings so statuses are correct, but **changing an error's wording can silently change its HTTP status**. When adding errors, prefer wrapping a sentinel (`fmt.Errorf("...: %w", httpx.ErrValidation)`) or returning `httpx.NewPublicError(msg, status)` directly rather than relying on the text fallback. Long-term fix: make sentinels the sole contract and delete the string fallbacks (~160 call sites; do incrementally).
+- **Shared-wallet access check is duplicated, not centralized.** The composite FKs that used to enforce ownership at the DB level are intentionally dropped for shared wallets (migrations `000012`, `000016`-`000019`); access is re-enforced in app code. Only the `transaction` module uses the canonical `wallet.AccessChecker`. The owner-or-joined-member SQL predicate is copy-pasted across `transaction/repository.go`, `tracker/repository_helpers.go`, `quickentry/repository.go`, and `recurring/repository.go`. All current write paths to a shared wallet funnel through `transaction/repository.go applyDeltas` (scoped to owner-or-member, returns `pgx.ErrNoRows` on 0 rows), so there is **no known cross-user write hole** — but a new module that forgets the predicate would create one. **Invariant for any new shared-wallet write path: validate access via the canonical checker (or the same SQL predicate) before mutating balances.** Optional hardening: extract one shared predicate, and/or add a DB-level CHECK/trigger as defense-in-depth.
+
 ## Git Rules
 
 Before staging:
