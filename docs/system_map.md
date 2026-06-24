@@ -87,7 +87,7 @@ graph TB
 
 | Modul | Lokasi | Deskripsi | Dependensi |
 |-------|--------|-----------|------------|
-| **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 16 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
+| **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 18 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
 | **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (25 file SQL). | pgx |
 | **page** | `internal/page/` | Struct generik `Result[T]` untuk pagination (`limit`, `offset`, `total`). | stdlib |
 | **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `GetUUIDParam`, `ParsePage`, `BindOptionalJSON`, `WriteError` (error mapping), `Error`, `JSON`, `InternalError`, `PublicError`, `RateLimiter` (auth/API rate limiting). | page, gin, golang.org/x/time/rate |
@@ -553,12 +553,11 @@ Status: open → partial → paid_off (otomatis saat paid == principal)
 ```
 POST /api/v1/transactions/split
   │
-  ├─ 1. Validasi: sum(splits) < total_amount
-  ├─ 2. Hitung user_share = total - sum(splits)
-  ├─ 3. BEGIN TX
-  │     ├─ Buat 1x Expense transaction (user_share)
+  ├─ 1. Validasi: sum(splits) <= total_amount (over-split ditolak; full split sum == total valid)
+  ├─ 2. BEGIN TX
+  │     ├─ Buat 1x Expense transaction senilai total_amount (user bayar penuh di depan)
   │     └─ Buat Nx Debt(receivable) per split participant
-  └─ 4. COMMIT
+  └─ 3. COMMIT
 ```
 
 ### 6.4. Recurring Scheduler Flow
@@ -668,7 +667,7 @@ internal/server/
 | transaction | service_test.go, usecase_test.go, test_helpers_test.go | 376 | BalanceDeltas, all 4 types |
 | wallet | access_test.go, usecase_test.go | 313 | CRUD, type validation, access helper behavior |
 
-### 9.2. Integration Tests (31 server files; 73 DB/server/debt integration `Test*` functions)
+### 9.2. Integration Tests (31 server files; 73 DB/server/debt `Test*` functions run by `make verify`)
 
 The table below highlights high-value integration coverage. It is representative, not a complete inventory of every current test file.
 
@@ -727,6 +726,8 @@ make verify
 | `SMTP_USER` | (kosong) | SMTP username |
 | `SMTP_PASS` | (kosong) | SMTP password |
 | `SMTP_FROM` | noreply@affluena.com | Alamat pengirim email |
+| `AUTH_RATE_LIMIT_RPS` | 5 | Rate limit auth endpoint (request per detik) |
+| `AUTH_RATE_LIMIT_BURST` | 10 | Burst size rate limit auth endpoint |
 
 ---
 
@@ -778,7 +779,7 @@ sequenceDiagram
 
 1. **Isolasi User** — Setiap resource yang dimiliki user harus di-scope via `user_id`. User A TIDAK BOLEH mengakses data User B.
 2. **Konsistensi Saldo** — Setiap operasi yang melibatkan uang harus menggunakan PostgreSQL Transaction (BEGIN/COMMIT). Saldo wallet harus selalu akurat.
-3. **Pagination Seragam** — Semua endpoint list mengembalikan `{collection, pagination}` dengan `limit/offset/sort`.
+3. **Pagination Seragam** — Semua endpoint list mengembalikan `{collection, pagination}` dengan `limit/offset/sort`. _Pengecualian:_ `GET /api/v1/goals` mengembalikan JSON array polos tanpa metadata pagination (lihat `internal/goal/handler.go`); kedua client (WEB & MOBILE) sudah menangani bentuk ini secara khusus.
 4. **Testing Wajib** — Setiap perubahan business logic harus disertai unit test + integration test. `make verify` harus lolos sebelum commit.
 5. **Conventional Commits** — Format: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`.
 6. **Monetary Values** — Disimpan sebagai `int64` minor units (misal: Rp 50.000 = `50000`).

@@ -2,7 +2,7 @@
 
 This document provides a testing checklist for QA and Frontend engineers to ensure that the Affluena UI adheres to the backend's strict business rules.
 
-Current automated E2E coverage lives in `Affluena-QA`: 79 Playwright spec files with 189 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings. Use this matrix as the business-rule checklist; use `Affluena-QA/tests/**` as the executable suite.
+Current automated E2E coverage lives in `Affluena-QA`: 81 Playwright spec files with 196 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings. Use this matrix as the business-rule checklist; use `Affluena-QA/tests/**` as the executable suite.
 
 ## Foundation & Auth
 | Flow | Action | Expected Result | Edge Cases |
@@ -17,8 +17,8 @@ Current automated E2E coverage lives in `Affluena-QA`: 79 Playwright spec files 
 |------|--------|-----------------|------------|
 | **Create Wallet**| Submit valid wallet data | 201 Created. Initial balance is 0. | `type="goal"` is explicitly rejected (400). |
 | **Update Wallet**| Edit name or type | 200 OK. | Balance cannot be modified directly via PUT. |
-| **Delete Wallet**| Delete empty wallet | 200 OK. Wallet is soft-deleted. | Non-empty wallet deletion may fail depending on constraint logic. |
-| **Share Wallet** | Invite another user via email | 200 OK. Invite created. | Self-invite rejected. Non-existent user rejected. |
+| **Delete Wallet**| Delete empty wallet | 204 No Content. Wallet is hard-deleted. | Non-empty wallet deletion may fail depending on constraint logic. |
+| **Share Wallet** | Invite another user via email | 201 Created. Invite created. | Self-invite rejected. Non-existent user rejected. |
 | **Accept Share** | Member accepts invite | 200 OK. Member can now see and use wallet. | - |
 | **Cross-User Auth**| Try accessing another user's wallet| 403 Forbidden or 404 Not Found. | IDs manipulated in URL/Request payload. |
 
