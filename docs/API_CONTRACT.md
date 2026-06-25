@@ -7,7 +7,9 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - **Base URL (Local)**: `http://localhost:8080`
 - **API Prefix**: `/api/v1`
 - **Auth Scheme**: Bearer Token (`Authorization: Bearer <access_token>`)
-- **Rate Limits (Auth)**: Defaults to 5 req/s with a burst of 10. `429 Too Many Requests` is returned if exceeded.
+- **Rate Limits (Auth)**: Defaults to 5 req/s with a burst of 10 per IP on `/auth/*`. The authenticated API is additionally protected per-IP at 100 req/s, burst 200. `429 Too Many Requests` is returned if exceeded.
+- **Security Headers**: Every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` (plus `Strict-Transport-Security` in production).
+- **CSV Export Safety**: Cells beginning with `= + - @` (or a leading tab/CR) are prefixed with `'` to neutralize spreadsheet formula injection.
 - **Content Type**: `application/json` for both requests and responses (except export endpoints).
 - **Money Format**: Integer minor units (e.g., IDR 1.000 = `1000`).
 - **Date/Time Format**: ISO 8601 strings (e.g., `2024-01-01T15:04:05Z`).
@@ -33,11 +35,11 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - `POST /api/v1/auth/refresh` - `{ refresh_token }` -> `{ user: { id, email, created_at, updated_at }, tokens: { access_token, refresh_token } }`
 - `GET /api/v1/auth/me` - Profile data -> `{ user: { id, email, created_at, updated_at } }`
 - `PUT /api/v1/auth/account` - Update account -> `{ name, avatar_url }` -> `{ user }`
-- `PUT /api/v1/auth/password` - Change password -> `{ current_password, new_password }`
+- `PUT /api/v1/auth/password` - Change password -> `{ current_password, new_password }` -> `200 { user, tokens: { access_token, refresh_token } }`. **Revokes all existing sessions** and returns a fresh token pair for the calling device. Clients MUST persist the returned tokens (the old access/refresh tokens are now invalid).
 - `GET /api/v1/auth/sessions` - List sessions -> `{ sessions: [...] }`
 - `DELETE /api/v1/auth/sessions/:session_id` - Revoke session
 - `POST /api/v1/auth/forgot-password` - `{ email }` -> 204
-- `POST /api/v1/auth/reset-password` - `{ token, new_password }` -> 204
+- `POST /api/v1/auth/reset-password` - `{ token, new_password }` -> 204. **Revokes all existing sessions** for the user (forces re-login on every device).
 - *Note:* Logout is handled client-side (token deletion). Session revocation is available via `DELETE /api/v1/auth/sessions/:id`.
 
 ### Dashboard

@@ -2,7 +2,7 @@
 
 This document provides a testing checklist for QA and Frontend engineers to ensure that the Affluena UI adheres to the backend's strict business rules.
 
-Current automated E2E coverage lives in `Affluena-QA`: 81 Playwright spec files with 196 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings. Use this matrix as the business-rule checklist; use `Affluena-QA/tests/**` as the executable suite.
+Current automated E2E coverage lives in `Affluena-QA`: 85 Playwright spec files with 198 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, settings, and security. Use this matrix as the business-rule checklist; use `Affluena-QA/tests/**` as the executable suite.
 
 ## Foundation & Auth
 | Flow | Action | Expected Result | Edge Cases |
@@ -11,6 +11,16 @@ Current automated E2E coverage lives in `Affluena-QA`: 81 Playwright spec files 
 | **Login** | Valid credentials | 200 OK. Returns access and refresh tokens. | Wrong password throws 401. |
 | **Protected Route**| Access without token | 401 Unauthorized. | Missing Bearer header. |
 | **Token Refresh**| Refresh using valid refresh token| 200 OK. New token pair generated. | Expired refresh token returns 401. |
+| **Change Password**| `PUT /auth/password` with valid current password | 200 OK. Returns `{ user, tokens }`. **All other sessions revoked**; client persists the new pair. | Old/other refresh tokens now 401. Wrong current → 401. Weak new → 400. |
+| **Reset Password**| `POST /auth/reset-password` with valid token | 204. **All sessions revoked** (re-login required everywhere). | Invalid/expired token → 400. |
+
+## Security (OWASP)
+| Flow | Action | Expected Result | Edge Cases |
+|------|--------|-----------------|------------|
+| **Security Headers**| Any API response | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, CSP `default-src 'none'`. | HSTS present only in production. |
+| **Auth Rate Limit**| Burst of auth requests from one IP | `429 Too Many Requests` once burst exceeded. | Default 5 req/s, burst 10 per IP. |
+| **CSV Injection**| Export note/wallet/category starting with `=`/`+`/`-`/`@` | Cell prefixed with `'` (inert text). | Defends spreadsheet formula execution. |
+| **Session Revocation**| Change password, then refresh with an old token | Old + other-device refresh tokens return 401; only the freshly issued pair works. | - |
 
 ## Wallet & Permissions
 | Flow | Action | Expected Result | Edge Cases |

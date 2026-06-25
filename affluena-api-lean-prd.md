@@ -26,6 +26,12 @@ Autentikasi dikelola secara independen di dalam _backend_ Affluena-API.
 
 - **Fitur:** _Register_, _Login_, dan pelindungan _endpoint_ menggunakan JWT (JSON Web Tokens).
 - **Use Case:** Pengguna melakukan _login_ dengan _email_ dan _password_. Server memvalidasi _hash_ (menggunakan _bcrypt_), lalu menerbitkan _Access Token_ dan _Refresh Token_ untuk menjaga sesi tetap aktif di PWA.
+- **OWASP Hardening:** Selaras dengan OWASP Top 10:
+  - JWT algoritma di-pin (HS256), refresh & reset token `crypto/rand` disimpan sebagai SHA-256, password di-hash `bcrypt`.
+  - **Ganti/reset password merevoke seluruh sesi**; ganti password mengembalikan token pair baru untuk device aktif.
+  - Rate limiting per-IP pada `/auth/*` (5 req/s) dan seluruh API ter-autentikasi (100 req/s) → `429`.
+  - Security headers di setiap response (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, CSP) + HSTS di production; CORS menolak wildcard saat credentials aktif.
+  - Ekspor CSV dilindungi dari formula injection; payload auth di-mask di log; fail-fast bila `JWT_SECRET` default/lemah atau `sslmode=disable` di production.
 
 ### 3.2. Wallet & Multi-Asset Management
 
