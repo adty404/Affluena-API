@@ -44,7 +44,8 @@ Sistem mendukung lebih dari satu dompet dengan tipe aset yang berbeda untuk mela
 
 Manajemen mutasi masuk, keluar, dan penyesuaian saldo.
 
-- **Fitur:** CRUD transaksi mencakup nominal, _wallet_id_, _category_id_, tanggal, dan catatan tambahan.
+- **Fitur:** CRUD transaksi mencakup nominal, _wallet_id_, _category_id_, `transaction_at` (timestamp RFC3339 lengkap: tanggal **dan** jam), dan catatan tambahan.
+- **Backdate & Time-of-Day:** `transaction_at` adalah timestamp RFC3339 penuh yang merekam tanggal sekaligus waktu (jam/menit), sehingga transaksi dapat dicatat mundur (_backdate_) maupun untuk tanggal di masa depan, bukan terbatas pada "sekarang" atau tengah malam. Dukungan ini berlaku konsisten di seluruh titik input transaksi: pembuatan/penyuntingan transaksi, eksekusi _Quick Entry_, _Split Bill_, dan penyesuaian saldo dompet (_adjustment_). Klien mengirim waktu lokal yang dipilih ter-normalisasi ke UTC.
 - **Category Hierarchy:** Kategori dapat memiliki `parent_id` hingga 3 level. Parent kategori harus dimiliki user yang sama dan memiliki tipe yang sama (`income` dengan `income`, `expense` dengan `expense`), serta tidak boleh membentuk siklus.
 - **Quick Entry:** _Endpoint_ khusus untuk transaksi instan berdasarkan _template_.
 - **Use Case:** Eksekusi _template_ pengeluaran rutin dalam satu klik, seperti biaya tol dan transportasi _commute_ rute Tambun - SCBD, atau pengeluaran makan siang standar.

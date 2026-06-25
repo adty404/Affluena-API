@@ -35,12 +35,14 @@ Current automated E2E coverage lives in `Affluena-QA`: 85 Playwright spec files 
 ## Transactions
 | Flow | Action | Expected Result | Edge Cases |
 |------|--------|-----------------|------------|
-| **Create Income**| Submit `transaction_at`, `note` to Wallet A | Wallet A balance increases by amount. | - |
-| **Create Expense**| Submit `transaction_at`, `note` from Wallet A | Wallet A balance decreases by amount. | - |
-| **Transfer** | Transfer A -> B | Wallet A decreases, Wallet B increases. | Requires `to_wallet_id`. Must own both wallets. |
-| **Adjustment** | Adjust Wallet A | Calculates difference and creates adjustment transaction. | - |
-| **Split Bill** | Split expense | Debt generated automatically. `origination_transaction_id` is an internal flow. | Split total must equal transaction amount. |
+| **Create Income**| Submit `transaction_at`, `note` to Wallet A | Wallet A balance increases by amount. | `transaction_at` is a full RFC3339 timestamp (date AND time-of-day). Backdated and future-dated values accepted. |
+| **Create Expense**| Submit `transaction_at`, `note` from Wallet A | Wallet A balance decreases by amount. | Same `transaction_at` rules: RFC3339 date+time, backdate/future allowed. Edit (PUT) accepts the same. |
+| **Transfer** | Transfer A -> B | Wallet A decreases, Wallet B increases. | Requires `to_wallet_id`. Must own both wallets. `transaction_at` is RFC3339 date+time; backdate/future allowed. |
+| **Adjustment** | Adjust Wallet A | Calculates difference and creates adjustment transaction. | Adjustment transaction stamps `transaction_at` (RFC3339 date+time); backdate/future allowed via the picker. |
+| **Split Bill** | Split expense | Debt generated automatically. `origination_transaction_id` is an internal flow. | Split total must equal transaction amount. `transaction_at` is RFC3339 date+time; backdate/future allowed. |
 | **Data Isolation**| Submit expense to unowned wallet| 403 Forbidden. | - |
+
+> **`transaction_at` is a full RFC3339 timestamp (date AND time-of-day).** Every transaction entry point — create/edit, transfer, adjustment, split-bill, and quick-entry execute — accepts any date, so backdating and future-dating are supported and the picked time-of-day is preserved. Clients send the local datetime normalized to UTC (e.g. `DateTime.toUtc().toIso8601String()`); the API parses it as RFC3339. Values are not coerced to date-only or midnight.
 
 ## Budget
 | Flow | Action | Expected Result | Edge Cases |

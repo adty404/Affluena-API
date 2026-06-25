@@ -76,12 +76,12 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - `DELETE /api/v1/tags/:id`
 
 ### Transaction
-- `POST /api/v1/transactions` - `{ type, amount_minor, transaction_at, note, wallet_id, to_wallet_id, category_id, tag_ids }`
+- `POST /api/v1/transactions` - `{ type, amount_minor, transaction_at, note, wallet_id, to_wallet_id, category_id, tag_ids }`. `transaction_at` is a full RFC3339 timestamp (date **and** time-of-day, e.g. `2024-01-01T15:04:05Z`). Any date is accepted, so transactions may be backdated or future-dated. Clients should send the local datetime normalized to UTC.
 - `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`. `from`/`to` accept `YYYY-MM-DD` or RFC3339 (both normalized to day granularity; `to` is inclusive). `category_id` matches the category **and all its descendants** (subtree).
 - `GET /api/v1/transactions/:id`
-- `PUT /api/v1/transactions/:id` - Fields same as POST.
+- `PUT /api/v1/transactions/:id` - Fields same as POST (including the full date+time `transaction_at`, which may be backdated or future-dated).
 - `DELETE /api/v1/transactions/:id`
-- `POST /api/v1/transactions/split` - `{ wallet_id, category_id, total_amount_minor, transaction_at, note, tag_ids, splits: [{ counterparty_name, amount_minor, disbursement_category_id, payment_category_id }] }` -> `{ transaction_id, debt_ids }`. Creates one expense transaction for the full amount plus one receivable debt per participant (linked via `debts.origination_transaction_id`).
+- `POST /api/v1/transactions/split` - `{ wallet_id, category_id, total_amount_minor, transaction_at, note, tag_ids, splits: [{ counterparty_name, amount_minor, disbursement_category_id, payment_category_id }] }` -> `{ transaction_id, debt_ids }`. Creates one expense transaction for the full amount plus one receivable debt per participant (linked via `debts.origination_transaction_id`). `transaction_at` is a full RFC3339 date+time and may be backdated or future-dated.
 - `GET /api/v1/split-bills` - List split bills aggregated per origination transaction. Param `status=ongoing|settled` (omit for all). Item: `{ transaction_id, note, total_amount_minor, transaction_at, participant_count, settled_count, total_owed_minor, total_remaining_minor, status }`. A split is `ongoing` while any participant debt is `open`/`partial`, else `settled`.
 - `GET /api/v1/split-bills/:transaction_id` - Split bill detail: the summary fields plus `participants: [{ debt_id, counterparty_name, principal_amount_minor, paid_amount_minor, remaining_amount_minor, status, due_date }]`.
 - *Note:* `type` must be `income`, `expense`, `transfer`, or `adjustment`. Adjustments fix balance drifts. Transfers require `to_wallet_id`. Category belongs to the user regardless of shared wallet.
@@ -93,7 +93,7 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - `GET /api/v1/quick-entry-templates/:id`
 - `PUT /api/v1/quick-entry-templates/:id`
 - `DELETE /api/v1/quick-entry-templates/:id`
-- `POST /api/v1/quick-entry-templates/:id/execute` - `{ transaction_at, note }` (Applies template directly into a new transaction.)
+- `POST /api/v1/quick-entry-templates/:id/execute` - `{ transaction_at, note }` (Applies template directly into a new transaction.) `transaction_at` is a full RFC3339 date+time; it may be backdated or future-dated rather than only "now".
 
 ### Budget
 - `POST /api/v1/category-budgets` - `{ category_id, limit_minor, month }`
