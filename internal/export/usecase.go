@@ -48,16 +48,30 @@ func (u *UseCase) GenerateCSVData(ctx context.Context, userID string, opts Expor
 			row.Type,
 			fmt.Sprintf("%d", row.AmountMinor),
 			row.TransactionAt.Format("2006-01-02T15:04:05Z07:00"), // RFC3339
-			row.Note,
-			row.WalletName,
-			row.ToWalletName,
-			row.CategoryName,
-			row.Tags,
+			sanitizeCSVCell(row.Note),
+			sanitizeCSVCell(row.WalletName),
+			sanitizeCSVCell(row.ToWalletName),
+			sanitizeCSVCell(row.CategoryName),
+			sanitizeCSVCell(row.Tags),
 			row.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		})
 	}
 
 	return csvData, nil
+}
+
+// sanitizeCSVCell defuses CSV formula injection: spreadsheet apps execute a cell
+// that begins with =, +, -, @, or a leading tab/CR. User-controlled text is
+// prefixed with a single quote so it is treated as literal text, not a formula.
+func sanitizeCSVCell(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
 }
 
 func (u *UseCase) RecordJob(ctx context.Context, userID string, format string, opts ExportOptions, rowCount int, status string) (ExportJob, error) {
