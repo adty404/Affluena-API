@@ -99,7 +99,7 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 
 ## Endpoints
 
-The current Gin router registers 100 routes including `GET /healthz`: 5 public auth routes and 94 protected API routes under `/api/v1`.
+The current Gin router registers 102 routes including `GET /healthz`: 5 public auth routes and 96 protected API routes under `/api/v1`.
 
 - `GET /healthz`
 - `POST /api/v1/auth/register`

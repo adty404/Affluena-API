@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -201,33 +202,65 @@ func (r *Repository) upcomingDebts(ctx context.Context, userID string, month tim
 	return debts, rows.Err()
 }
 
-func (r *Repository) CashflowTrend(ctx context.Context, userID string, months int) ([]CashflowTrend, error) {
-	// Generate months from N months ago to current month
-	// Group transactions by month
-	query := `
-		WITH RECURSIVE months AS (
-			SELECT date_trunc('month', CURRENT_DATE - interval '1 month' * ($2 - 1)) AS m
-			UNION ALL
-			SELECT m + interval '1 month'
-			FROM months
-			WHERE m < date_trunc('month', CURRENT_DATE)
+func (r *Repository) CashflowTrend(ctx context.Context, userID string, opts CashflowTrendOptions) ([]CashflowTrend, error) {
+	unit := "month"
+	interval := "1 month"
+	if opts.Granularity == GranularityWeek {
+		unit = "week"
+		interval = "1 week"
+	}
+
+	// Resolve the window. When an explicit range is given, use it; otherwise look
+	// back N months/weeks from today. We pass any date inside the first/last
+	// bucket and let SQL date_trunc snap to bucket boundaries so the generated
+	// buckets line up exactly with the FILTER's date_trunc.
+	now := time.Now().UTC()
+	var start, end time.Time
+	switch {
+	case !opts.From.IsZero() && !opts.To.IsZero():
+		start, end = opts.From, opts.To
+	case opts.Granularity == GranularityWeek:
+		weeks := opts.Weeks
+		if weeks <= 0 {
+			weeks = 8
+		}
+		end = now
+		start = now.AddDate(0, 0, -7*(weeks-1))
+	default:
+		months := opts.Months
+		if months <= 0 {
+			months = 6
+		}
+		end = now
+		start = now.AddDate(0, -(months - 1), 0)
+	}
+
+	// unit/interval come from a validated enum (month|week), never user free-text.
+	query := fmt.Sprintf(`
+		WITH buckets AS (
+			SELECT generate_series(
+				date_trunc('%[1]s', $2::timestamptz),
+				date_trunc('%[1]s', $3::timestamptz),
+				interval '%[2]s'
+			) AS b
 		)
-		SELECT 
-			to_char(m.m, 'YYYY-MM') AS month,
+		SELECT
+			to_char(buckets.b, 'YYYY-MM-DD') AS period_start,
 			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'income'), 0) AS income_minor,
 			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.type = 'expense'), 0) AS expense_minor
-		FROM months m
-		LEFT JOIN transactions t 
-			ON date_trunc('month', t.transaction_at AT TIME ZONE 'UTC') = m.m
+		FROM buckets
+		LEFT JOIN transactions t
+			ON date_trunc('%[1]s', t.transaction_at AT TIME ZONE 'UTC') = buckets.b
 			AND (
 				t.user_id = $1 OR
 				EXISTS (SELECT 1 FROM wallets w WHERE w.id = t.wallet_id AND w.user_id = $1) OR
 				t.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
 			)
-		GROUP BY m.m
-		ORDER BY m.m ASC
-	`
-	rows, err := r.pool.Query(ctx, query, userID, months)
+		GROUP BY buckets.b
+		ORDER BY buckets.b ASC
+	`, unit, interval)
+
+	rows, err := r.pool.Query(ctx, query, userID, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +269,15 @@ func (r *Repository) CashflowTrend(ctx context.Context, userID string, months in
 	var trends []CashflowTrend
 	for rows.Next() {
 		var t CashflowTrend
-		if err := rows.Scan(&t.Month, &t.IncomeMinor, &t.ExpenseMinor); err != nil {
+		if err := rows.Scan(&t.PeriodStart, &t.IncomeMinor, &t.ExpenseMinor); err != nil {
 			return nil, err
+		}
+		// Month keeps the legacy shape: YYYY-MM for month buckets, the week-start
+		// date for week buckets.
+		if unit == "month" && len(t.PeriodStart) >= 7 {
+			t.Month = t.PeriodStart[:7]
+		} else {
+			t.Month = t.PeriodStart
 		}
 		t.CashflowMinor = t.IncomeMinor - t.ExpenseMinor
 		trends = append(trends, t)

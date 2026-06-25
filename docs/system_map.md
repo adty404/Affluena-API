@@ -350,7 +350,7 @@ erDiagram
 
 ---
 
-## 5. API Route Map (100 Registered Routes)
+## 5. API Route Map (102 Registered Routes)
 
 ### 5.1. Public Routes (6)
 
@@ -363,7 +363,7 @@ erDiagram
 | POST | `/api/v1/auth/forgot-password` | auth.ForgotPassword | Request password reset |
 | POST | `/api/v1/auth/reset-password` | auth.ResetPassword | Complete password reset |
 
-### 5.2. Protected Routes (94) — Semua membutuhkan `Authorization: Bearer <token>`
+### 5.2. Protected Routes (96) — Semua membutuhkan `Authorization: Bearer <token>`
 
 #### Auth & Profile
 | Method | Path | Handler |
@@ -417,6 +417,8 @@ erDiagram
 | Method | Path | Handler |
 |--------|------|---------|
 | POST | `/api/v1/transactions/split` | splitbill.Split |
+| GET | `/api/v1/split-bills` | splitbill.List |
+| GET | `/api/v1/split-bills/:id` | splitbill.Get |
 | POST | `/api/v1/transactions` | transaction.Create |
 | GET | `/api/v1/transactions` | transaction.List |
 | GET | `/api/v1/transactions/:id` | transaction.Get |

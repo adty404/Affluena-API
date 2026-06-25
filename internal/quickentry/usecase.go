@@ -11,7 +11,7 @@ import (
 
 type RepositoryPort interface {
 	Create(ctx context.Context, userID string, template Template) (Template, error)
-	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error)
+	List(ctx context.Context, userID string, typeFilter string, pagination page.Params) (page.Result[Template], error)
 	Get(ctx context.Context, userID string, id string) (Template, error)
 	Update(ctx context.Context, userID string, id string, template Template) (Template, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -42,8 +42,8 @@ func (u *UseCase) Create(ctx context.Context, userID string, template Template) 
 	return t, err
 }
 
-func (u *UseCase) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
-	return u.repo.List(ctx, userID, pagination)
+func (u *UseCase) List(ctx context.Context, userID string, typeFilter transaction.TransactionType, pagination page.Params) (page.Result[Template], error) {
+	return u.repo.List(ctx, userID, string(typeFilter), pagination)
 }
 
 func (u *UseCase) Get(ctx context.Context, userID string, id string) (Template, error) {

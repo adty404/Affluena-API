@@ -89,7 +89,14 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 		WHERE `+accessibleTransactionPredicate+`
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
-			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
+			AND ($4 = '' OR category_id IN (
+				WITH RECURSIVE subtree AS (
+					SELECT id FROM categories WHERE user_id = $1 AND id = NULLIF($4, '')::uuid
+					UNION ALL
+					SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id WHERE c.user_id = $1
+				)
+				SELECT id FROM subtree
+			))
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
 			AND ($9 = '' OR transactions.id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($9, '')::uuid))
@@ -120,7 +127,14 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 		WHERE `+accessibleTransactionPredicate+`
 			AND ($2 = '' OR type = $2)
 			AND ($3 = '' OR wallet_id = NULLIF($3, '')::uuid OR to_wallet_id = NULLIF($3, '')::uuid)
-			AND ($4 = '' OR category_id = NULLIF($4, '')::uuid)
+			AND ($4 = '' OR category_id IN (
+				WITH RECURSIVE subtree AS (
+					SELECT id FROM categories WHERE user_id = $1 AND id = NULLIF($4, '')::uuid
+					UNION ALL
+					SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id WHERE c.user_id = $1
+				)
+				SELECT id FROM subtree
+			))
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
 			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($7, '')::uuid))

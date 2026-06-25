@@ -198,10 +198,17 @@ func parseFilterDate(c *gin.Context, key string) (time.Time, bool) {
 	if value == "" {
 		return time.Time{}, true
 	}
+	// Accept a plain date (YYYY-MM-DD) or a full RFC3339 timestamp (the mobile and
+	// web clients send the latter). Either way we filter at day granularity, so
+	// normalize to the UTC calendar date; bindFilter makes `to` inclusive.
 	parsed, err := time.Parse("2006-01-02", value)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, key+" must use YYYY-MM-DD")
-		return time.Time{}, false
+		rfcParsed, rfcErr := time.Parse(time.RFC3339, value)
+		if rfcErr != nil {
+			httpx.Error(c, http.StatusBadRequest, key+" must use YYYY-MM-DD or RFC3339")
+			return time.Time{}, false
+		}
+		parsed = rfcParsed.UTC()
 	}
 	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC), true
 }

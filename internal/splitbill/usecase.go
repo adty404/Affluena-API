@@ -6,6 +6,7 @@ import (
 
 	"affluena-api/internal/activity"
 	"affluena-api/internal/debt"
+	"affluena-api/internal/page"
 	"affluena-api/internal/transaction"
 
 	"github.com/jackc/pgx/v5"
@@ -35,6 +36,7 @@ type UseCase struct {
 	pool            *pgxpool.Pool
 	transactionRepo transactionRepository
 	debtRepo        debtRepository
+	reads           *Repository
 	activityUC      activity.UseCase
 }
 
@@ -43,8 +45,19 @@ func NewUseCase(pool *pgxpool.Pool, transactionRepo transactionRepository, debtR
 		pool:            pool,
 		transactionRepo: transactionRepo,
 		debtRepo:        debtRepo,
+		reads:           NewRepository(pool),
 		activityUC:      activityUC,
 	}
+}
+
+// List returns the user's split bills (status: ""|ongoing|settled).
+func (u *UseCase) List(ctx context.Context, userID string, status string, pagination page.Params) (page.Result[SplitBillSummary], error) {
+	return u.reads.List(ctx, userID, status, pagination)
+}
+
+// Get returns one split bill by its origination transaction id.
+func (u *UseCase) Get(ctx context.Context, userID string, transactionID string) (SplitBillDetail, error) {
+	return u.reads.Get(ctx, userID, transactionID)
 }
 
 func (u *UseCase) SplitExpense(ctx context.Context, userID string, input SplitTransactionInput) (SplitTransactionResponse, error) {
