@@ -30,7 +30,7 @@ func (f *fakeTemplateRepository) Create(ctx context.Context, userID string, temp
 	return f.created, nil
 }
 
-func (f *fakeTemplateRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
+func (f *fakeTemplateRepository) List(ctx context.Context, userID string, typeFilter string, pagination page.Params) (page.Result[Template], error) {
 	f.listPage = pagination
 	if f.err != nil {
 		return page.Result[Template]{}, f.err

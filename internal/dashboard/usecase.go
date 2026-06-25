@@ -7,7 +7,7 @@ import (
 
 type RepositoryPort interface {
 	Summary(ctx context.Context, userID string, month time.Time) (Summary, error)
-	CashflowTrend(ctx context.Context, userID string, months int) ([]CashflowTrend, error)
+	CashflowTrend(ctx context.Context, userID string, opts CashflowTrendOptions) ([]CashflowTrend, error)
 	ExpenseDistribution(ctx context.Context, userID string, month time.Time) ([]ExpenseDistribution, error)
 	Forecast(ctx context.Context, userID string, month time.Time) (Forecast, error)
 }
@@ -24,8 +24,8 @@ func (u *UseCase) Summary(ctx context.Context, userID string, month time.Time) (
 	return u.repo.Summary(ctx, userID, month)
 }
 
-func (u *UseCase) CashflowTrend(ctx context.Context, userID string, months int) ([]CashflowTrend, error) {
-	return u.repo.CashflowTrend(ctx, userID, months)
+func (u *UseCase) CashflowTrend(ctx context.Context, userID string, opts CashflowTrendOptions) ([]CashflowTrend, error) {
+	return u.repo.CashflowTrend(ctx, userID, opts)
 }
 
 func (u *UseCase) ExpenseDistribution(ctx context.Context, userID string, month time.Time) ([]ExpenseDistribution, error) {

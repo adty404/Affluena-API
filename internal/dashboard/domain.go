@@ -46,10 +46,34 @@ type UpcomingDebt struct {
 }
 
 type CashflowTrend struct {
-	Month         string `json:"month"`
+	// Month is kept for backward compatibility: "YYYY-MM" for month granularity,
+	// or the week-start date ("YYYY-MM-DD") for week granularity.
+	Month string `json:"month"`
+	// PeriodStart is the bucket start date ("YYYY-MM-DD") regardless of granularity.
+	PeriodStart   string `json:"period_start"`
 	IncomeMinor   int64  `json:"income_minor"`
 	ExpenseMinor  int64  `json:"expense_minor"`
 	CashflowMinor int64  `json:"cashflow_minor"`
+}
+
+// CashflowGranularity selects the bucket size for the cashflow trend.
+type CashflowGranularity string
+
+const (
+	GranularityMonth CashflowGranularity = "month"
+	GranularityWeek  CashflowGranularity = "week"
+)
+
+// CashflowTrendOptions controls the cashflow-trend window and bucket size.
+// When From/To are both set they define an explicit (inclusive) date range;
+// otherwise the last Months months (month granularity) or Weeks weeks (week
+// granularity) are returned.
+type CashflowTrendOptions struct {
+	Granularity CashflowGranularity
+	Months      int
+	Weeks       int
+	From        time.Time
+	To          time.Time
 }
 
 type ExpenseDistribution struct {

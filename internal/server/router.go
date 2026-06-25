@@ -180,6 +180,8 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.DELETE("/tags/:id", tagHandler.Delete)
 
 	protected.POST("/transactions/split", splitBillHandler.Split)
+	protected.GET("/split-bills", splitBillHandler.List)
+	protected.GET("/split-bills/:id", splitBillHandler.Get)
 	protected.POST("/transactions", transactionHandler.Create)
 	protected.GET("/transactions", transactionHandler.List)
 	protected.GET("/transactions/:id", transactionHandler.Get)

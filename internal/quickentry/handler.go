@@ -18,7 +18,7 @@ type Handler struct {
 
 type quickEntryUseCase interface {
 	Create(ctx context.Context, userID string, template Template) (Template, error)
-	List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error)
+	List(ctx context.Context, userID string, typeFilter transaction.TransactionType, pagination page.Params) (page.Result[Template], error)
 	Get(ctx context.Context, userID string, id string) (Template, error)
 	Update(ctx context.Context, userID string, id string, template Template) (Template, error)
 	Delete(ctx context.Context, userID string, id string) error
@@ -72,7 +72,12 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.usecase.List(c.Request.Context(), userID, pagination)
+	typeFilter := transaction.TransactionType(c.Query("type"))
+	if typeFilter != "" && !transaction.IsValidType(typeFilter) {
+		httpx.Error(c, http.StatusBadRequest, "invalid transaction type")
+		return
+	}
+	result, err := h.usecase.List(c.Request.Context(), userID, typeFilter, pagination)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "list quick entry templates failed")
 		return

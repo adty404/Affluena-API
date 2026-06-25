@@ -44,8 +44,8 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 
 ### Dashboard
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` - Summary stats including net worth, cashflow, budgets, upcoming trackers.
-- `GET /api/v1/dashboard/cashflow-trend?months=6` - Time series data of income vs expense.
-- `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` - Breakdowns by category.
+- `GET /api/v1/dashboard/cashflow-trend` - Time series of income vs expense. Params: `granularity=month|week` (default `month`), `months=1..12` (month granularity, default 6), `weeks=1..26` (week granularity, default 8), or an explicit `from`/`to` range (`YYYY-MM-DD` or RFC3339). Each point includes `period_start` (`YYYY-MM-DD`); `month` is kept for back-compat (`YYYY-MM` for month buckets, week-start date for week buckets).
+- `GET /api/v1/dashboard/expense-distribution?month=YYYY-MM` - Breakdowns by **root** category for the month (defaults to current month). Drill-in: call `GET /api/v1/transactions?category_id=<root>&from=<month-start>&to=<month-end>` — the transactions `category_id` filter expands to the category's whole subtree.
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Spend forecasting and budget alerts.
 
 ### Wallet
@@ -77,17 +77,19 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 
 ### Transaction
 - `POST /api/v1/transactions` - `{ type, amount_minor, transaction_at, note, wallet_id, to_wallet_id, category_id, tag_ids }`
-- `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`.
+- `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`. `from`/`to` accept `YYYY-MM-DD` or RFC3339 (both normalized to day granularity; `to` is inclusive). `category_id` matches the category **and all its descendants** (subtree).
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id` - Fields same as POST.
 - `DELETE /api/v1/transactions/:id`
-- `POST /api/v1/transactions/split` - `{ wallet_id, category_id, total_amount_minor, transaction_at, note, tag_ids, splits: [{ counterparty_name, amount_minor, disbursement_category_id, payment_category_id }] }`
+- `POST /api/v1/transactions/split` - `{ wallet_id, category_id, total_amount_minor, transaction_at, note, tag_ids, splits: [{ counterparty_name, amount_minor, disbursement_category_id, payment_category_id }] }` -> `{ transaction_id, debt_ids }`. Creates one expense transaction for the full amount plus one receivable debt per participant (linked via `debts.origination_transaction_id`).
+- `GET /api/v1/split-bills` - List split bills aggregated per origination transaction. Param `status=ongoing|settled` (omit for all). Item: `{ transaction_id, note, total_amount_minor, transaction_at, participant_count, settled_count, total_owed_minor, total_remaining_minor, status }`. A split is `ongoing` while any participant debt is `open`/`partial`, else `settled`.
+- `GET /api/v1/split-bills/:transaction_id` - Split bill detail: the summary fields plus `participants: [{ debt_id, counterparty_name, principal_amount_minor, paid_amount_minor, remaining_amount_minor, status, due_date }]`.
 - *Note:* `type` must be `income`, `expense`, `transfer`, or `adjustment`. Adjustments fix balance drifts. Transfers require `to_wallet_id`. Category belongs to the user regardless of shared wallet.
 - *Split Bill Rules:* Parent transaction uses `total_amount_minor`, decreasing wallet balance by the total bill. Each split creates a `receivable` debt (the participant owes the user). Full split is valid if total split == total amount. Over split is invalid. Transaction amount cannot be 0.
 
 ### Quick Entry
 - `POST /api/v1/quick-entry-templates` - `{ name, type, amount_minor, category_id, wallet_id, to_wallet_id, note, tag_ids }`
-- `GET /api/v1/quick-entry-templates`
+- `GET /api/v1/quick-entry-templates` - Optional `type=income|expense|transfer|adjustment` to return only templates of that type.
 - `GET /api/v1/quick-entry-templates/:id`
 - `PUT /api/v1/quick-entry-templates/:id`
 - `DELETE /api/v1/quick-entry-templates/:id`

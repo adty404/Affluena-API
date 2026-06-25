@@ -32,15 +32,16 @@ func (r *Repository) Create(ctx context.Context, userID string, template Templat
 	return created, translateNotFound(err)
 }
 
-func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Template], error) {
+func (r *Repository) List(ctx context.Context, userID string, typeFilter string, pagination page.Params) (page.Result[Template], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, note, created_at, updated_at
 		FROM quick_entry_templates
 		WHERE user_id = $1
+			AND ($4 = '' OR type = $4)
 		ORDER BY `+templateOrderBy(pagination.Sort)+`
 		LIMIT $2 OFFSET $3
-	`, userID, pagination.Limit, pagination.Offset)
+	`, userID, pagination.Limit, pagination.Offset, typeFilter)
 	if err != nil {
 		return page.Result[Template]{}, err
 	}
@@ -58,7 +59,7 @@ func (r *Repository) List(ctx context.Context, userID string, pagination page.Pa
 		return page.Result[Template]{}, err
 	}
 	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM quick_entry_templates WHERE user_id = $1`, userID).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM quick_entry_templates WHERE user_id = $1 AND ($2 = '' OR type = $2)`, userID, typeFilter).Scan(&total); err != nil {
 		return page.Result[Template]{}, err
 	}
 	return page.NewResult(templates, pagination, total), nil
