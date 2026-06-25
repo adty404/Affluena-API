@@ -18,9 +18,11 @@ graph TB
 
     subgraph Gateway["🚪 Gateway Layer"]
         GIN["Gin HTTP Router"]
-        MW_CORS["CORS Middleware"]
         MW_RECOVERY["Recovery Middleware"]
+        MW_SECHEAD["Security Headers Middleware"]
+        MW_CORS["CORS Middleware"]
         MW_APILOG["API Log Middleware"]
+        MW_RATELIMIT["Rate Limiter (Auth + API)"]
         MW_AUTH["JWT Auth Middleware"]
     end
 
@@ -67,7 +69,7 @@ graph TB
     end
 
     Client --> GIN
-    GIN --> MW_CORS --> MW_RECOVERY --> MW_APILOG --> MW_AUTH
+    GIN --> MW_RECOVERY --> MW_SECHEAD --> MW_CORS --> MW_APILOG --> MW_RATELIMIT --> MW_AUTH
     MW_AUTH --> Core
     MW_AUTH --> Features
     Core --> PG
@@ -100,7 +102,7 @@ graph TB
 
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
-| **auth** | `internal/auth/` | 6 src + 2 test | 870 + 287 | Registrasi, login, refresh token (JWT HS256 + bcrypt), forgot/reset password, profile, password change, dan session revocation. Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. |
+| **auth** | `internal/auth/` | 6 src + 2 test | 870 + 287 | Registrasi, login, refresh token (JWT HS256 + bcrypt), forgot/reset password, profile, password change, dan session revocation. Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. **Password change & reset merevoke SEMUA sesi lalu menerbitkan token pair baru** (change-password mengembalikan `{user, tokens}` sehingga device aktif tetap login; device lain logout). |
 | **wallet** | `internal/wallet/` | 5 src + 2 test | 918 + 313 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. Access control: `AccessLevel`, `CheckOwnerAccess`, `CheckMemberAccess`, dan `AccessChecker` untuk shared-wallet-aware checks. |
 | **category** | `internal/category/` | 4 src + 1 test | 489 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
 | **transaction** | `internal/transaction/` | 5 src + 3 test | 982 + 376 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
@@ -599,19 +601,20 @@ transaction.Create (Expense)
 ## 7. Middleware Pipeline
 
 ```
-Request ──► gin.Recovery() ──► CORS ──► apilog.APILogMiddleware ──► [RateLimiter] ──► [auth.AuthMiddleware] ──► Handler
-                                         │                                      │                           │
-                                         │                              /auth/* only                │
-                                         │                      (AuthLimiter: 5 req/s)       │
-                                         │                                                      │
-                                         ▼                                                      ▼
-                                   Catat ke DB                                    Validate JWT
-                                   - Method, Path, Status                              - Extract userID
-                                   - Latency (ms)                                       - Set context
-                                   - Client IP, User Agent
-                                   - Request & Response Body
-                                   - Masking pada /auth/*
+Request ──► gin.Recovery() ──► securityHeaders ──► CORS ──► apilog.APILogMiddleware ──► route group ──► Handler
+                                       │                            │                           │
+                          nosniff, X-Frame-Options: DENY,           │             /auth/*  : AuthLimiter (5 req/s, burst 10)
+                          Referrer-Policy: no-referrer,             │             protected: AuthMiddleware (validate JWT)
+                          CSP default-src 'none',                   │                       + APILimiter (per-IP 100 req/s, burst 200)
+                          HSTS (production only)                    ▼
+                                                             Catat ke DB
+                                                             - Method, Path, Status, Latency (ms)
+                                                             - Client IP, User Agent
+                                                             - Request & Response Body
+                                                             - Masking pada /auth/* (incl. password/reset)
 ```
+
+> **CORS:** origin `*` di-drop secara eksplisit karena API mengirim credentials (`AllowCredentials: true`); `"*" + credentials` invalid per spec CORS dan berisiko. Fail-closed ke default origin bila kosong.
 
 ---
 
@@ -787,12 +790,15 @@ sequenceDiagram
 6. **Monetary Values** — Disimpan sebagai `int64` minor units (misal: Rp 50.000 = `50000`).
 7. **Auth Masking** — Payload auth (password, token) HARUS di-mask di API logs.
 8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.WriteError()`, `httpx.PublicError`, atau helper yang tersedia.
-9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter). Aplikasi fail-fast jika config invalid.
+9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter, bukan nilai default). Di `APP_ENV=production`, `DATABASE_URL` TIDAK BOLEH memakai `sslmode=disable` (wajib `sslmode=require`/`verify-full`). Aplikasi fail-fast jika config invalid.
 10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
 11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
 12. **UUID Path Parameters** — Gunakan `httpx.GetUUIDParam()` untuk validasi UUID dari path parameters. Menulis 400 error otomatis jika format invalid.
-13. **Rate Limiting** — Endpoint auth (`/auth/*`) dilindungi oleh `AuthLimiter` (5 req/s, burst 10). Gunakan `APILimiter` untuk endpoint lain jika diperlukan.
+13. **Rate Limiting** — Endpoint auth (`/auth/*`) dilindungi oleh `AuthLimiter` (5 req/s, burst 10). Seluruh API ter-autentikasi (`protected` group) dilindungi `APILimiter` per-IP (100 req/s, burst 200). Keduanya mengembalikan `429 Too Many Requests`.
 14. **Shared API Contract** — Jangan membuat kontrak endpoint khusus web atau khusus mobile tanpa kebutuhan nyata. Web React dan Flutter companion harus memakai `/api/v1` contract yang sama agar behavior, pagination, auth, dan error handling tetap konsisten.
+15. **Security Headers** — Setiap response memuat header hardening (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`), plus `Strict-Transport-Security` di production. Jangan menghapusnya.
+16. **CSV Injection Defense** — Semua teks user-controlled yang diekspor ke CSV (note, nama wallet/kategori, tags) WAJIB melewati `sanitizeCSVCell` (prefix `'` untuk sel yang diawali `= + - @ \t \r`) agar tidak dieksekusi sebagai formula spreadsheet.
+17. **Credential Change = Revoke Sessions** — Mengubah/reset password HARUS merevoke seluruh sesi user (`RevokeAllSessionsExcept(userID, "")`). Change-password menerbitkan token pair baru untuk device pemanggil; client WAJIB menyimpan pair baru tersebut.
 
 ---
 

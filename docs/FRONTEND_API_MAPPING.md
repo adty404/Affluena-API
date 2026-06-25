@@ -92,7 +92,7 @@ This document maps the current Affluena-WEB routes/pages to the Affluena API end
 | **Settings** | | | | | | | | |
 | `/settings/profile` | View profile | `/api/v1/auth/me` | GET | none | `user` | skeleton | error alert | - |
 | `/settings/account` | Update account | `/api/v1/auth/account` | PUT | `{ name, avatar_url }` | `user` | disable btn | inline error | - |
-| `/settings/security` | Update password| `/api/v1/auth/password` | PUT | `{ current_password, new_password }` | - | disable btn | inline error | - |
+| `/settings/security` | Update password| `/api/v1/auth/password` | PUT | `{ current_password, new_password }` | `{ user, tokens }` | disable btn | inline error | **Persist returned token pair** — revokes all other sessions |
 | `/settings/sessions` | List sessions | `/api/v1/auth/sessions` | GET | none | `sessions` | list skeleton | empty state | Revoke via `DELETE /auth/sessions/:id` |
 | `/settings/notifications`| Manage notification rules | `/api/v1/notifications/rules` | GET/PUT | `{ enabled, channel }` | `{ rules: NotificationRule[] }` or `NotificationRule` | skeleton | inline error | Manage notification rules |
 | `/settings/preferences`| - | - | - | - | - | - | - | **Frontend-only**: Store locally |

@@ -84,6 +84,18 @@ make verify
 
 The verify script checks Go formatting, unit tests, `go vet`, API build, Postman JSON validity, Docker Compose rebuild, integration tests against PostgreSQL, and `/healthz`.
 
+## Security
+
+Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 and `docs/system_map.md` §14):
+
+- **Auth**: JWT alg-pinned (HS256), bcrypt password hashing, `crypto/rand` refresh/reset tokens stored as SHA-256, automatic refresh-token rotation.
+- **Credential changes revoke all sessions** — `PUT /auth/password` returns a fresh token pair (clients persist it); reset-password forces re-login everywhere.
+- **Rate limiting** — per-IP on `/auth/*` (5 req/s, burst 10) and the whole authenticated API (100 req/s, burst 200) → `429`.
+- **Response headers** — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, plus HSTS in production. CORS rejects wildcard origins when credentials are enabled.
+- **Data**: CSV export defuses formula injection; auth payloads masked in logs.
+- **Config fail-fast** — refuses to boot with a default/weak `JWT_SECRET` or `sslmode=disable` in production.
+- **Dependencies** — Go toolchain pinned (`go1.26.4`); `govulncheck ./...` reports no known vulnerabilities.
+
 ## Endpoints
 
 The current Gin router registers 100 routes including `GET /healthz`: 5 public auth routes and 94 protected API routes under `/api/v1`.

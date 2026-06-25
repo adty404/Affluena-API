@@ -169,6 +169,6 @@ This document records the completed sequencing used to integrate Affluena-WEB wi
 
 ## Summary
 
-All 19 integration steps are implemented in the current API/Web/QA codebases. The current QA repo contains 81 Playwright spec files and 196 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, and settings.
+All 19 integration steps are implemented in the current API/Web/QA codebases. The current QA repo contains 85 Playwright spec files and 198 runnable tests across foundation, wallets, categories, tags, transactions, dashboard, budgets, debts, trackers, recurring, goals, reports, export, activity, alerts, system logs, settings, and security (OWASP).
 
-Latest recorded cleanup verification (2026-06-20): the full `Affluena-QA` Playwright suite passed against the local API and Vite dev server. That run covered the suite as it stood then (189 tests); it has since grown to 196 runnable tests, which have not yet been re-verified in a single clean run.
+Latest recorded cleanup verification (2026-06-20): the full `Affluena-QA` Playwright suite passed against the local API and Vite dev server. That run covered the suite as it stood then (189 tests); it has since grown to 198 runnable tests (incl. the new `security/` OWASP suite), which have not yet been re-verified in a single clean run.
