@@ -31,7 +31,7 @@ Autentikasi dikelola secara independen di dalam _backend_ Affluena-API.
   - **Ganti/reset password merevoke seluruh sesi**; ganti password mengembalikan token pair baru untuk device aktif.
   - Rate limiting per-IP pada `/auth/*` (5 req/s) dan seluruh API ter-autentikasi (100 req/s) → `429`.
   - Security headers di setiap response (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, CSP) + HSTS di production; CORS menolak wildcard saat credentials aktif.
-  - Ekspor CSV dilindungi dari formula injection; payload auth di-mask di log; fail-fast bila `JWT_SECRET` default/lemah atau `sslmode=disable` di production.
+  - Ekspor CSV dilindungi dari formula injection; payload auth di-mask di log; fail-fast bila `JWT_SECRET` default/lemah atau `sslmode=disable` di production (kecuali `ALLOW_INSECURE_DB=true` untuk DB di host/network terpercaya yang sama).
 
 ### 3.2. Wallet & Multi-Asset Management
 

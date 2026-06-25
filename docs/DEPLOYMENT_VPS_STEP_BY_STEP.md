@@ -291,6 +291,11 @@ APP_ENV=production
 HTTP_ADDR=:8080
 JWT_SECRET=ISI_DARI_OPENSSL_RAND_BASE64_48
 RUN_MIGRATIONS=true
+# Postgres berjalan sebagai service di Docker network yang sama (lihat
+# docker-compose.prod.yml, DATABASE_URL pakai sslmode=disable). Karena trafik DB
+# tidak pernah keluar dari host, set opt-in ini agar API mau boot di production.
+# Untuk DB remote/managed, JANGAN set ini — pakai sslmode=require.
+ALLOW_INSECURE_DB=true
 CORS_ALLOWED_ORIGINS=http://VPS_PUBLIC_IP
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -841,6 +846,24 @@ Gunakan `sudo tee`:
 ```bash
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
+
+### API restart terus dan log `invalid configuration ... sslmode=disable in production`
+
+Sejak hardening OWASP, API menolak boot di `APP_ENV=production` bila `DATABASE_URL` memakai `sslmode=disable`. Untuk Postgres internal (Docker network yang sama), tambahkan opt-in di file env aplikasi `.env.production` (yang dibaca via `env_file` oleh service `api`, bukan `deploy/.env` yang hanya untuk interpolasi Compose):
+
+```env
+ALLOW_INSECURE_DB=true
+```
+
+Lalu rebuild:
+
+```bash
+cd /opt/affluena/deploy
+docker compose -f docker-compose.prod.yml up -d --build api
+docker compose -f docker-compose.prod.yml logs --tail=50 api
+```
+
+Untuk database remote/managed, jangan set flag ini — ubah `DATABASE_URL` ke `sslmode=require` (atau `verify-full`).
 
 ### API restart terus dan log `invalid port` pada `DATABASE_URL`
 

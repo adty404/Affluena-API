@@ -28,6 +28,9 @@ func main() {
 		slog.Error("invalid configuration", "error", err)
 		os.Exit(1)
 	}
+	if cfg.UsesInsecureProdDB() {
+		slog.Warn("running in production with an unencrypted database connection (sslmode=disable); permitted via ALLOW_INSECURE_DB. Ensure Postgres is reachable only over a trusted host/network.")
+	}
 
 	ctx := context.Background()
 
