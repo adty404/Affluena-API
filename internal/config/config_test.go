@@ -90,6 +90,16 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr:   true,
 		},
 		{
+			name:      "prod example placeholder is invalid",
+			jwtSecret: "CHANGE_ME_GENERATE_A_RANDOM_32+_CHAR_SECRET",
+			wantErr:   true,
+		},
+		{
+			name:      "dev example placeholder is invalid",
+			jwtSecret: "replace-with-a-long-random-secret-minimum-32-chars",
+			wantErr:   true,
+		},
+		{
 			name:      "too short JWT secret is invalid",
 			jwtSecret: "short-secret",
 			wantErr:   true,
@@ -102,6 +112,43 @@ func TestConfig_Validate(t *testing.T) {
 			err := cfg.Validate()
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestConfig_Validate_ProductionDatabaseTLS(t *testing.T) {
+	const secret = "this-is-a-very-long-and-secure-jwt-secret"
+	const insecureURL = "postgres://u:p@postgres:5432/db?sslmode=disable"
+	const secureURL = "postgres://u:p@postgres:5432/db?sslmode=require"
+
+	tests := []struct {
+		name            string
+		env             string
+		databaseURL     string
+		allowInsecureDB bool
+		wantErr         bool
+	}{
+		{name: "production sslmode=disable without opt-out is rejected", env: "production", databaseURL: insecureURL, wantErr: true},
+		{name: "production sslmode=disable with opt-out is allowed", env: "production", databaseURL: insecureURL, allowInsecureDB: true, wantErr: false},
+		{name: "production sslmode=require is allowed", env: "production", databaseURL: secureURL, wantErr: false},
+		{name: "development sslmode=disable is allowed", env: "development", databaseURL: insecureURL, wantErr: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{
+				Env:             tc.env,
+				DatabaseURL:     tc.databaseURL,
+				JWTSecret:       secret,
+				AllowInsecureDB: tc.allowInsecureDB,
+			}
+			if err := cfg.Validate(); (err != nil) != tc.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+			wantInsecure := tc.env == "production" && tc.databaseURL == insecureURL
+			if got := cfg.UsesInsecureProdDB(); got != wantInsecure {
+				t.Errorf("UsesInsecureProdDB() = %v, want %v", got, wantInsecure)
 			}
 		})
 	}

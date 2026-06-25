@@ -718,6 +718,7 @@ make verify
 | `APP_ENV` | development | Mode aplikasi |
 | `HTTP_ADDR` | :8080 | Port HTTP |
 | `DATABASE_URL` | postgres://...localhost | Connection string PostgreSQL |
+| `ALLOW_INSECURE_DB` | false | Izinkan `sslmode=disable` di production untuk DB di host/network terpercaya yang sama. Default false → fail-fast. |
 | `JWT_SECRET` | **wajib di production** | Secret untuk JWT HS256 (min 32 karakter, divalidasi saat startup) |
 | `ACCESS_TOKEN_TTL` | 15m | Masa berlaku access token |
 | `REFRESH_TOKEN_TTL` | 720h (30 hari) | Masa berlaku refresh token |
@@ -790,7 +791,7 @@ sequenceDiagram
 6. **Monetary Values** — Disimpan sebagai `int64` minor units (misal: Rp 50.000 = `50000`).
 7. **Auth Masking** — Payload auth (password, token) HARUS di-mask di API logs.
 8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.WriteError()`, `httpx.PublicError`, atau helper yang tersedia.
-9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter, bukan nilai default). Di `APP_ENV=production`, `DATABASE_URL` TIDAK BOLEH memakai `sslmode=disable` (wajib `sslmode=require`/`verify-full`). Aplikasi fail-fast jika config invalid.
+9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter, bukan nilai default). Di `APP_ENV=production`, `DATABASE_URL` TIDAK BOLEH memakai `sslmode=disable` kecuali `ALLOW_INSECURE_DB=true` di-set secara eksplisit (untuk Postgres di host/Docker network terpercaya yang sama). Aplikasi fail-fast jika config invalid.
 10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
 11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
 12. **UUID Path Parameters** — Gunakan `httpx.GetUUIDParam()` untuk validasi UUID dari path parameters. Menulis 400 error otomatis jika format invalid.

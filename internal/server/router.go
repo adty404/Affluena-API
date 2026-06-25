@@ -255,10 +255,13 @@ func allowedCORSOrigins(raw string) []string {
 		origin := strings.TrimSpace(part)
 		// Never allow a wildcard origin: the API sends credentials
 		// (AllowCredentials: true), and "*" + credentials is both invalid per
-		// the CORS spec and a security risk. Fail closed by dropping it.
-		if origin != "" && origin != "*" {
-			origins = append(origins, origin)
+		// the CORS spec and a security risk. Also drop origins without a valid
+		// scheme — gin-contrib/cors PANICS on those, which would crash the server
+		// at startup (e.g. a bare host/IP in CORS_ALLOWED_ORIGINS). Fail closed.
+		if origin == "" || origin == "*" || !hasURLScheme(origin) {
+			continue
 		}
+		origins = append(origins, origin)
 	}
 
 	if len(origins) == 0 {
@@ -266,6 +269,18 @@ func allowedCORSOrigins(raw string) []string {
 	}
 
 	return origins
+}
+
+// hasURLScheme reports whether origin carries a scheme accepted by the CORS
+// library (http/https/ws/wss). Origins without a scheme make cors.New() panic,
+// so we treat a scheme-less value (e.g. a bare host or IP) as misconfiguration.
+func hasURLScheme(origin string) bool {
+	for _, scheme := range []string{"http://", "https://", "ws://", "wss://"} {
+		if strings.HasPrefix(origin, scheme) {
+			return true
+		}
+	}
+	return false
 }
 
 // securityHeaders sets baseline hardening response headers on every response.

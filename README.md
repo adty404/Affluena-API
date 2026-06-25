@@ -51,6 +51,7 @@ The application is configured via environment variables. Copy `.env.example` to 
 | `APP_ENV` | Environment (`development`, `production`) | `development` | No |
 | `HTTP_ADDR` | HTTP server address | `:8080` | No |
 | `DATABASE_URL` | PostgreSQL connection string | see .env.example | Yes |
+| `ALLOW_INSECURE_DB` | Allow `sslmode=disable` in production (trusted same-host/Docker-network DB) | `false` | No |
 | `JWT_SECRET` | JWT signing secret (min 32 chars) | - | **Yes** |
 | `ACCESS_TOKEN_TTL` | Access token lifetime | `15m` | No |
 | `REFRESH_TOKEN_TTL` | Refresh token lifetime | `720h` | No |
@@ -93,7 +94,7 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 - **Rate limiting** — per-IP on `/auth/*` (5 req/s, burst 10) and the whole authenticated API (100 req/s, burst 200) → `429`.
 - **Response headers** — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, plus HSTS in production. CORS rejects wildcard origins when credentials are enabled.
 - **Data**: CSV export defuses formula injection; auth payloads masked in logs.
-- **Config fail-fast** — refuses to boot with a default/weak `JWT_SECRET` or `sslmode=disable` in production.
+- **Config fail-fast** — refuses to boot with a default/weak `JWT_SECRET`, or with `sslmode=disable` in production unless `ALLOW_INSECURE_DB=true` is set explicitly (for Postgres on the same trusted host/Docker network).
 - **Dependencies** — Go toolchain pinned (`go1.26.4`); `govulncheck ./...` reports no known vulnerabilities.
 
 ## Endpoints
