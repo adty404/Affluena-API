@@ -166,6 +166,7 @@ Current notable API decisions:
 - `POST/GET/PUT/DELETE /api/v1/tags` manage user-owned transaction labels.
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
 - `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
+- `POST/PUT /api/v1/transactions` accept `transaction_at` as a full RFC3339 timestamp (date **and** time-of-day). Any past or future instant is accepted, so transactions can be backdated or future-dated; it is not date-only or normalized to midnight. Quick-entry execute and split-bill creation parse `transaction_at` the same way. Clients send the user-picked local datetime normalized to UTC.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
 - Generic wallet create/update/delete endpoints reject direct `goal` wallet writes; goal-managed wallets are created and retained by the financial goal workflow.
 - `POST/PUT /api/v1/quick-entry-templates` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the template user.
