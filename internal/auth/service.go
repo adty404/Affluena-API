@@ -140,28 +140,38 @@ func (s *Service) UpdateAccount(ctx context.Context, userID string, name string,
 	return user, nil
 }
 
-func (s *Service) ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) error {
+func (s *Service) ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) (User, TokenPair, error) {
 	if len(newPassword) < 8 {
-		return ErrPasswordTooWeak
+		return User{}, TokenPair{}, ErrPasswordTooWeak
 	}
 	user, err := s.repo.UserByID(ctx, userID)
 	if err != nil {
-		return err
+		return User{}, TokenPair{}, err
 	}
 	if !CheckPassword(user.PasswordHash, currentPassword) {
-		return ErrInvalidCredentials
+		return User{}, TokenPair{}, ErrInvalidCredentials
 	}
 	hash, err := HashPassword(newPassword)
 	if err != nil {
-		return err
+		return User{}, TokenPair{}, err
 	}
 	if err := s.repo.ChangePassword(ctx, userID, hash); err != nil {
-		return err
+		return User{}, TokenPair{}, err
+	}
+	// Invalidate every existing session so a leaked/stolen refresh token cannot
+	// survive a credential change. Then mint a fresh session for the device that
+	// performed the change so it stays signed in (other devices are logged out).
+	if err := s.repo.RevokeAllSessionsExcept(ctx, userID, ""); err != nil {
+		return User{}, TokenPair{}, err
+	}
+	pair, err := s.issuePair(ctx, user)
+	if err != nil {
+		return User{}, TokenPair{}, err
 	}
 	if s.activityUC != nil {
 		s.activityUC.LogActivity(ctx, userID, "UPDATE", "AUTH", nil, "Mengubah password akun")
 	}
-	return nil
+	return user, pair, nil
 }
 
 func (s *Service) ListSessions(ctx context.Context, userID string) ([]Session, error) {
@@ -215,6 +225,11 @@ func (s *Service) ResetPassword(ctx context.Context, token string, newPassword s
 		return err
 	}
 	if err := s.repo.ChangePassword(ctx, userID, pwHash); err != nil {
+		return err
+	}
+	// A reset is an unauthenticated credential change (often a compromise/lockout
+	// recovery): revoke every existing session so any stolen token is killed.
+	if err := s.repo.RevokeAllSessionsExcept(ctx, userID, ""); err != nil {
 		return err
 	}
 	if s.activityUC != nil {

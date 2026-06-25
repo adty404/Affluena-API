@@ -234,8 +234,27 @@ func redactSensitiveFields(data map[string]interface{}) map[string]interface{} {
 			result[key] = "***REDACTED***"
 		} else if nested, ok := value.(map[string]interface{}); ok {
 			result[key] = redactSensitiveFields(nested)
+		} else if arr, ok := value.([]interface{}); ok {
+			result[key] = redactSensitiveSlice(arr)
 		} else {
 			result[key] = value
+		}
+	}
+	return result
+}
+
+// redactSensitiveSlice recurses into arrays so secrets nested inside a JSON
+// array (e.g. a list of objects) are still redacted.
+func redactSensitiveSlice(items []interface{}) []interface{} {
+	result := make([]interface{}, len(items))
+	for i, item := range items {
+		switch v := item.(type) {
+		case map[string]interface{}:
+			result[i] = redactSensitiveFields(v)
+		case []interface{}:
+			result[i] = redactSensitiveSlice(v)
+		default:
+			result[i] = item
 		}
 	}
 	return result
@@ -244,7 +263,10 @@ func redactSensitiveFields(data map[string]interface{}) map[string]interface{} {
 func isSensitiveAuthPath(path string) bool {
 	return strings.Contains(path, "/auth/login") ||
 		strings.Contains(path, "/auth/register") ||
-		strings.Contains(path, "/auth/refresh")
+		strings.Contains(path, "/auth/refresh") ||
+		strings.Contains(path, "/auth/forgot-password") ||
+		strings.Contains(path, "/auth/reset-password") ||
+		strings.Contains(path, "/auth/password")
 }
 
 func isExportPath(path string) bool {

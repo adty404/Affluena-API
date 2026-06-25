@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -119,6 +120,11 @@ func (c Config) Validate() error {
 	}
 	if len(c.JWTSecret) < minJWTSecretLength {
 		return fmt.Errorf("JWT_SECRET must be at least %d characters long", minJWTSecretLength)
+	}
+	// In production the database connection must be encrypted; refuse to boot
+	// with sslmode=disable so credentials and row data are not sent in cleartext.
+	if c.Env == "production" && strings.Contains(c.DatabaseURL, "sslmode=disable") {
+		return errors.New("DATABASE_URL must not use sslmode=disable in production; use sslmode=require or verify-full")
 	}
 	return nil
 }

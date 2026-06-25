@@ -20,7 +20,7 @@ type authUseCase interface {
 	Refresh(ctx context.Context, refreshToken string) (User, TokenPair, error)
 	User(ctx context.Context, userID string) (User, error)
 	UpdateAccount(ctx context.Context, userID string, name string, avatarURL string) (User, error)
-	ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) error
+	ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) (User, TokenPair, error)
 	ListSessions(ctx context.Context, userID string) ([]Session, error)
 	RevokeSession(ctx context.Context, userID string, sessionID string) error
 	RequestPasswordReset(ctx context.Context, email string) error
@@ -154,7 +154,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	err := h.service.ChangePassword(c.Request.Context(), userID, req.CurrentPassword, req.NewPassword)
+	user, tokens, err := h.service.ChangePassword(c.Request.Context(), userID, req.CurrentPassword, req.NewPassword)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
 			httpx.Error(c, http.StatusUnauthorized, "current password is incorrect")
@@ -167,7 +167,9 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, "change password failed")
 		return
 	}
-	c.Status(http.StatusNoContent)
+	// Changing the password revokes all other sessions; return a fresh token
+	// pair so the current device stays signed in with the new credentials.
+	httpx.JSON(c, http.StatusOK, authResponse{User: user, Tokens: tokens})
 }
 
 func (h *Handler) ListSessions(c *gin.Context) {

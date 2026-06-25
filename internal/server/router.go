@@ -42,6 +42,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	apilogHandler := apilog.NewHandler(apilogRepo)
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(securityHeaders(cfg.Env))
 
 	// Setup CORS
 	router.Use(cors.New(cors.Config{
@@ -119,6 +120,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected := v1.Group("")
 	protected.Use(auth.AuthMiddleware(tokenManager))
+	// General per-IP rate limiting for the whole authenticated API (auth
+	// endpoints keep their own stricter AuthLimiter above).
+	protected.Use(httpx.APILimiter.Middleware())
 	protected.GET("/auth/me", authHandler.Me)
 	protected.PUT("/auth/account", authHandler.UpdateAccount)
 	protected.PUT("/auth/password", authHandler.ChangePassword)
@@ -249,7 +253,10 @@ func allowedCORSOrigins(raw string) []string {
 
 	for _, part := range parts {
 		origin := strings.TrimSpace(part)
-		if origin != "" {
+		// Never allow a wildcard origin: the API sends credentials
+		// (AllowCredentials: true), and "*" + credentials is both invalid per
+		// the CORS spec and a security risk. Fail closed by dropping it.
+		if origin != "" && origin != "*" {
 			origins = append(origins, origin)
 		}
 	}
@@ -259,4 +266,24 @@ func allowedCORSOrigins(raw string) []string {
 	}
 
 	return origins
+}
+
+// securityHeaders sets baseline hardening response headers on every response.
+// The API only ever returns JSON (or CSV attachments), never HTML documents, so
+// a strict CSP/frame policy here is safe for the WEB/MOBILE clients that just
+// consume the bodies.
+func securityHeaders(env string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		// HSTS only makes sense over TLS; emit it in production where the API is
+		// served via HTTPS so browsers pin the secure scheme.
+		if env == "production" {
+			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		c.Next()
+	}
 }
