@@ -259,10 +259,17 @@ func parseOptionalDate(c *gin.Context, value string, field string) (*time.Time, 
 	if value == "" {
 		return nil, true
 	}
+	// Accept a plain date (YYYY-MM-DD) or a full RFC3339 timestamp. due_date is
+	// returned to clients as RFC3339, so an unchanged value sent back (e.g. when
+	// cancelling a debt) must round-trip; normalize to the UTC calendar date.
 	parsed, err := time.Parse("2006-01-02", value)
 	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, field+" must use YYYY-MM-DD")
-		return nil, false
+		rfc, rfcErr := time.Parse(time.RFC3339, value)
+		if rfcErr != nil {
+			httpx.Error(c, http.StatusBadRequest, field+" must use YYYY-MM-DD or RFC3339")
+			return nil, false
+		}
+		parsed = rfc.UTC()
 	}
 	date := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC)
 	return &date, true
