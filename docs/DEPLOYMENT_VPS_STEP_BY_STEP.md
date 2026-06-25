@@ -849,21 +849,31 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ### API restart terus dan log `invalid configuration ... sslmode=disable in production`
 
-Sejak hardening OWASP, API menolak boot di `APP_ENV=production` bila `DATABASE_URL` memakai `sslmode=disable`. Untuk Postgres internal (Docker network yang sama), tambahkan opt-in di file env aplikasi `.env.production` (yang dibaca via `env_file` oleh service `api`, bukan `deploy/.env` yang hanya untuk interpolasi Compose):
+Sejak hardening OWASP, API menolak boot di `APP_ENV=production` bila `DATABASE_URL` memakai `sslmode=disable`. Untuk Postgres internal (Docker network yang sama, trafik tidak keluar host), tambahkan opt-in di file env aplikasi `.env.production` — file yang dibaca lewat `env_file` oleh service `api` (BUKAN `deploy/.env`, yang hanya untuk interpolasi `${POSTGRES_PASSWORD}` di Compose):
 
-```env
-ALLOW_INSECURE_DB=true
+```bash
+# nama file env aplikasi yang dipakai service api (lihat env_file di docker-compose.prod.yml)
+echo 'ALLOW_INSECURE_DB=true' >> ../Affluena-API/.env.production
+# pastikan baris-nya berdiri sendiri (jangan nempel ke baris sebelumnya):
+grep -n ALLOW_INSECURE_DB ../Affluena-API/.env.production
 ```
 
-Lalu rebuild:
+Lalu **recreate** container-nya:
 
 ```bash
 cd /opt/affluena/deploy
-docker compose -f docker-compose.prod.yml up -d --build api
-docker compose -f docker-compose.prod.yml logs --tail=50 api
+sudo docker compose -f docker-compose.prod.yml up -d --force-recreate api
+sudo docker compose -f docker-compose.prod.yml logs --tail=50 api
+curl -fsS http://127.0.0.1:8080/healthz
 ```
 
-Untuk database remote/managed, jangan set flag ini — ubah `DATABASE_URL` ke `sslmode=require` (atau `verify-full`).
+Yang diharapkan di log: `WARN ... unencrypted database connection ... permitted via ALLOW_INSECURE_DB`, lalu `starting api`, lalu `curl` mengembalikan `{"status":"ok"}`.
+
+> **Penting — kenapa harus `--force-recreate`:** container yang sedang crash-loop **tetap memakai environment lama**-nya; env hanya dibaca ulang saat container DIBUAT ULANG, bukan saat restart biasa. `docker compose up -d` (apalagi cuma `restart`) sering TIDAK me-recreate kalau image tidak berubah, jadi `.env.production` yang baru tidak terpakai dan API tetap crash. `--force-recreate` memaksa container baru sehingga `env_file` di-load ulang. (Juga: pastikan nama file `docker-compose.prod.yml` benar — typo seperti `docker--compose.prod.yml` membuat perintah gagal diam-diam.)
+
+Karena `.env.production` di VPS tidak ikut `git pull`, flag ini cukup di-set sekali; deploy GitHub Actions berikutnya otomatis me-recreate container dan ikut membaca flag-nya.
+
+Untuk database remote/managed, JANGAN set flag ini — ubah `DATABASE_URL` ke `sslmode=require` (atau `verify-full`).
 
 ### API restart terus dan log `invalid port` pada `DATABASE_URL`
 

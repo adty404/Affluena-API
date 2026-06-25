@@ -219,3 +219,6 @@ curl -I http://VPS_PUBLIC_IP
 - Secrets must be created in both repositories because API and Web are separate GitHub repositories.
 - `VITE_API_BASE_URL` is a web repository variable, not an API secret.
 - If a workflow still sees empty secrets, run a new workflow after saving the secrets.
+- The CI job can pass and deploy "succeed" while the `api` container then crash-loops at boot. Most common cause: production config validation. If `curl http://VPS_PUBLIC_IP/healthz` fails after a deploy, check `docker compose -f docker-compose.prod.yml logs --tail=50 api`:
+  - `invalid configuration ... sslmode=disable in production` → set `ALLOW_INSECURE_DB=true` in `../Affluena-API/.env.production` and **recreate** with `docker compose -f docker-compose.prod.yml up -d --force-recreate api` (a crash-looping container keeps its old env until recreated). See `docs/DEPLOYMENT_VPS_STEP_BY_STEP.md` → Troubleshooting.
+  - `JWT_SECRET must be set ...` → set a real `JWT_SECRET` (32+ chars, not a `change-me`/`replace-with` placeholder) in `.env.production`, then `--force-recreate`.
