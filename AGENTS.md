@@ -10,7 +10,7 @@ Core domains:
 
 - Auth: register, login, refresh token, protected routes.
 - Dashboard: monthly summary for net worth, cashflow, budgets, upcoming obligations, plus cashflow trend, expense distribution, and spend forecasting analytics.
-- Wallets: cash, bank, e-wallet, investment/trading wallets.
+- Wallets: cash, bank, e-wallet, investment/trading wallets. Wallets can be shared with other users; a share carries a `role` of `member` (read+write) or `viewer` (read-only).
 - Categories: user-owned income/expense categories with optional same-user, same-type `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
 - Tags: user-owned labels attachable to transactions through `tag_ids`, with transaction filtering by `tag_id`.
 - Transactions: income, expense, transfer, adjustment, with wallet balance updates, tag links, and list filters.
@@ -54,6 +54,8 @@ Important invariants:
 - Operations that change balances or multiple related tables must be atomic PostgreSQL transactions.
 - Create/update/delete transaction flows must preserve wallet balances.
 - Transaction balance deltas must only update wallets still accessible to the authenticated user, either as owner or joined shared-wallet member.
+- Shared-wallet writes require a `member` role. A `viewer`-role share is read-only: it may see the wallet, its transactions, reports, exports, and dashboard analytics, but every write path (transaction balance apply, quick entry, tracker, debt, recurring) must reject it. `wallet.CheckMemberAccess` enforces `>= AccessMember`, and the copy-pasted owner-or-joined-member SQL predicates additionally require `ws.role = 'member'`.
+- A pending (not-yet-joined) invitee must not see a wallet's balance, member roster, or goal-pool total; those are withheld until the invite is accepted.
 - Goal wallets use internal type `goal`; generic wallet create/update/delete endpoints must not create, convert, or delete goal-managed wallets.
 - Installment plans must keep `total_amount_minor == monthly_amount_minor * tenor_months`; otherwise payments can overcharge or undercharge the declared total.
 - Debt, installment, subscription, quick entry, and recurring execution flows must not partially write data.
@@ -173,6 +175,7 @@ Current notable API decisions:
 - `POST/PUT /api/v1/recurring-transactions` accept `wallet_id` and `to_wallet_id` for wallets owned by the authenticated user or joined shared wallets; categories remain owned by the recurring-rule user.
 - `POST/PUT /api/v1/installments` and `POST/PUT /api/v1/subscriptions` accept `wallet_id` for wallets owned by the authenticated user or joined shared wallets; expense categories remain owned by the tracker user.
 - `POST /api/v1/debts` accepts `wallet_id` for wallets owned by the authenticated user or joined shared wallets; disbursement and payment categories remain owned by the debt user.
+- `POST /api/v1/wallets/:id/invites` accepts an optional `role` (`member` (read+write, default) or `viewer` (read-only)) alongside `email`. The role is stored on `wallet_shares.role`; `viewer` shares can read the wallet/transactions/reports/exports/analytics but are denied every shared-wallet write path. `GET /api/v1/wallets`, `GET /api/v1/wallets/:id`, and `GET /api/v1/wallets/:id/members` surface the real share role.
 - `GET /api/v1/goals` currently returns all accessible goals as a JSON array ordered by `created_at DESC`; it does not yet return `{goals, pagination}`.
 - Financial goal creation and invite acceptance create goal wallets in the same PostgreSQL transaction. Goal wallet names include a goal ID suffix so duplicate goal names can coexist. Joined goal invitations cannot be rejected later via the invitation-response endpoint.
 - `GET /api/v1/dashboard/summary?month=YYYY-MM` returns monthly summary data scoped to the authenticated user.
@@ -189,7 +192,7 @@ Current notable API decisions:
 - Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
-- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), sent alerts (`000020`), wallet display metadata (`000021`), user profile fields (`000022`), password reset tokens (`000023`), export jobs (`000024`), and notification rules (`000025`).
+- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), sent alerts (`000020`), wallet display metadata (`000021`), user profile fields (`000022`), password reset tokens (`000023`), export jobs (`000024`), notification rules (`000025`), and the shared-wallet `role` column (`000026`, `wallet_shares.role` ∈ {`member`,`viewer`} default `member`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Known Tech Debt
