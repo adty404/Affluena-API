@@ -147,7 +147,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `GET /api/v1/wallets/:id`
 - `PUT /api/v1/wallets/:id`
 - `DELETE /api/v1/wallets/:id`
-- `POST /api/v1/wallets/:id/invites`
+- `POST /api/v1/wallets/:id/invites` (optional `role`: `member` (read+write, default) or `viewer` (read-only))
 - `PATCH /api/v1/wallets/:id/members/:member_id`
 - `GET /api/v1/wallets/:id/members`
 - `GET /api/v1/wallets/:id/analytics?month=YYYY-MM`
@@ -410,9 +410,17 @@ Transaction `tag_ids` must be valid UUIDs owned by the authenticated user. Dupli
 
 Shared wallet owners and joined members can see transactions recorded on the shared wallet in transaction lists, CSV export, and dashboard analytics. Joined members can create quick entry templates, debt records, installment trackers, subscription trackers, and recurring transaction rules for shared wallets; executing those templates, debt payments, tracker payments, or rules records transactions against the shared wallet. Shared-wallet analytics count each wallet transaction once even when multiple members have joined.
 
+**Share roles (`wallet_shares.role`):** An invite carries a role, sent as the optional `role` field on `POST /api/v1/wallets/:id/invites` and defaulting to `member`:
+- `member` — read + write: can view the wallet and record transactions against it (and create quick entries, debts, trackers, and recurring rules for it).
+- `viewer` — read-only: can view the wallet, its transactions, reports, exports, and dashboard analytics, but every write path (transaction balance apply, quick entry, tracker, debt, recurring) is denied. `list`, `get`, and `members` surface the real role for each share.
+
+The role is stored on `wallet_shares` and defaults to `member`, so every pre-existing share keeps its read+write behavior. The share lifecycle (`status`: pending/joined/rejected) is unchanged.
+
+A **pending** (invited but not-yet-joined) invitee can see only that the wallet exists; the wallet's balance, member roster, and goal-pool total are withheld until the invite is accepted.
+
 **Transaction permissions on shared wallets:**
-- View: Anyone with wallet access can view transactions
-- Create: Any user with wallet access can create transactions
+- View: Anyone with wallet access (owner, member, or viewer) can view transactions
+- Create: Owners and joined `member`-role users can create transactions; `viewer`-role users cannot
 - Update/Delete: **Only the transaction creator** can update or delete their own transactions
 
 Categories and tags are personal metadata owned by the transaction creator. When viewing shared wallet transactions, you may see categories from other users — this is intentional and reflects how the creator categorized their expense.
