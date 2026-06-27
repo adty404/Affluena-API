@@ -80,7 +80,8 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 
 func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at
+		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at,
+			CASE WHEN g.user_id = $1 THEN 'joined' ELSE gm.status END AS member_status
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
 		WHERE g.user_id = $1 OR (gm.user_id = $1 AND gm.status IN ('pending', 'joined'))
@@ -94,10 +95,15 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 	var goals []Goal
 	for rows.Next() {
 		var goal Goal
-		if err := rows.Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt); err != nil {
+		var memberStatus string
+		if err := rows.Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus); err != nil {
 			return nil, err
 		}
-		goal.CollectedAmountMinor, _ = r.getCollectedAmount(ctx, goal.ID)
+		// Pending invitees see the goal (to accept it) but not the collective
+		// pool balance until they join.
+		if goal.UserID == userID || memberStatus == "joined" {
+			goal.CollectedAmountMinor, _ = r.getCollectedAmount(ctx, goal.ID)
+		}
 		goals = append(goals, goal)
 	}
 	return goals, rows.Err()
@@ -105,12 +111,14 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Goal, error) {
 	var goal Goal
+	var memberStatus string
 	err := r.pool.QueryRow(ctx, `
-		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at
+		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at,
+			CASE WHEN g.user_id = $1 THEN 'joined' ELSE COALESCE(gm.status, 'pending') END AS member_status
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
 		WHERE (g.user_id = $1 OR (gm.user_id = $1 AND gm.status IN ('pending', 'joined'))) AND g.id = $2
-	`, userID, id).Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt)
+	`, userID, id).Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Goal{}, ErrNotFound
@@ -119,8 +127,12 @@ func (r *Repository) Get(ctx context.Context, userID string, id string) (Goal, e
 		return Goal{}, err
 	}
 
-	goal.CollectedAmountMinor, _ = r.getCollectedAmount(ctx, goal.ID)
-	goal.Members, _ = r.GetMembers(ctx, goal.ID)
+	// Pending (not-yet-accepted) invitees can see the goal to accept it, but not
+	// the collective pool balance or the member roster until they join.
+	if goal.UserID == userID || memberStatus == "joined" {
+		goal.CollectedAmountMinor, _ = r.getCollectedAmount(ctx, goal.ID)
+		goal.Members, _ = r.GetMembers(ctx, goal.ID)
+	}
 	return goal, nil
 }
 

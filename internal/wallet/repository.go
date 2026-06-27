@@ -53,6 +53,11 @@ func (r *Repository) List(ctx context.Context, userID string, pagination page.Pa
 		if err := rows.Scan(&wallet.ID, &wallet.UserID, &wallet.Name, &wallet.Type, &wallet.CurrencyCode, &wallet.BalanceMinor, &wallet.Color, &wallet.Description, &wallet.GoalID, &wallet.CreatedAt, &wallet.UpdatedAt, &wallet.Role, &wallet.ShareStatus); err != nil {
 			return page.Result[Wallet]{}, err
 		}
+		// A pending (not-yet-accepted) invitee may see that the wallet exists so
+		// they can accept the invite, but not its balance until they join.
+		if wallet.Role != "owner" && wallet.ShareStatus != "joined" {
+			wallet.BalanceMinor = 0
+		}
 		wallets = append(wallets, wallet)
 	}
 	if err := rows.Err(); err != nil {
@@ -104,7 +109,14 @@ func (r *Repository) Get(ctx context.Context, userID string, id string) (Wallet,
 		return Wallet{}, err
 	}
 
-	wallet.Members, _ = r.GetMembers(ctx, wallet.ID)
+	// Owner and joined members get the full wallet (balance + roster). A pending
+	// invitee can see the wallet to accept the invite, but not its balance or the
+	// member roster (which would leak other members' emails) until they join.
+	if wallet.Role == "owner" || wallet.ShareStatus == "joined" {
+		wallet.Members, _ = r.GetMembers(ctx, wallet.ID)
+	} else {
+		wallet.BalanceMinor = 0
+	}
 	return wallet, nil
 }
 

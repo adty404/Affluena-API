@@ -430,6 +430,84 @@ func TestSharedWalletOwnerCannotMutateMemberTransaction(t *testing.T) {
 	assertAPIStatus(t, router, memberToken, http.MethodDelete, "/api/v1/transactions/"+txID, "", http.StatusNoContent)
 }
 
+// TestPendingInviteeCannotSeeWalletBalanceOrRoster locks the wallet-sharing
+// isolation fix: a pending (not-yet-accepted) invitee may see that the wallet
+// exists (so they can accept the invite) but must NOT see its balance or the
+// member roster (which would leak other members' emails). Both become visible
+// once they join.
+func TestPendingInviteeCannotSeeWalletBalanceOrRoster(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-share-pending-leak-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "pending-leak-owner")
+	inviteeID, inviteeToken := registerIntegrationAPIUser(t, router, "pending-leak-invitee")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, inviteeID)
+
+	walletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Secret Balance Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 500000
+	}`)
+	inviteeEmail := getIntegrationUserEmail(t, router, inviteeToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+inviteeEmail+`"
+	}`, http.StatusCreated)
+
+	// While PENDING: GET /wallets/:id is visible but balance + roster are hidden.
+	pendingBody := performAPIRequest(t, router, inviteeToken, http.MethodGet, "/api/v1/wallets/"+walletID, "", http.StatusOK)
+	var pendingWallet wallet.Wallet
+	if err := json.Unmarshal(pendingBody, &pendingWallet); err != nil {
+		t.Fatalf("parse pending wallet: %v", err)
+	}
+	if pendingWallet.ShareStatus != "pending" {
+		t.Fatalf("expected pending share_status, got %q", pendingWallet.ShareStatus)
+	}
+	if pendingWallet.BalanceMinor != 0 {
+		t.Fatalf("pending invitee leaked balance via Get: got %d, want 0", pendingWallet.BalanceMinor)
+	}
+	if len(pendingWallet.Members) != 0 {
+		t.Fatalf("pending invitee leaked member roster via Get: got %d members", len(pendingWallet.Members))
+	}
+
+	// Same hiding via the list endpoint.
+	listBody := performAPIRequest(t, router, inviteeToken, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
+	var listResp struct {
+		Wallets []wallet.Wallet `json:"wallets"`
+	}
+	if err := json.Unmarshal(listBody, &listResp); err != nil {
+		t.Fatalf("parse wallet list: %v", err)
+	}
+	if len(listResp.Wallets) != 1 {
+		t.Fatalf("expected 1 wallet for pending invitee, got %d", len(listResp.Wallets))
+	}
+	if listResp.Wallets[0].BalanceMinor != 0 {
+		t.Fatalf("pending invitee leaked balance via List: got %d, want 0", listResp.Wallets[0].BalanceMinor)
+	}
+
+	// After joining, balance and roster become visible.
+	assertAPIStatus(t, router, inviteeToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+inviteeID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+	joinedBody := performAPIRequest(t, router, inviteeToken, http.MethodGet, "/api/v1/wallets/"+walletID, "", http.StatusOK)
+	var joinedWallet wallet.Wallet
+	if err := json.Unmarshal(joinedBody, &joinedWallet); err != nil {
+		t.Fatalf("parse joined wallet: %v", err)
+	}
+	if joinedWallet.BalanceMinor != 500000 {
+		t.Fatalf("joined member should see balance 500000, got %d", joinedWallet.BalanceMinor)
+	}
+	if len(joinedWallet.Members) < 2 {
+		t.Fatalf("joined member should see the full roster, got %d members", len(joinedWallet.Members))
+	}
+}
+
 func getIntegrationUserEmail(t *testing.T, router http.Handler, token string) string {
 	t.Helper()
 
