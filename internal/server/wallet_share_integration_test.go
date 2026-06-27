@@ -508,6 +508,92 @@ func TestPendingInviteeCannotSeeWalletBalanceOrRoster(t *testing.T) {
 	}
 }
 
+// TestWalletViewerRoleIsReadOnly locks the read-only viewer share: a viewer can
+// see the wallet and its balance but cannot record transactions into it, while a
+// member invited to the same wallet can.
+func TestWalletViewerRoleIsReadOnly(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "production",
+		JWTSecret:            "wallet-viewer-role-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	ownerID, ownerToken := registerIntegrationAPIUser(t, router, "viewer-role-owner")
+	viewerID, viewerToken := registerIntegrationAPIUser(t, router, "viewer-role-viewer")
+	memberID, memberToken := registerIntegrationAPIUser(t, router, "viewer-role-member")
+	defer cleanupServerIntegrationUsers(t, pool, ownerID)
+	defer cleanupServerIntegrationUsers(t, pool, viewerID)
+	defer cleanupServerIntegrationUsers(t, pool, memberID)
+
+	walletID := createAPIResource(t, router, ownerToken, "/api/v1/wallets", `{
+		"name": "Personal Wallet",
+		"type": "bank",
+		"currency_code": "IDR",
+		"balance_minor": 100000
+	}`)
+
+	// Invite as VIEWER (read-only) and accept.
+	viewerEmail := getIntegrationUserEmail(t, router, viewerToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+viewerEmail+`",
+		"role": "viewer"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, viewerToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+viewerID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+
+	// Viewer CAN read the wallet, sees its balance, and is marked as a viewer.
+	viewerBody := performAPIRequest(t, router, viewerToken, http.MethodGet, "/api/v1/wallets/"+walletID, "", http.StatusOK)
+	var viewerWallet wallet.Wallet
+	if err := json.Unmarshal(viewerBody, &viewerWallet); err != nil {
+		t.Fatalf("parse viewer wallet: %v", err)
+	}
+	if viewerWallet.BalanceMinor != 100000 {
+		t.Fatalf("viewer should see balance 100000, got %d", viewerWallet.BalanceMinor)
+	}
+	if viewerWallet.Role != "viewer" {
+		t.Fatalf("expected role viewer, got %q", viewerWallet.Role)
+	}
+
+	// Viewer CANNOT record a transaction into the wallet (write denied -> 404).
+	viewerCategoryID := createAPIResource(t, router, viewerToken, "/api/v1/categories", `{
+		"name": "Viewer Expense",
+		"type": "expense"
+	}`)
+	assertAPIStatus(t, router, viewerToken, http.MethodPost, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+viewerCategoryID+`",
+		"amount_minor": 5000,
+		"transaction_at": "2026-06-15T08:00:00Z"
+	}`, http.StatusNotFound)
+	assertWalletBalance(t, router, ownerToken, walletID, 100000) // unchanged
+
+	// Contrast: a MEMBER on the same wallet CAN record, moving the balance.
+	memberEmail := getIntegrationUserEmail(t, router, memberToken)
+	assertAPIStatus(t, router, ownerToken, http.MethodPost, "/api/v1/wallets/"+walletID+"/invites", `{
+		"email": "`+memberEmail+`",
+		"role": "member"
+	}`, http.StatusCreated)
+	assertAPIStatus(t, router, memberToken, http.MethodPatch, "/api/v1/wallets/"+walletID+"/members/"+memberID, `{
+		"status": "joined"
+	}`, http.StatusOK)
+	memberCategoryID := createAPIResource(t, router, memberToken, "/api/v1/categories", `{
+		"name": "Member Expense",
+		"type": "expense"
+	}`)
+	createAPIResource(t, router, memberToken, "/api/v1/transactions", `{
+		"type": "expense",
+		"wallet_id": "`+walletID+`",
+		"category_id": "`+memberCategoryID+`",
+		"amount_minor": 5000,
+		"transaction_at": "2026-06-15T09:00:00Z"
+	}`)
+	assertWalletBalance(t, router, ownerToken, walletID, 95000)
+}
+
 func getIntegrationUserEmail(t *testing.T, router http.Handler, token string) string {
 	t.Helper()
 

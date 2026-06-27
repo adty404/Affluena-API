@@ -14,7 +14,7 @@ type RepositoryPort interface {
 	Get(ctx context.Context, userID string, id string) (Wallet, error)
 	Update(ctx context.Context, userID string, id string, input UpdateWalletInput) (Wallet, error)
 	Delete(ctx context.Context, userID string, id string) error
-	AddMember(ctx context.Context, walletID string, userID string, status string) error
+	AddMember(ctx context.Context, walletID string, userID string, status string, role string) error
 	FindUserByEmail(ctx context.Context, email string) (string, error)
 	RespondInvite(ctx context.Context, walletID string, userID string, status string) error
 	GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error)
@@ -105,7 +105,11 @@ func (u *UseCase) InviteMember(ctx context.Context, userID string, id string, in
 		return errors.New("cannot invite yourself")
 	}
 
-	err = u.repo.AddMember(ctx, id, invitedUserID, "pending")
+	role := input.Role
+	if role == "" {
+		role = "member"
+	}
+	err = u.repo.AddMember(ctx, id, invitedUserID, "pending", role)
 	if err == nil && u.activityUC != nil {
 		u.activityUC.LogActivity(ctx, userID, "INVITE", "WALLET", &id, "Mengundang "+input.Email+" ke dompet bersama")
 	}

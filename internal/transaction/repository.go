@@ -332,7 +332,7 @@ func applyDeltas(ctx context.Context, tx pgx.Tx, userID string, deltas []Balance
 					EXISTS (
 						SELECT 1
 						FROM wallet_shares
-						WHERE wallet_id = wallets.id AND user_id = $3 AND status = 'joined'
+						WHERE wallet_id = wallets.id AND user_id = $3 AND status = 'joined' AND role = 'member'
 					)
 				)
 		`, delta.AmountMinor, delta.WalletID, userID)
@@ -359,7 +359,7 @@ func ensureWallet(ctx context.Context, tx pgx.Tx, userID string, walletID string
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM wallets w
-			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined'
+			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined' AND ws.role = 'member'
 			WHERE (w.user_id = $1 OR ws.wallet_id IS NOT NULL) AND w.id = $2
 		)
 	`, userID, walletID).Scan(&exists); err != nil {

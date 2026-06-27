@@ -57,7 +57,7 @@ func (f *fakeWalletRepository) Delete(ctx context.Context, userID string, id str
 	return f.err
 }
 
-func (f *fakeWalletRepository) AddMember(ctx context.Context, walletID string, userID string, status string) error {
+func (f *fakeWalletRepository) AddMember(ctx context.Context, walletID string, userID string, status string, role string) error {
 	return f.err
 }
 
