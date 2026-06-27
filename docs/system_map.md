@@ -103,7 +103,7 @@ graph TB
 | Modul | Lokasi | File | Lines | Deskripsi |
 |-------|--------|------|-------|-----------|
 | **auth** | `internal/auth/` | 6 src + 2 test | 870 + 287 | Registrasi, login, refresh token (JWT HS256 + bcrypt), forgot/reset password, profile, password change, dan session revocation. Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. **Password change & reset merevoke SEMUA sesi lalu menerbitkan token pair baru** (change-password mengembalikan `{user, tokens}` sehingga device aktif tetap login; device lain logout). |
-| **wallet** | `internal/wallet/` | 5 src + 2 test | 918 + 313 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user. Access control: `AccessLevel`, `CheckOwnerAccess`, `CheckMemberAccess`, dan `AccessChecker` untuk shared-wallet-aware checks. |
+| **wallet** | `internal/wallet/` | 5 src + 2 test | 918 + 313 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user dengan role `member` (baca+tulis) atau `viewer` (hanya-baca). Access control: `AccessLevel` (None/Viewer/Member/Owner), `CheckOwnerAccess`, `CheckMemberAccess` (≥ member, menolak viewer), `CheckViewAccess`, dan `AccessChecker` untuk shared-wallet-aware checks. |
 | **category** | `internal/category/` | 4 src + 1 test | 489 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
 | **transaction** | `internal/transaction/` | 5 src + 3 test | 982 + 376 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
 
@@ -288,7 +288,7 @@ erDiagram
 | 1 | `users` | id (UUID PK), email (UNIQUE), password_hash | — |
 | 2 | `refresh_tokens` | id, user_id (FK), token_hash (UNIQUE), expires_at, revoked_at | CASCADE on user delete |
 | 3 | `wallets` | id, user_id (FK), name, type, currency_code, balance_minor, goal_id | UNIQUE(user_id, name), CHECK type ∈ {cash,bank,e_wallet,investment,goal} |
-| 4 | `wallet_shares` | wallet_id (FK), user_id (FK), status | PK(wallet_id, user_id), CHECK status ∈ {pending,joined,rejected} |
+| 4 | `wallet_shares` | wallet_id (FK), user_id (FK), status, role | PK(wallet_id, user_id), CHECK status ∈ {pending,joined,rejected}, CHECK role ∈ {member,viewer} (default member) |
 | 5 | `categories` | id, user_id (FK), name, type, parent_id (self-FK) | UNIQUE(user_id, name, type), CHECK type ∈ {income,expense}, max depth 3 |
 | 6 | `transactions` | id, user_id (FK), type, wallet_id (FK), to_wallet_id, category_id, amount_minor, transaction_at, note | CHECK type rules, CHECK amount ≠ 0 |
 | 7 | `transaction_tags` | user_id, transaction_id (FK), tag_id (FK) | PK(transaction_id, tag_id), composite FK ownership |
@@ -310,7 +310,7 @@ erDiagram
 | 23 | `export_jobs` | id, user_id, format, from_at, to_at, row_count, status, created_at | CSV export audit trail |
 | 24 | `notification_rules` | id, user_id, rule_key, title, enabled, channel | UNIQUE(user_id, rule_key), CHECK channel in email/in-app/both |
 
-### 4.2. Migrasi (25 File)
+### 4.2. Migrasi (26 File)
 
 | File | Deskripsi |
 |------|-----------|
@@ -339,6 +339,7 @@ erDiagram
 | `000023_password_reset_tokens.sql` | Password reset token storage |
 | `000024_export_jobs.sql` | Export job audit table |
 | `000025_notification_rules.sql` | User notification rule preferences |
+| `000026_wallet_share_role.sql` | Adds `role` (member/viewer) to wallet_shares for read-only sharing |
 
 ### 4.3. Scripts (Development)
 
@@ -795,7 +796,7 @@ sequenceDiagram
 8. **Error Sanitization** — Error internal (5xx) tidak boleh diekspos langsung ke client. Gunakan `httpx.WriteError()`, `httpx.PublicError`, atau helper yang tersedia.
 9. **Config Validation** — `JWT_SECRET` wajib di-set di production (min 32 karakter, bukan nilai default). Di `APP_ENV=production`, `DATABASE_URL` TIDAK BOLEH memakai `sslmode=disable` kecuali `ALLOW_INSECURE_DB=true` di-set secara eksplisit (untuk Postgres di host/Docker network terpercaya yang sama). Aplikasi fail-fast jika config invalid.
 10. **Refresh Token Atomic** — Refresh token consumption harus atomic (UPDATE...RETURNING) untuk mencegah race condition.
-11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view.
+11. **Transaction Ownership** — Hanya creator transaksi yang boleh mengubah (update/delete) transaksinya sendiri. User lain dengan akses shared wallet hanya bisa view. Pada shared wallet, hanya share ber-role `member` (dan owner) yang boleh mencatat transaksi; share ber-role `viewer` bersifat hanya-baca dan semua jalur tulis (transaction, quick entry, tracker, debt, recurring) menolaknya. Undangan yang masih `pending` belum melihat saldo/daftar anggota/total goal-pool.
 12. **UUID Path Parameters** — Gunakan `httpx.GetUUIDParam()` untuk validasi UUID dari path parameters. Menulis 400 error otomatis jika format invalid.
 13. **Rate Limiting** — Endpoint auth (`/auth/*`) dilindungi oleh `AuthLimiter` (5 req/s, burst 10). Seluruh API ter-autentikasi (`protected` group) dilindungi `APILimiter` per-IP (100 req/s, burst 200). Keduanya mengembalikan `429 Too Many Requests`.
 14. **Shared API Contract** — Jangan membuat kontrak endpoint khusus web atau khusus mobile tanpa kebutuhan nyata. Web React dan Flutter companion harus memakai `/api/v1` contract yang sama agar behavior, pagination, auth, dan error handling tetap konsisten.
