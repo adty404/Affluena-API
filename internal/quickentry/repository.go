@@ -136,7 +136,7 @@ func (r *Repository) ensureWallet(ctx context.Context, userID string, walletID s
 		SELECT EXISTS (
 			SELECT 1
 			FROM wallets w
-			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined'
+			LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id AND ws.user_id = $1 AND ws.status = 'joined' AND ws.role = 'member'
 			WHERE (w.user_id = $1 OR ws.wallet_id IS NOT NULL) AND w.id = $2
 		)
 	`, userID, walletID).Scan(&exists); err != nil {

@@ -34,7 +34,7 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateWall
 func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Wallet], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT DISTINCT w.id::text, w.user_id::text, w.name, w.type, w.currency_code, w.balance_minor, w.color, w.description, w.goal_id::text, w.created_at, w.updated_at,
-			CASE WHEN w.user_id = $1 THEN 'owner' ELSE 'member' END as role,
+			CASE WHEN w.user_id = $1 THEN 'owner' ELSE COALESCE(ws.role, 'member') END as role,
 			CASE WHEN w.user_id = $1 THEN 'joined' ELSE ws.status END as share_status
 		FROM wallets w
 		LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id
@@ -96,7 +96,7 @@ func (r *Repository) Get(ctx context.Context, userID string, id string) (Wallet,
 	var wallet Wallet
 	err := r.pool.QueryRow(ctx, `
 		SELECT DISTINCT w.id::text, w.user_id::text, w.name, w.type, w.currency_code, w.balance_minor, w.color, w.description, w.goal_id::text, w.created_at, w.updated_at,
-			CASE WHEN w.user_id = $1 THEN 'owner' ELSE 'member' END as role,
+			CASE WHEN w.user_id = $1 THEN 'owner' ELSE COALESCE(ws.role, 'member') END as role,
 			CASE WHEN w.user_id = $1 THEN 'joined' ELSE COALESCE(ws.status, 'pending') END as share_status
 		FROM wallets w
 		LEFT JOIN wallet_shares ws ON w.id = ws.wallet_id
@@ -156,17 +156,18 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (string,
 	return id, err
 }
 
-func (r *Repository) AddMember(ctx context.Context, walletID string, userID string, status string) error {
+func (r *Repository) AddMember(ctx context.Context, walletID string, userID string, status string, role string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO wallet_shares (wallet_id, user_id, status)
-		VALUES ($1, $2, $3)
+		INSERT INTO wallet_shares (wallet_id, user_id, status, role)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (wallet_id, user_id) DO UPDATE SET
 			status = CASE
 				WHEN wallet_shares.status = 'joined' THEN 'joined'
 				ELSE EXCLUDED.status
 			END,
+			role = EXCLUDED.role,
 			updated_at = now()
-	`, walletID, userID, status)
+	`, walletID, userID, status, role)
 	return err
 }
 
@@ -229,7 +230,7 @@ func (r *Repository) GetMembers(ctx context.Context, walletID string) ([]WalletM
 			JOIN users u ON u.id = w.user_id
 			WHERE w.id = $1
 			UNION ALL
-			SELECT ws.wallet_id, ws.user_id, u.email, 'member' AS role, ws.status, ws.created_at, ws.updated_at
+			SELECT ws.wallet_id, ws.user_id, u.email, ws.role, ws.status, ws.created_at, ws.updated_at
 			FROM wallet_shares ws
 			JOIN users u ON u.id = ws.user_id
 			WHERE ws.wallet_id = $1
@@ -328,18 +329,18 @@ func (r *Repository) GetAccessLevel(ctx context.Context, userID string, walletID
 		return AccessOwner, nil
 	}
 
-	var isMember bool
+	var role string
 	err = r.pool.QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM wallet_shares WHERE wallet_id = $1 AND user_id = $2 AND status = 'joined'
-		)
-	`, walletID, userID).Scan(&isMember)
+		SELECT role FROM wallet_shares WHERE wallet_id = $1 AND user_id = $2 AND status = 'joined'
+	`, walletID, userID).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AccessNone, nil
+	}
 	if err != nil {
 		return AccessNone, err
 	}
-	if isMember {
-		return AccessMember, nil
+	if role == "viewer" {
+		return AccessViewer, nil
 	}
-
-	return AccessNone, nil
+	return AccessMember, nil
 }

@@ -72,6 +72,8 @@ type WalletAnalytics struct {
 
 type InviteMemberInput struct {
 	Email string `json:"email" binding:"required,email"`
+	// Role the invitee gets: "member" (read+write, default) or "viewer" (read-only).
+	Role string `json:"role" binding:"omitempty,oneof=viewer member"`
 }
 
 type RespondInviteInput struct {
