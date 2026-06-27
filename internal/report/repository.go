@@ -196,7 +196,7 @@ func (r *Repository) GetGoals(ctx context.Context, userID string) ([]GoalAggrega
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
 		LEFT JOIN wallets w ON w.goal_id = g.id
-		WHERE g.user_id = $1 OR (gm.user_id = $1 AND gm.status IN ('pending', 'joined'))
+		WHERE g.user_id = $1 OR (gm.user_id = $1 AND gm.status = 'joined')
 		GROUP BY g.id, g.name, g.target_amount_minor, g.status
 		ORDER BY g.created_at DESC
 	`
