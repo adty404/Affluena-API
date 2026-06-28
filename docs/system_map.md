@@ -1,7 +1,7 @@
 # Affluena-API: System Map
 
-> **Versi:** v2.8 — 24 Juni 2026
-> **Go Files:** 172 total (105 source + 67 test) | **Source Code:** ~13.640 baris | **Test Code:** ~10.540 baris
+> **Versi:** v2.9 — 28 Juni 2026
+> **Go Files:** 174 total (106 source + 68 test) | **Source Code:** ~14.270 baris | **Test Code:** ~10.882 baris
 > **Stack:** Go 1.26 · Gin · PostgreSQL 17 (pgx v5) · Docker Compose · Native JWT · Native Scheduler
 
 ---
