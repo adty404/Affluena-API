@@ -62,15 +62,17 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - *Share Roles:* A `member` share can read **and** record transactions on the wallet; a `viewer` share is read-only (can see the wallet, its transactions, reports, exports, and dashboard analytics, but all write paths are denied). The role defaults to `member`. Wallet `list`/`get` responses include the caller's `role`.
 - *Pending Visibility:* A pending (invited but not-yet-joined) invitee sees only that the wallet exists; its balance, member roster, and goal-pool total are withheld until the invite is accepted.
 
-### Partner (account-level link)
+### Wallet-history sharing (account-level link)
 
-A **partner** link is a one-way, read-only grant at the account level: once accepted, the partner gets `viewer` access to **all** of the owner's wallets — current and any created later. It is implemented on top of wallet sharing: accepting fans out joined `viewer` `wallet_shares` (tagged `source='partner'`) for every owner wallet, and creating a new wallet auto-adds the same for each joined partner; revoking removes only those `source='partner'` shares.
+> Endpoints are under `/partners` for historical reasons; the user-facing feature is **"Berbagi Dompet"** (share wallet history). The mechanism is unchanged: a one-way, read-only grant.
 
-- `POST /api/v1/partners/invites` - Invite a partner. `{ email }`. Creates a `pending` link from the caller (owner) to the invited user. **At most one active partner**: if the caller already has a `pending` or `joined` outgoing link, the invite is rejected with `409` (revoke the existing partner first to switch). Errors: self-invite (400), unknown email (404), already linked to this person / partner limit reached (409). A previously `rejected` link does not count and may be re-created.
+A share link is a one-way, read-only grant at the account level: once accepted, the invited person gets `viewer` access to **all** of the owner's wallets — current and any created later. It is implemented on top of wallet sharing: accepting fans out joined `viewer` `wallet_shares` (tagged `source='partner'`) for every owner wallet, and creating a new wallet auto-adds the same for each joined viewer; revoking removes only those `source='partner'` shares.
+
+- `POST /api/v1/partners/invites` - Invite someone to view your wallets. `{ email }`. Creates a `pending` link from the caller (owner) to the invited user. **At most 5 active viewers**: if the caller already has 5 `pending`/`joined` outgoing links, the invite is rejected with `409` (remove one first). Errors: self-invite (400), unknown email (404), this person already invited / share limit reached (409). A previously `rejected` link does not count and may be re-created.
 - `GET /api/v1/partners` - List the caller's links in both directions: `direction:"owned"` (people I invited to view my wallets) and `direction:"incoming"` (people whose wallets I can view). Each entry carries the other party's `user_id`, `email`, `name`, plus `status`.
 - `PATCH /api/v1/partners/:id` - `{ status: "joined"|"rejected" }`. Only the invited partner may respond; `joined` grants the viewer access.
 - `DELETE /api/v1/partners/:id` - Revoke the link (either party). Removes the auto-granted viewer access; manual wallet shares are untouched.
-- *Note:* One-way and read-only — the partner cannot record transactions, and the owner does not gain access to the partner's wallets. Budgets remain personal.
+- *Note:* One-way and read-only — the invited viewer cannot record transactions, and the owner does not gain access to the viewer's wallets. Budgets remain personal.
 
 ### Category
 - `POST /api/v1/categories` - `{ name, type, parent_id }`
