@@ -39,9 +39,9 @@ func (h *Handler) Invite(c *gin.Context) {
 	if err := h.usecase.Invite(c.Request.Context(), userID, req); err != nil {
 		switch {
 		case errors.Is(err, ErrPartnerLimit):
-			httpx.Error(c, http.StatusConflict, "You already have a partner. Remove the current one before inviting someone else.")
+			httpx.Error(c, http.StatusConflict, "You can share with at most 5 people. Remove someone first to add another.")
 		case errors.Is(err, ErrAlreadyLinked):
-			httpx.Error(c, http.StatusConflict, "That person is already your partner.")
+			httpx.Error(c, http.StatusConflict, "That person can already see your wallets.")
 		default:
 			httpx.WriteError(c, err)
 		}

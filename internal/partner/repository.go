@@ -25,36 +25,41 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (string,
 	return id, err
 }
 
-// Invite creates (or re-opens) a pending partner link from owner to partner.
+// maxActiveShares is how many people one owner may share their wallets with at
+// once. "Active" means a pending or joined outgoing link; rejected links do not
+// count, so a declined invite frees up a slot.
+const maxActiveShares = 5
+
+// Invite creates (or re-opens) a pending share link from owner to partner.
 //
-// At most one ACTIVE (pending or joined) outgoing partner is allowed: only one
-// person may view the owner's wallets at a time. So:
-//   - if the owner already has an active link to THIS partner -> ErrAlreadyLinked
-//   - if the owner already has an active link to ANYONE ELSE  -> ErrPartnerLimit
-//   - otherwise re-open a previously rejected link to this partner, or insert.
+// An owner may share their wallets with at most maxActiveShares people at once:
+//   - if THIS person already has an active link -> ErrAlreadyLinked
+//   - if the owner is already at the active limit -> ErrPartnerLimit
+//   - otherwise re-open a previously rejected link to this person, or insert.
 //
 // Rejected links never count against the limit, so a declined invite leaves the
 // owner free to invite someone else (or re-invite the same person).
 func (r *Repository) Invite(ctx context.Context, ownerID, partnerID string) error {
-	var activePartnerID string
-	err := r.pool.QueryRow(ctx,
-		`SELECT partner_id::text FROM partner_links
-		 WHERE owner_id = $1 AND status IN ('pending', 'joined')
-		 LIMIT 1`,
-		ownerID,
-	).Scan(&activePartnerID)
-	if err == nil {
-		if activePartnerID == partnerID {
-			return ErrAlreadyLinked
-		}
-		return ErrPartnerLimit
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	var activeCount, sameActive int
+	err := r.pool.QueryRow(ctx, `
+		SELECT
+			count(*) FILTER (WHERE status IN ('pending', 'joined')),
+			count(*) FILTER (WHERE status IN ('pending', 'joined') AND partner_id = $2)
+		FROM partner_links
+		WHERE owner_id = $1
+	`, ownerID, partnerID).Scan(&activeCount, &sameActive)
+	if err != nil {
 		return err
 	}
+	if sameActive > 0 {
+		return ErrAlreadyLinked
+	}
+	if activeCount >= maxActiveShares {
+		return ErrPartnerLimit
+	}
 
-	// No active outgoing link. Re-open a prior rejected link to this partner if
-	// one exists; otherwise insert a fresh pending link.
+	// Below the limit. Re-open a prior rejected link to this person if one
+	// exists; otherwise insert a fresh pending link.
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE partner_links SET status = 'pending', updated_at = now()
 		 WHERE owner_id = $1 AND partner_id = $2 AND status = 'rejected'`,
