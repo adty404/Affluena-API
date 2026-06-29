@@ -49,16 +49,17 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - `GET /api/v1/dashboard/forecast?month=YYYY-MM` - Spend forecasting and budget alerts.
 
 ### Wallet
-- `POST /api/v1/wallets` - `{ name, type, currency_code, balance_minor }`
+- `POST /api/v1/wallets` - `{ name, type, currency_code, balance_minor, color?, icon?, description? }`
 - `GET /api/v1/wallets` - Paginated wallet list.
 - `GET /api/v1/wallets/:id`
-- `PUT /api/v1/wallets/:id` - `{ name, type, currency_code }` (Balance updates via transactions).
+- `PUT /api/v1/wallets/:id` - `{ name, type, currency_code, color?, icon?, description? }` (Balance updates via transactions).
 - `DELETE /api/v1/wallets/:id` - Soft archive behavior based on constraints.
 - `POST /api/v1/wallets/:id/invites` - Share wallet. `{ email, role? }` where `role` is `"member"` (read+write, default) or `"viewer"` (read-only).
 - `PATCH /api/v1/wallets/:id/members/:member_id` - `{ status: "joined"|"rejected" }`
 - `GET /api/v1/wallets/:id/members` - List wallet members. Each member carries its real `role` (`owner`/`member`/`viewer`).
 - `GET /api/v1/wallets/:id/analytics?month=YYYY-MM` - Wallet-level income/expense analytics.
 - *Note:* Direct writes to `type="goal"` wallets are rejected. Supported types: `cash`, `bank`, `e_wallet`, `investment`. `goal_id` is not sent by frontend when creating a wallet; goal wallets are created and managed internally by the goal module.
+- *UI metadata (`color`, `icon`, `description`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"bank"`, `"cash"`, `"gift"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same wallet identically.
 - *Share Roles:* A `member` share can read **and** record transactions on the wallet; a `viewer` share is read-only (can see the wallet, its transactions, reports, exports, and dashboard analytics, but all write paths are denied). The role defaults to `member`. Wallet `list`/`get` responses include the caller's `role`.
 - *Pending Visibility:* A pending (invited but not-yet-joined) invitee sees only that the wallet exists; its balance, member roster, and goal-pool total are withheld until the invite is accepted.
 

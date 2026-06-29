@@ -1165,7 +1165,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000\n}"
+              "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000,\n  \"color\": \"#3E72B8\",\n  \"icon\": \"bank\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/wallets",
@@ -1192,7 +1192,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000\n}"
+                  "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000,\n  \"color\": \"#3E72B8\",\n  \"icon\": \"bank\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/v1/wallets",
@@ -1230,7 +1230,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000\n}"
+                  "raw": "{\n  \"name\": \"BCA Main {{$timestamp}}\",\n  \"type\": \"bank\",\n  \"currency_code\": \"IDR\",\n  \"balance_minor\": 10000000,\n  \"color\": \"#3E72B8\",\n  \"icon\": \"bank\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/v1/wallets",
