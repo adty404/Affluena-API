@@ -171,16 +171,16 @@ func (r *Repository) AddMember(ctx context.Context, walletID string, userID stri
 	return err
 }
 
-// AddPartnerViewerShares grants every joined account-level partner of the owner
+// AddPartnerViewerShares grants every joined account-level viewer of the owner
 // a viewer share on the given wallet (used when a new wallet is created so the
-// "partner sees all my wallets" invariant holds). Tagged source='partner' so it
-// is cleaned up if the partner link is later revoked; never clobbers a manual
+// "a viewer sees all my wallets" invariant holds). Tagged source='link' so it
+// is cleaned up if the share link is later revoked; never clobbers a manual
 // share.
 func (r *Repository) AddPartnerViewerShares(ctx context.Context, ownerID string, walletID string) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO wallet_shares (wallet_id, user_id, status, role, source)
-		SELECT $1, pl.partner_id, 'joined', 'viewer', 'partner'
-		FROM partner_links pl
+		SELECT $1, pl.viewer_id, 'joined', 'viewer', 'link'
+		FROM wallet_share_links pl
 		WHERE pl.owner_id = $2 AND pl.status = 'joined'
 		ON CONFLICT (wallet_id, user_id) DO NOTHING
 	`, walletID, ownerID)

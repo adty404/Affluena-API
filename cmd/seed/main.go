@@ -62,13 +62,14 @@ func main() {
 		tagBali    = "55555555-5555-5555-5555-555555550001"
 		tagMonthly = "55555555-5555-5555-5555-555555550002"
 
-		// "Pasangan" (account-level partner) demo. partnerEmail is the demo
-		// user's spouse: a real second account with its own wallets. calonEmail
-		// is a third account used only to show an incoming pending invite.
-		partnerEmail = "pasangan@affluena.com"
-		calonEmail   = "calon@affluena.com"
+		// "Berbagi Dompet" (account-level wallet-history sharing) demo.
+		// viewerEmail is a real second account (with its own wallets) that demo
+		// shares with both ways; calonEmail is a third account used only to show
+		// an incoming pending invite.
+		viewerEmail = "pengamat@affluena.com"
+		calonEmail  = "calon@affluena.com"
 
-		uPartner   = "77777777-7777-7777-7777-777777770001"
+		uViewer    = "77777777-7777-7777-7777-777777770001"
 		uCalon     = "77777777-7777-7777-7777-777777770002"
 		wpMandiri  = "88888888-8888-8888-8888-888888880001"
 		wpDana     = "88888888-8888-8888-8888-888888880002"
@@ -82,9 +83,12 @@ func main() {
 	fmt.Printf("  User: %s / %s\n", testEmail, testPassword)
 
 	// Clean up existing demo users (cascade deletes all owned data, including
-	// partner_links and the auto-managed wallet_shares, via ON DELETE CASCADE).
-	mustExec(db, `DELETE FROM users WHERE email IN ($1, $2, $3)`,
-		testEmail, partnerEmail, calonEmail)
+	// wallet_share_links and the auto-managed wallet_shares, via ON DELETE
+	// CASCADE). Match on both the stable demo UUIDs and the emails, so re-seeding
+	// is clean even if an earlier seed used different demo emails at the same
+	// UUIDs (e.g. the pre-rebrand "pasangan@affluena.com").
+	mustExec(db, `DELETE FROM users WHERE id IN ($1, $2, $3) OR email IN ($4, $5, $6)`,
+		uID, uViewer, uCalon, testEmail, viewerEmail, calonEmail)
 
 	mustExec(db, `INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, 'Aditya (Demo)')`,
 		uID, testEmail, string(pwHash))
@@ -183,39 +187,38 @@ func main() {
 		(gen_random_uuid(), $1, 'Daily Coffee', 'expense', $2, $3, 35000, 'Iced Latte') ON CONFLICT DO NOTHING`,
 		uID, wGoPay, cFood)
 
-	// --- "Pasangan" (account-level partner) demo ------------------------------
-	// Two extra accounts (same password) so the partner feature is visible from
+	// --- "Berbagi Dompet" (account-level wallet-history sharing) demo ----------
+	// Two extra accounts (same password) so the sharing feature is visible from
 	// every angle when logged in as demo@affluena.com:
-	//   * pasangan@affluena.com -- demo's spouse, a real account with its own
-	//     wallets/transactions. Linked both ways (a couple), so demo can VIEW
-	//     pasangan's wallets (shown in the Beranda "Pasangan" section) and
-	//     pasangan can view demo's.
+	//   * pengamat@affluena.com -- a real account with its own wallets/txns.
+	//     Linked both ways with demo, so demo can VIEW their wallets (shown in
+	//     the Beranda "Dibagikan untukku" section) and they can view demo's.
 	//   * calon@affluena.com -- has only a PENDING invite to demo, to show the
 	//     "Undangan masuk" (Terima/Tolak) UI.
 
-	mustExec(db, `INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, 'Pasangan (Demo)')`,
-		uPartner, partnerEmail, string(pwHash))
-	mustExec(db, `INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, 'Calon Pasangan (Demo)')`,
+	mustExec(db, `INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, 'Pengamat (Demo)')`,
+		uViewer, viewerEmail, string(pwHash))
+	mustExec(db, `INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, 'Calon Pengamat (Demo)')`,
 		uCalon, calonEmail, string(pwHash))
 
-	// Pasangan's own finances (so demo sees real balances + transactions when
-	// viewing them read-only under the Pasangan section).
+	// The viewer's own finances (so demo sees real balances + transactions when
+	// viewing them read-only under "Dibagikan untukku").
 	mustExec(db, `INSERT INTO wallets (id, user_id, name, type, currency_code, balance_minor) VALUES
-		($1, $2, 'Mandiri Pasangan', 'bank', 'IDR', 6750000),
+		($1, $2, 'Mandiri Pengamat', 'bank', 'IDR', 6750000),
 		($3, $2, 'Dana', 'e_wallet', 'IDR', 410000)
-		ON CONFLICT DO NOTHING`, wpMandiri, uPartner, wpDana)
+		ON CONFLICT DO NOTHING`, wpMandiri, uViewer, wpDana)
 	mustExec(db, `INSERT INTO categories (id, user_id, name, type) VALUES
 		($1, $2, 'Gaji', 'income'),
 		($3, $2, 'Belanja', 'expense'),
 		($4, $2, 'Makan', 'expense')
-		ON CONFLICT DO NOTHING`, cpSalary, uPartner, cpShopping, cpFood)
+		ON CONFLICT DO NOTHING`, cpSalary, uViewer, cpShopping, cpFood)
 	mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, category_id, type, amount_minor, transaction_at, note) VALUES
 		(gen_random_uuid(), $1, $2, $3, 'income', 9000000, $6, 'Gaji bulanan'),
 		(gen_random_uuid(), $1, $2, $4, 'expense', 525000, $6 - interval '2 days', 'Belanja bulanan'),
 		(gen_random_uuid(), $1, $5, $7, 'expense', 88000, $6 - interval '1 day', 'Makan siang'),
 		(gen_random_uuid(), $1, $5, $7, 'expense', 132000, $6 - interval '3 days', 'Makan malam')
 		ON CONFLICT DO NOTHING`,
-		uPartner, wpMandiri, cpSalary, cpShopping, wpDana, now.AddDate(0, 0, -2), cpFood)
+		uViewer, wpMandiri, cpSalary, cpShopping, wpDana, now.AddDate(0, 0, -2), cpFood)
 
 	// Calon only needs a wallet so that, if demo accepts the pending invite in
 	// the app, there is something to view.
@@ -223,22 +226,23 @@ func main() {
 		($1, $2, 'Jenius', 'bank', 'IDR', 2000000)
 		ON CONFLICT DO NOTHING`, wcJenius, uCalon)
 
-	// Partner links. Each link is one-way; A+B together model a couple who each
-	// share with the other. C is an invite to demo still awaiting a response.
-	mustExec(db, `INSERT INTO partner_links (id, owner_id, partner_id, status) VALUES
+	// Share links. Each link is one-way; the two between demo and the viewer
+	// model two people who each share with the other. The third is an invite to
+	// demo still awaiting a response.
+	mustExec(db, `INSERT INTO wallet_share_links (id, owner_id, viewer_id, status) VALUES
 		(gen_random_uuid(), $1, $2, 'joined'),
 		(gen_random_uuid(), $2, $1, 'joined'),
 		(gen_random_uuid(), $3, $1, 'pending')
-		ON CONFLICT (owner_id, partner_id) DO NOTHING`,
-		uID, uPartner, uCalon)
+		ON CONFLICT (owner_id, viewer_id) DO NOTHING`,
+		uID, uViewer, uCalon)
 
 	// Fan out viewer shares for every JOINED link -- identical SQL to the API's
 	// accept handler (internal/partner/repository.go Respond). Every wallet of a
-	// link's owner becomes a read-only ('viewer') share for the partner, tagged
-	// source='partner'. Pending links (calon) grant nothing.
+	// link's owner becomes a read-only ('viewer') share for the invited person,
+	// tagged source='link'. Pending links (calon) grant nothing.
 	mustExec(db, `INSERT INTO wallet_shares (wallet_id, user_id, status, role, source)
-		SELECT w.id, pl.partner_id, 'joined', 'viewer', 'partner'
-		FROM partner_links pl
+		SELECT w.id, pl.viewer_id, 'joined', 'viewer', 'link'
+		FROM wallet_share_links pl
 		JOIN wallets w ON w.user_id = pl.owner_id
 		WHERE pl.status = 'joined'
 		ON CONFLICT (wallet_id, user_id) DO NOTHING`)
@@ -262,12 +266,12 @@ func main() {
 	fmt.Println("  1 goal (Europe Trip)")
 	fmt.Println("  1 quick entry template")
 	fmt.Println()
-	fmt.Println("Partner (\"Pasangan\") demo:")
-	fmt.Printf("  %s / %s  (spouse: own wallets, mutually linked with demo)\n", partnerEmail, testPassword)
+	fmt.Println("\"Berbagi Dompet\" (wallet-history sharing) demo:")
+	fmt.Printf("  %s / %s  (own wallets, shared both ways with demo)\n", viewerEmail, testPassword)
 	fmt.Printf("  %s / %s  (pending invite to demo -> Terima/Tolak)\n", calonEmail, testPassword)
-	fmt.Println("  Logged in as demo: Pengaturan > Pasangan shows the linked")
-	fmt.Println("  spouse + the pending invite; Beranda shows a \"Pasangan\"")
-	fmt.Println("  section with the spouse's wallets (read-only).")
+	fmt.Println("  Logged in as demo: Pengaturan > Berbagi Dompet shows the")
+	fmt.Println("  connected viewer + the pending invite; Beranda shows a")
+	fmt.Println("  \"Dibagikan untukku\" section with the viewer's wallets (read-only).")
 }
 
 func mustExec(db *sql.DB, query string, args ...interface{}) {
