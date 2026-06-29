@@ -492,8 +492,19 @@ sudo certbot renew --dry-run
 
 [VPS]
 
+**Cara cepat (disarankan):** dari checkout repo di server, jalankan helper berikut. Ia otomatis `git pull`, baca `POSTGRES_PASSWORD`, deteksi network Postgres, lalu `make seed` — dan pakai `sudo` sendiri bila kamu bukan root:
+
+```bash
+bash scripts/seed-prod.sh
+```
+
+Seed bersifat idempoten; hanya akun demo (`demo@`/`pengamat@`/`calon@`, plus `pasangan@` lama) yang dihapus & dibuat ulang — data user asli tidak tersentuh.
+
+**Cara manual** (kalau ingin langkah per langkah — jangan lupa `git pull` dulu supaya seeder cocok dengan skema terbaru):
+
 ```bash
 cd /opt/affluena/Affluena-API
+git pull --ff-only origin master
 set -a
 . /opt/affluena/deploy/.env
 set +a
