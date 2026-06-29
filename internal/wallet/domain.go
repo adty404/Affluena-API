@@ -23,6 +23,7 @@ type Wallet struct {
 	CurrencyCode string    `json:"currency_code"`
 	BalanceMinor int64     `json:"balance_minor"`
 	Color        string    `json:"color"`
+	Icon         string    `json:"icon"`
 	Description  string    `json:"description"`
 	GoalID       *string   `json:"goal_id,omitempty"`
 	Role         string    `json:"role,omitempty"`
@@ -49,6 +50,7 @@ type CreateWalletInput struct {
 	CurrencyCode string
 	BalanceMinor int64
 	Color        string
+	Icon         string
 	Description  string
 	GoalID       *string
 }
@@ -58,6 +60,7 @@ type UpdateWalletInput struct {
 	Type         string
 	CurrencyCode string
 	Color        string
+	Icon         string
 	Description  string
 }
 

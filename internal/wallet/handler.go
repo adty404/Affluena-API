@@ -37,6 +37,7 @@ type createWalletRequest struct {
 	CurrencyCode string `json:"currency_code"`
 	BalanceMinor int64  `json:"balance_minor"`
 	Color        string `json:"color"`
+	Icon         string `json:"icon"`
 	Description  string `json:"description"`
 }
 
@@ -45,6 +46,7 @@ type updateWalletRequest struct {
 	Type         string `json:"type" binding:"required"`
 	CurrencyCode string `json:"currency_code" binding:"required"`
 	Color        string `json:"color"`
+	Icon         string `json:"icon"`
 	Description  string `json:"description"`
 }
 
@@ -65,6 +67,7 @@ func (h *Handler) Create(c *gin.Context) {
 		CurrencyCode: req.CurrencyCode,
 		BalanceMinor: req.BalanceMinor,
 		Color:        req.Color,
+		Icon:         req.Icon,
 		Description:  req.Description,
 	})
 	if err != nil {
@@ -141,6 +144,7 @@ func (h *Handler) Update(c *gin.Context) {
 		Type:         req.Type,
 		CurrencyCode: req.CurrencyCode,
 		Color:        req.Color,
+		Icon:         req.Icon,
 		Description:  req.Description,
 	})
 	if err != nil {
