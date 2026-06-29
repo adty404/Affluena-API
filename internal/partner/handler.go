@@ -2,6 +2,7 @@ package partner
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"affluena-api/internal/httpx"
@@ -36,7 +37,14 @@ func (h *Handler) Invite(c *gin.Context) {
 		return
 	}
 	if err := h.usecase.Invite(c.Request.Context(), userID, req); err != nil {
-		httpx.WriteError(c, err)
+		switch {
+		case errors.Is(err, ErrPartnerLimit):
+			httpx.Error(c, http.StatusConflict, "You already have a partner. Remove the current one before inviting someone else.")
+		case errors.Is(err, ErrAlreadyLinked):
+			httpx.Error(c, http.StatusConflict, "That person is already your partner.")
+		default:
+			httpx.WriteError(c, err)
+		}
 		return
 	}
 	c.Status(http.StatusCreated)
