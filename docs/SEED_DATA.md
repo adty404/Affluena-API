@@ -39,25 +39,25 @@ Seeded data:
 - 1 recurring rule.
 - 1 financial goal with a goal wallet.
 - 1 quick entry template.
-- 2 extra partner accounts (a linked spouse + a pending invite) — see [Partner ("Pasangan") demo](#partner-pasangan-demo).
+- 2 extra accounts for the "Berbagi Dompet" demo (a connected viewer + a pending invite) — see [Berbagi Dompet demo](#berbagi-dompet-demo).
 
-## Partner ("Pasangan") demo
+## Berbagi Dompet demo
 
-The seed also creates two extra accounts (same password, `password123`) so the account-level partner feature is visible from every angle when logged in as `demo@affluena.com`:
+The seed also creates two extra accounts (same password, `password123`) so the **Berbagi Dompet** (wallet-history sharing) feature is visible from every angle when logged in as `demo@affluena.com`:
 
 | Email | Role in the demo |
 |-------|------------------|
-| `pasangan@affluena.com` | The demo user's **spouse** — a real account with its own wallets (`Mandiri Pasangan`, `Dana`), categories, and transactions. Linked **both ways** with `demo` (a couple), so each can view the other's wallets. |
+| `pengamat@affluena.com` | A real account with its own wallets (`Mandiri Pengamat`, `Dana`), categories, and transactions. Linked **both ways** with `demo`, so each can view the other's wallets. |
 | `calon@affluena.com` | Has only a **pending** invite to `demo` (one wallet, `Jenius`). Demonstrates the "Undangan masuk" → Terima/Tolak UI. No wallet access is granted until accepted. |
 
-Three `partner_links` are created: `demo → pasangan` (joined), `pasangan → demo` (joined), and `calon → demo` (pending). For each **joined** link, the seed runs the exact same fan-out the API's accept handler uses (`internal/partner/repository.go` `Respond`): one read-only (`viewer`) `wallet_shares` row, tagged `source='partner'`, for every wallet the link's owner owns.
+Three `wallet_share_links` are created: `demo → pengamat` (joined), `pengamat → demo` (joined), and `calon → demo` (pending). For each **joined** link, the seed runs the exact same fan-out the API's accept handler uses (`internal/partner/repository.go` `Respond`): one read-only (`viewer`) `wallet_shares` row, tagged `source='link'`, for every wallet the link's owner owns.
 
 When logged in as `demo@affluena.com`:
 
-- **Pengaturan → Pasangan** lists the connected spouse (`Terhubung`) under "Pasangan saya" and the pending `calon` invite under "Undangan masuk".
-- **Beranda** shows a dedicated **"Pasangan"** section with the spouse's wallets (read-only, `LIHAT` badge), excluded from the personal **Dompet** section and the Total-saldo hero.
+- **Pengaturan → Berbagi Dompet** lists the connected viewer (`Terhubung`) under "Pengamat saya (N/5)" and the pending `calon` invite under "Undangan masuk".
+- **Beranda** shows a dedicated **"Dibagikan untukku"** section with the viewer's wallets (read-only, `LIHAT` badge), excluded from the personal **Dompet** section and the Total-saldo hero.
 
-Logging in as `pasangan@affluena.com` is symmetric — its Beranda shows `demo`'s wallets in the Pasangan section.
+Logging in as `pengamat@affluena.com` is symmetric — its Beranda shows `demo`'s wallets in that section.
 
 ## Stable Demo Identifiers
 
@@ -79,10 +79,10 @@ The seed uses fixed UUIDs for core lookup data so local UI and QA checks can be 
 | `44444444-4444-4444-4444-444444440006` | Expense category | Loan Given |
 | `55555555-5555-5555-5555-555555550001` | Tag | #BaliTrip |
 | `55555555-5555-5555-5555-555555550002` | Tag | #MonthlyBill |
-| `77777777-7777-7777-7777-777777770001` | User | Pasangan (`pasangan@affluena.com`) |
-| `77777777-7777-7777-7777-777777770002` | User | Calon Pasangan (`calon@affluena.com`) |
-| `88888888-8888-8888-8888-888888880001` | Wallet | Mandiri Pasangan (pasangan) |
-| `88888888-8888-8888-8888-888888880002` | Wallet | Dana (pasangan) |
+| `77777777-7777-7777-7777-777777770001` | User | Pengamat (`pengamat@affluena.com`) |
+| `77777777-7777-7777-7777-777777770002` | User | Calon Pengamat (`calon@affluena.com`) |
+| `88888888-8888-8888-8888-888888880001` | Wallet | Mandiri Pengamat (pengamat) |
+| `88888888-8888-8888-8888-888888880002` | Wallet | Dana (pengamat) |
 | `88888888-8888-8888-8888-888888880003` | Wallet | Jenius (calon) |
 
 The seeded quick entry template is `Daily Coffee`; it stores `wallet_id=22222222-2222-2222-2222-222222220003` and `category_id=44444444-4444-4444-4444-444444440001`, which resolve to `GoPay` and `Food & Dining`.

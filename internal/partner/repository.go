@@ -44,8 +44,8 @@ func (r *Repository) Invite(ctx context.Context, ownerID, partnerID string) erro
 	err := r.pool.QueryRow(ctx, `
 		SELECT
 			count(*) FILTER (WHERE status IN ('pending', 'joined')),
-			count(*) FILTER (WHERE status IN ('pending', 'joined') AND partner_id = $2)
-		FROM partner_links
+			count(*) FILTER (WHERE status IN ('pending', 'joined') AND viewer_id = $2)
+		FROM wallet_share_links
 		WHERE owner_id = $1
 	`, ownerID, partnerID).Scan(&activeCount, &sameActive)
 	if err != nil {
@@ -61,8 +61,8 @@ func (r *Repository) Invite(ctx context.Context, ownerID, partnerID string) erro
 	// Below the limit. Re-open a prior rejected link to this person if one
 	// exists; otherwise insert a fresh pending link.
 	tag, err := r.pool.Exec(ctx,
-		`UPDATE partner_links SET status = 'pending', updated_at = now()
-		 WHERE owner_id = $1 AND partner_id = $2 AND status = 'rejected'`,
+		`UPDATE wallet_share_links SET status = 'pending', updated_at = now()
+		 WHERE owner_id = $1 AND viewer_id = $2 AND status = 'rejected'`,
 		ownerID, partnerID,
 	)
 	if err != nil {
@@ -72,13 +72,13 @@ func (r *Repository) Invite(ctx context.Context, ownerID, partnerID string) erro
 		return nil
 	}
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO partner_links (owner_id, partner_id, status) VALUES ($1, $2, 'pending')`,
+		`INSERT INTO wallet_share_links (owner_id, viewer_id, status) VALUES ($1, $2, 'pending')`,
 		ownerID, partnerID,
 	)
 	return err
 }
 
-// Respond lets the invited partner accept or reject. On accept, it fans out a
+// Respond lets the invited viewer accept or reject. On accept, it fans out a
 // joined viewer wallet_share for every wallet the owner currently holds.
 func (r *Repository) Respond(ctx context.Context, linkID, partnerID, status string) error {
 	tx, err := r.pool.Begin(ctx)
@@ -89,7 +89,7 @@ func (r *Repository) Respond(ctx context.Context, linkID, partnerID, status stri
 
 	var ownerID, invitedID, current string
 	err = tx.QueryRow(ctx,
-		`SELECT owner_id::text, partner_id::text, status FROM partner_links WHERE id = $1 FOR UPDATE`,
+		`SELECT owner_id::text, viewer_id::text, status FROM wallet_share_links WHERE id = $1 FOR UPDATE`,
 		linkID,
 	).Scan(&ownerID, &invitedID, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -103,7 +103,7 @@ func (r *Repository) Respond(ctx context.Context, linkID, partnerID, status stri
 	}
 
 	if _, err = tx.Exec(ctx,
-		`UPDATE partner_links SET status = $2, updated_at = now() WHERE id = $1`,
+		`UPDATE wallet_share_links SET status = $2, updated_at = now() WHERE id = $1`,
 		linkID, status,
 	); err != nil {
 		return err
@@ -112,7 +112,7 @@ func (r *Repository) Respond(ctx context.Context, linkID, partnerID, status stri
 	if status == "joined" {
 		if _, err = tx.Exec(ctx, `
 			INSERT INTO wallet_shares (wallet_id, user_id, status, role, source)
-			SELECT w.id, $2, 'joined', 'viewer', 'partner'
+			SELECT w.id, $2, 'joined', 'viewer', 'link'
 			FROM wallets w
 			WHERE w.user_id = $1
 			ON CONFLICT (wallet_id, user_id) DO NOTHING
@@ -125,21 +125,21 @@ func (r *Repository) Respond(ctx context.Context, linkID, partnerID, status stri
 }
 
 // List returns the caller's links in both directions: ones they own (the other
-// party is the partner) and ones where they are the partner (the other party is
+// party is the viewer) and ones where they are the viewer (the other party is
 // the owner).
 func (r *Repository) List(ctx context.Context, userID string) ([]Link, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT pl.id::text, 'owned' AS direction, pl.status,
 		       u.id::text, u.email, u.name, pl.created_at, pl.updated_at
-		FROM partner_links pl
-		JOIN users u ON u.id = pl.partner_id
+		FROM wallet_share_links pl
+		JOIN users u ON u.id = pl.viewer_id
 		WHERE pl.owner_id = $1
 		UNION ALL
 		SELECT pl.id::text, 'incoming' AS direction, pl.status,
 		       u.id::text, u.email, u.name, pl.created_at, pl.updated_at
-		FROM partner_links pl
+		FROM wallet_share_links pl
 		JOIN users u ON u.id = pl.owner_id
-		WHERE pl.partner_id = $1
+		WHERE pl.viewer_id = $1
 		ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *Repository) Revoke(ctx context.Context, linkID, userID string) error {
 
 	var ownerID, partnerID string
 	err = tx.QueryRow(ctx,
-		`SELECT owner_id::text, partner_id::text FROM partner_links WHERE id = $1 FOR UPDATE`,
+		`SELECT owner_id::text, viewer_id::text FROM wallet_share_links WHERE id = $1 FOR UPDATE`,
 		linkID,
 	).Scan(&ownerID, &partnerID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -184,13 +184,13 @@ func (r *Repository) Revoke(ctx context.Context, linkID, userID string) error {
 
 	if _, err = tx.Exec(ctx, `
 		DELETE FROM wallet_shares
-		WHERE user_id = $1 AND source = 'partner'
+		WHERE user_id = $1 AND source = 'link'
 		  AND wallet_id IN (SELECT id FROM wallets WHERE user_id = $2)
 	`, partnerID, ownerID); err != nil {
 		return err
 	}
 
-	if _, err = tx.Exec(ctx, `DELETE FROM partner_links WHERE id = $1`, linkID); err != nil {
+	if _, err = tx.Exec(ctx, `DELETE FROM wallet_share_links WHERE id = $1`, linkID); err != nil {
 		return err
 	}
 
