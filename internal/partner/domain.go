@@ -11,10 +11,10 @@ var (
 	ErrAlreadyLinked = errors.New("partner already exists")
 	ErrSelfInvite    = errors.New("cannot invite yourself")
 	ErrUserNotFound  = errors.New("user with that email not found")
-	// ErrPartnerLimit means the caller already has an active (pending or
-	// joined) outgoing partner. Only one partner may view your wallets at a
-	// time; the existing link must be revoked before inviting someone else.
-	ErrPartnerLimit = errors.New("partner limit reached")
+	// ErrPartnerLimit means the caller has reached the maximum number of active
+	// (pending or joined) people they can share their wallets with. An existing
+	// link must be revoked before inviting someone else. See maxActiveShares.
+	ErrPartnerLimit = errors.New("share limit reached")
 )
 
 // Direction of a link relative to the caller.
