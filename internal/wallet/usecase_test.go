@@ -72,6 +72,10 @@ func (f *fakeWalletRepository) RespondInvite(ctx context.Context, walletID strin
 	return f.err
 }
 
+func (f *fakeWalletRepository) AddPartnerViewerShares(ctx context.Context, ownerID string, walletID string) error {
+	return f.err
+}
+
 func (f *fakeWalletRepository) GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error) {
 	if f.err != nil {
 		return AccessNone, f.err
