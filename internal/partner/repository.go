@@ -26,26 +26,45 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (string,
 }
 
 // Invite creates (or re-opens) a pending partner link from owner to partner.
-// A pending or joined link is treated as a conflict; a previously rejected one
-// is re-opened to pending.
+//
+// At most one ACTIVE (pending or joined) outgoing partner is allowed: only one
+// person may view the owner's wallets at a time. So:
+//   - if the owner already has an active link to THIS partner -> ErrAlreadyLinked
+//   - if the owner already has an active link to ANYONE ELSE  -> ErrPartnerLimit
+//   - otherwise re-open a previously rejected link to this partner, or insert.
+//
+// Rejected links never count against the limit, so a declined invite leaves the
+// owner free to invite someone else (or re-invite the same person).
 func (r *Repository) Invite(ctx context.Context, ownerID, partnerID string) error {
-	var status string
+	var activePartnerID string
 	err := r.pool.QueryRow(ctx,
-		`SELECT status FROM partner_links WHERE owner_id = $1 AND partner_id = $2`,
-		ownerID, partnerID,
-	).Scan(&status)
+		`SELECT partner_id::text FROM partner_links
+		 WHERE owner_id = $1 AND status IN ('pending', 'joined')
+		 LIMIT 1`,
+		ownerID,
+	).Scan(&activePartnerID)
 	if err == nil {
-		if status == "joined" || status == "pending" {
+		if activePartnerID == partnerID {
 			return ErrAlreadyLinked
 		}
-		_, err = r.pool.Exec(ctx,
-			`UPDATE partner_links SET status = 'pending', updated_at = now() WHERE owner_id = $1 AND partner_id = $2`,
-			ownerID, partnerID,
-		)
-		return err
+		return ErrPartnerLimit
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
+	}
+
+	// No active outgoing link. Re-open a prior rejected link to this partner if
+	// one exists; otherwise insert a fresh pending link.
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE partner_links SET status = 'pending', updated_at = now()
+		 WHERE owner_id = $1 AND partner_id = $2 AND status = 'rejected'`,
+		ownerID, partnerID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
 	}
 	_, err = r.pool.Exec(ctx,
 		`INSERT INTO partner_links (owner_id, partner_id, status) VALUES ($1, $2, 'pending')`,

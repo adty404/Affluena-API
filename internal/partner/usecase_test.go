@@ -84,6 +84,18 @@ func TestInviteUnknownEmail(t *testing.T) {
 	assert.ErrorIs(t, err, ErrUserNotFound)
 }
 
+func TestInvitePropagatesPartnerLimit(t *testing.T) {
+	repo := &fakePartnerRepo{
+		emailToID: map[string]string{"p@example.com": "partner-2"},
+		inviteErr: ErrPartnerLimit,
+	}
+	uc := NewUseCase(repo, nil)
+
+	err := uc.Invite(context.Background(), "owner-1", InviteInput{Email: "p@example.com"})
+
+	assert.ErrorIs(t, err, ErrPartnerLimit)
+}
+
 func TestRespondDelegates(t *testing.T) {
 	repo := &fakePartnerRepo{}
 	uc := NewUseCase(repo, nil)
