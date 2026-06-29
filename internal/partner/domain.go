@@ -27,8 +27,8 @@ const (
 	DirectionIncoming = "incoming"
 )
 
-// Link is a single partner_links row as seen by the caller, carrying the OTHER
-// party's identity (so the client can render names without extra lookups).
+// Link is a single wallet_share_links row as seen by the caller, carrying the
+// OTHER party's identity (so the client can render names without extra lookups).
 type Link struct {
 	ID        string    `json:"id"`
 	Direction string    `json:"direction"`
