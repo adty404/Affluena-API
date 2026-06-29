@@ -17,6 +17,7 @@ type RepositoryPort interface {
 	AddMember(ctx context.Context, walletID string, userID string, status string, role string) error
 	FindUserByEmail(ctx context.Context, email string) (string, error)
 	RespondInvite(ctx context.Context, walletID string, userID string, status string) error
+	AddPartnerViewerShares(ctx context.Context, ownerID string, walletID string) error
 	GetAccessLevel(ctx context.Context, userID string, walletID string) (AccessLevel, error)
 	GetMembers(ctx context.Context, walletID string) ([]WalletMember, error)
 	GetAnalytics(ctx context.Context, userID string, walletID string, month string) (WalletAnalytics, error)
@@ -39,8 +40,14 @@ func (u *UseCase) Create(ctx context.Context, userID string, input CreateWalletI
 		input.CurrencyCode = "IDR"
 	}
 	w, err := u.repo.Create(ctx, userID, input)
-	if err == nil && u.activityUC != nil {
-		u.activityUC.LogActivity(ctx, userID, "CREATE", "WALLET", &w.ID, "Membuat dompet baru: "+input.Name)
+	if err == nil {
+		// Keep the "partner sees all my wallets" invariant: any joined partner
+		// of this owner automatically gets viewer access to the new wallet.
+		// Best-effort — never block wallet creation on it.
+		_ = u.repo.AddPartnerViewerShares(ctx, userID, w.ID)
+		if u.activityUC != nil {
+			u.activityUC.LogActivity(ctx, userID, "CREATE", "WALLET", &w.ID, "Membuat dompet baru: "+input.Name)
+		}
 	}
 	return w, err
 }

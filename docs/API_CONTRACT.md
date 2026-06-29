@@ -62,6 +62,16 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 - *Share Roles:* A `member` share can read **and** record transactions on the wallet; a `viewer` share is read-only (can see the wallet, its transactions, reports, exports, and dashboard analytics, but all write paths are denied). The role defaults to `member`. Wallet `list`/`get` responses include the caller's `role`.
 - *Pending Visibility:* A pending (invited but not-yet-joined) invitee sees only that the wallet exists; its balance, member roster, and goal-pool total are withheld until the invite is accepted.
 
+### Partner (account-level link)
+
+A **partner** link is a one-way, read-only grant at the account level: once accepted, the partner gets `viewer` access to **all** of the owner's wallets — current and any created later. It is implemented on top of wallet sharing: accepting fans out joined `viewer` `wallet_shares` (tagged `source='partner'`) for every owner wallet, and creating a new wallet auto-adds the same for each joined partner; revoking removes only those `source='partner'` shares.
+
+- `POST /api/v1/partners/invites` - Invite a partner. `{ email }`. Creates a `pending` link from the caller (owner) to the invited user. Errors: self-invite (400), unknown email (404), already invited/linked (409).
+- `GET /api/v1/partners` - List the caller's links in both directions: `direction:"owned"` (people I invited to view my wallets) and `direction:"incoming"` (people whose wallets I can view). Each entry carries the other party's `user_id`, `email`, `name`, plus `status`.
+- `PATCH /api/v1/partners/:id` - `{ status: "joined"|"rejected" }`. Only the invited partner may respond; `joined` grants the viewer access.
+- `DELETE /api/v1/partners/:id` - Revoke the link (either party). Removes the auto-granted viewer access; manual wallet shares are untouched.
+- *Note:* One-way and read-only — the partner cannot record transactions, and the owner does not gain access to the partner's wallets. Budgets remain personal.
+
 ### Category
 - `POST /api/v1/categories` - `{ name, type, parent_id }`
 - `GET /api/v1/categories?type=income|expense` - List (optionally filtered by type).
