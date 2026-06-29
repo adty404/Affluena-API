@@ -19,6 +19,7 @@ import (
 	"affluena-api/internal/httpx"
 	"affluena-api/internal/mailer"
 	"affluena-api/internal/notification"
+	"affluena-api/internal/partner"
 	"affluena-api/internal/quickentry"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/report"
@@ -68,6 +69,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	walletRepo := wallet.NewRepository(pool)
 	walletHandler := wallet.NewHandler(wallet.NewUseCase(walletRepo, activityUC))
+	partnerHandler := partner.NewHandler(partner.NewUseCase(partner.NewRepository(pool), activityUC))
 	categoryHandler := category.NewHandler(category.NewUseCase(category.NewRepository(pool), activityUC))
 	tagHandler := tag.NewHandler(tag.NewUseCase(tag.NewRepository(pool), activityUC))
 	budgetUC := budget.NewUseCase(budget.NewRepository(pool), activityUC)
@@ -166,6 +168,13 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.PATCH("/wallets/:id/members/:member_id", walletHandler.RespondInvite)
 	protected.GET("/wallets/:id/members", walletHandler.ListMembers)
 	protected.GET("/wallets/:id/analytics", walletHandler.Analytics)
+
+	// Account-level partner links: one-way, read-only viewer of all the owner's
+	// wallets (current + future).
+	protected.POST("/partners/invites", partnerHandler.Invite)
+	protected.GET("/partners", partnerHandler.List)
+	protected.PATCH("/partners/:id", partnerHandler.Respond)
+	protected.DELETE("/partners/:id", partnerHandler.Revoke)
 
 	protected.POST("/categories", categoryHandler.Create)
 	protected.GET("/categories", categoryHandler.List)
