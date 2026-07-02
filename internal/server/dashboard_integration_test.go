@@ -194,10 +194,14 @@ func TestDashboardAnalyticsEdgeCases(t *testing.T) {
 		"type": "expense",
 		"parent_id": "`+parentCategory+`"
 	}`)
+	// Limit must stay above the worst-case forecast extrapolation so the
+	// "safe" assertion is date-independent: a 20000 expense recorded on the
+	// 1st projects to 20000 * 31 = 620000 by month-end. A 100000 limit made
+	// this test fail every start of month (forecast = daily avg * days).
 	createAPIResource(t, router, tokenA, "/api/v1/category-budgets", `{
 		"category_id": "`+parentCategory+`",
 		"month": "`+currentMonth+`",
-		"limit_minor": 100000
+		"limit_minor": 1000000
 	}`)
 	createAPIResource(t, router, tokenA, "/api/v1/transactions", `{
 		"type": "expense",
@@ -240,7 +244,7 @@ func TestDashboardAnalyticsEdgeCases(t *testing.T) {
 	if err := json.Unmarshal(resForecast, &forecast); err != nil {
 		t.Fatalf("parse forecast response: %v", err)
 	}
-	if forecast.CurrentExpenseMinor != 20000 || forecast.BudgetLimitMinor != 100000 || forecast.Status != "safe" {
+	if forecast.CurrentExpenseMinor != 20000 || forecast.BudgetLimitMinor != 1000000 || forecast.Status != "safe" {
 		t.Fatalf("expected isolated parent-budget forecast, got %+v", forecast)
 	}
 }
