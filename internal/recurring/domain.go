@@ -22,6 +22,8 @@ type Rule struct {
 	LastRunAt     *time.Time                  `json:"last_run_at,omitempty"`
 	Status        Status                      `json:"status"`
 	Note          string                      `json:"note"`
+	Color         string                      `json:"color"`
+	Icon          string                      `json:"icon"`
 	CreatedAt     time.Time                   `json:"created_at"`
 	UpdatedAt     time.Time                   `json:"updated_at"`
 }
@@ -39,6 +41,8 @@ type RuleInput struct {
 	EndAt         *time.Time
 	Status        Status
 	Note          string
+	Color         string
+	Icon          string
 }
 
 type Run struct {

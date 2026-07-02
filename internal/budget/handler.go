@@ -32,6 +32,8 @@ type budgetRequest struct {
 	CategoryID string `json:"category_id" binding:"required"`
 	Month      string `json:"month" binding:"required"`
 	LimitMinor int64  `json:"limit_minor" binding:"required"`
+	Color      string `json:"color"`
+	Icon       string `json:"icon"`
 }
 
 func (h *Handler) Create(c *gin.Context) {
@@ -49,6 +51,8 @@ func (h *Handler) Create(c *gin.Context) {
 		CategoryID: req.CategoryID,
 		Month:      req.Month,
 		LimitMinor: req.LimitMinor,
+		Color:      req.Color,
+		Icon:       req.Icon,
 	})
 	if err != nil {
 		httpx.WriteError(c, err)
@@ -149,6 +153,8 @@ func (h *Handler) Update(c *gin.Context) {
 		CategoryID: req.CategoryID,
 		Month:      req.Month,
 		LimitMinor: req.LimitMinor,
+		Color:      req.Color,
+		Icon:       req.Icon,
 	})
 	if err != nil {
 		httpx.WriteError(c, err)

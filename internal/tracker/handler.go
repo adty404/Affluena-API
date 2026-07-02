@@ -47,6 +47,8 @@ type installmentRequest struct {
 	DueDay             int               `json:"due_day" binding:"required"`
 	Status             InstallmentStatus `json:"status"`
 	Note               string            `json:"note"`
+	Color              string            `json:"color"`
+	Icon               string            `json:"icon"`
 }
 
 type subscriptionRequest struct {
@@ -59,6 +61,8 @@ type subscriptionRequest struct {
 	NextDueDate   string             `json:"next_due_date" binding:"required"`
 	Status        SubscriptionStatus `json:"status"`
 	Note          string             `json:"note"`
+	Color         string             `json:"color"`
+	Icon          string             `json:"icon"`
 }
 
 type payRequest struct {
@@ -340,6 +344,8 @@ func bindInstallment(c *gin.Context) (Installment, bool) {
 		DueDay:             req.DueDay,
 		Status:             status,
 		Note:               req.Note,
+		Color:              req.Color,
+		Icon:               req.Icon,
 	}, true
 }
 
@@ -380,6 +386,8 @@ func bindSubscription(c *gin.Context) (Subscription, bool) {
 		NextDueDate:   nextDueDate,
 		Status:        req.Status,
 		Note:          req.Note,
+		Color:         req.Color,
+		Icon:          req.Icon,
 	}, true
 }
 

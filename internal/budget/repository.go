@@ -26,10 +26,10 @@ func (r *Repository) Create(ctx context.Context, userID string, input CreateBudg
 	}
 
 	budget, err := scanBudget(r.pool.QueryRow(ctx, `
-		INSERT INTO category_budgets (user_id, category_id, month, limit_minor)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
-	`, userID, input.CategoryID, input.MonthDate, input.LimitMinor))
+		INSERT INTO category_budgets (user_id, category_id, month, limit_minor, color, icon)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, color, icon, created_at, updated_at
+	`, userID, input.CategoryID, input.MonthDate, input.LimitMinor, input.Color, input.Icon))
 	return budget, translateNotFound(err)
 }
 
@@ -44,7 +44,7 @@ func (r *Repository) List(ctx context.Context, userID string, month time.Time, p
 			FROM categories c
 			INNER JOIN category_tree ct ON c.parent_id = ct.id
 		)
-		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor,
+		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor, b.color, b.icon,
 			b.created_at, b.updated_at,
 			COALESCE(SUM(t.amount_minor) FILTER (
 				WHERE t.type = 'expense'
@@ -177,7 +177,7 @@ func (r *Repository) ListReport(ctx context.Context, userID string, month time.T
 			FROM categories c
 			INNER JOIN category_tree ct ON c.parent_id = ct.id
 		)
-		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor,
+		SELECT b.id::text, b.user_id::text, b.category_id::text, b.month, b.limit_minor, b.color, b.icon,
 			b.created_at, b.updated_at,
 			COALESCE(SUM(t.amount_minor) FILTER (
 				WHERE t.type = 'expense'
@@ -295,7 +295,7 @@ func budgetOrderBy(sort string) string {
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Budget, error) {
 	budget, err := scanBudget(r.pool.QueryRow(ctx, `
-		SELECT id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
+		SELECT id::text, user_id::text, category_id::text, month, limit_minor, color, icon, created_at, updated_at
 		FROM category_budgets
 		WHERE user_id = $1 AND id = $2
 	`, userID, id))
@@ -309,10 +309,10 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 
 	budget, err := scanBudget(r.pool.QueryRow(ctx, `
 		UPDATE category_budgets
-		SET category_id = $3, month = $4, limit_minor = $5, updated_at = now()
+		SET category_id = $3, month = $4, limit_minor = $5, color = $6, icon = $7, updated_at = now()
 		WHERE user_id = $1 AND id = $2
-		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, created_at, updated_at
-	`, userID, id, input.CategoryID, input.MonthDate, input.LimitMinor))
+		RETURNING id::text, user_id::text, category_id::text, month, limit_minor, color, icon, created_at, updated_at
+	`, userID, id, input.CategoryID, input.MonthDate, input.LimitMinor, input.Color, input.Icon))
 	return budget, translateNotFound(err)
 }
 
@@ -349,7 +349,7 @@ type rowScanner interface {
 
 func scanBudget(row rowScanner) (Budget, error) {
 	var budget Budget
-	err := row.Scan(&budget.ID, &budget.UserID, &budget.CategoryID, &budget.Month, &budget.LimitMinor, &budget.CreatedAt, &budget.UpdatedAt)
+	err := row.Scan(&budget.ID, &budget.UserID, &budget.CategoryID, &budget.Month, &budget.LimitMinor, &budget.Color, &budget.Icon, &budget.CreatedAt, &budget.UpdatedAt)
 	return budget, err
 }
 
@@ -362,6 +362,8 @@ func scanBudgetSummary(row rowScanner) (BudgetSummary, error) {
 		&summary.CategoryID,
 		&summary.Month,
 		&summary.LimitMinor,
+		&summary.Color,
+		&summary.Icon,
 		&summary.CreatedAt,
 		&summary.UpdatedAt,
 		&spentMinor,

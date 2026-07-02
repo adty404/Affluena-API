@@ -43,6 +43,8 @@ type ruleRequest struct {
 	EndAt         string                      `json:"end_at"`
 	Status        Status                      `json:"status"`
 	Note          string                      `json:"note"`
+	Color         string                      `json:"color"`
+	Icon          string                      `json:"icon"`
 }
 
 type runRequest struct {
@@ -206,6 +208,8 @@ func bindRule(c *gin.Context) (RuleInput, bool) {
 		EndAt:         endAt,
 		Status:        req.Status,
 		Note:          req.Note,
+		Color:         req.Color,
+		Icon:          req.Icon,
 	}
 	if input.IntervalCount == 0 {
 		input.IntervalCount = 1

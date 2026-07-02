@@ -111,10 +111,10 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
 - `POST /api/v1/quick-entry-templates/:id/execute` - `{ transaction_at, note }` (Applies template directly into a new transaction.) `transaction_at` is a full RFC3339 date+time; it may be backdated or future-dated rather than only "now".
 
 ### Budget
-- `POST /api/v1/category-budgets` - `{ category_id, limit_minor, month }`
+- `POST /api/v1/category-budgets` - `{ category_id, limit_minor, month, color?, icon? }`
 - `GET /api/v1/category-budgets`
 - `GET /api/v1/category-budgets/:id`
-- `PUT /api/v1/category-budgets/:id` - `{ limit_minor }`
+- `PUT /api/v1/category-budgets/:id` - `{ category_id, limit_minor, month, color?, icon? }`
 - `DELETE /api/v1/category-budgets/:id`
 - `GET /api/v1/category-budgets/alerts?month=YYYY-MM` - Get budget alerts for a specific month.
   Response shape:
@@ -150,6 +150,8 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
         "category_id": "string",
         "month": "string",
         "limit_minor": 100000,
+        "color": "#3E72B8",
+        "icon": "food",
         "created_at": "string",
         "updated_at": "string",
         "spent_minor": 85000,
@@ -173,6 +175,7 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
   }
   ```
 - *Note:* Budgets are personal. Shared wallet expenses by other members do not decrement the owner's personal category budget.
+- *UI metadata (`color`, `icon`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"food"`, `"transport"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same budget identically.
 
 ### Debt
 - `POST /api/v1/debts` - `{ type: "payable"|"receivable", counterparty_name, wallet_id, disbursement_category_id, payment_category_id, principal_amount_minor, opened_at, due_date, note }`
@@ -184,35 +187,38 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
 - *Note:* `origination_transaction_id` is an internal-only field populated during the split bill workflow and must not be supplied by clients in public creation.
 
 ### Tracker (Installments & Subscriptions)
-- `POST /api/v1/installments` - `{ name, wallet_id, category_id, total_amount_minor, monthly_amount_minor, tenor_months, remaining_months, start_date, due_day, status, note }`
+- `POST /api/v1/installments` - `{ name, wallet_id, category_id, total_amount_minor, monthly_amount_minor, tenor_months, remaining_months, start_date, due_day, status, note, color?, icon? }`
 - `GET /api/v1/installments`
 - `GET /api/v1/installments/:id`
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
 - `POST /api/v1/installments/:id/pay` - `{ paid_at, note }` (Amount is inferred from installment configuration.)
-- `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "weekly"|"monthly", next_due_date, status, note }`
+- `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "weekly"|"monthly", next_due_date, status, note, color?, icon? }`
 - `GET /api/v1/subscriptions`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
 - `DELETE /api/v1/subscriptions/:id`
 - `POST /api/v1/subscriptions/:id/pay` - `{ paid_at, note }` (Amount is inferred from subscription configuration.)
+- *UI metadata (`color`, `icon`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"gym"`, `"streaming"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same tracker identically.
 
 ### Recurring
-- `POST /api/v1/recurring-transactions` - `{ name, type, wallet_id, to_wallet_id, category_id, amount_minor, frequency: "weekly"|"monthly", interval_count, next_run_at, end_at, status: "active"|"paused", note }`
+- `POST /api/v1/recurring-transactions` - `{ name, type, wallet_id, to_wallet_id, category_id, amount_minor, frequency: "weekly"|"monthly", interval_count, next_run_at, end_at, status: "active"|"paused", note, color?, icon? }`
 - `GET /api/v1/recurring-transactions`
 - `GET /api/v1/recurring-transactions/:id`
 - `PUT /api/v1/recurring-transactions/:id` - Same as POST.
 - `DELETE /api/v1/recurring-transactions/:id`
 - `POST /api/v1/recurring-transactions/:id/run` - Manual force execution.
+- *UI metadata (`color`, `icon`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"internet"`, `"salary"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same rule identically.
 
 ### Goal
-- `POST /api/v1/goals` - `{ name, target_amount_minor, deadline }`
+- `POST /api/v1/goals` - `{ name, target_amount_minor, deadline, color?, icon? }`
 - `GET /api/v1/goals` - Array format (not wrapped in pagination).
 - `GET /api/v1/goals/:id`
-- `PUT /api/v1/goals/:id` - Update goal metadata.
+- `PUT /api/v1/goals/:id` - Update goal metadata (`{ name, target_amount_minor, deadline, status?, color?, icon? }`).
 - `POST /api/v1/goals/:id/members` - Invite to goal. `{ email }`
 - `PUT /api/v1/goals/:id/members/:user_id/respond` - `{ status: "joined" }`.
 - *Note:* Collected amount is calculated from the goal wallet balance. Contributions are made via `POST /api/v1/transactions` with `type=transfer` and `to_wallet_id=<goal_wallet_id>`. There is no dedicated `/goals/:id/contribute` endpoint.
+- *UI metadata (`color`, `icon`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"vacation"`, `"house"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same goal identically.
 
 ### Reports, Export & Jobs
 - `GET /api/v1/export/csv?from=2026-06-01T00:00:00Z&to=2026-06-30T23:59:59Z`

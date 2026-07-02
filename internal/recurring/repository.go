@@ -43,21 +43,22 @@ func (r *Repository) Create(ctx context.Context, userID string, input RuleInput)
 	return scanRule(r.pool.QueryRow(ctx, `
 		INSERT INTO recurring_transaction_rules (
 			user_id, name, type, wallet_id, to_wallet_id, category_id, amount_minor,
-			frequency, interval_count, next_run_at, end_at, status, note
+			frequency, interval_count, next_run_at, end_at, status, note, color, icon
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 	`, userID, input.Name, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID),
-		input.AmountMinor, input.Frequency, input.IntervalCount, input.NextRunAt.UTC(), input.EndAt, input.Status, input.Note))
+		input.AmountMinor, input.Frequency, input.IntervalCount, input.NextRunAt.UTC(), input.EndAt, input.Status, input.Note,
+		input.Color, input.Icon))
 }
 
 func (r *Repository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Rule], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 		FROM recurring_transaction_rules
 		WHERE user_id = $1
 		ORDER BY `+recurringOrderBy(pagination.Sort)+`
@@ -125,13 +126,14 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 		UPDATE recurring_transaction_rules
 		SET name = $3, type = $4, wallet_id = $5, to_wallet_id = $6, category_id = $7,
 			amount_minor = $8, frequency = $9, interval_count = $10, next_run_at = $11,
-			end_at = $12, status = $13, note = $14, updated_at = now()
+			end_at = $12, status = $13, note = $14, color = $15, icon = $16, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 	`, userID, id, input.Name, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID),
-		input.AmountMinor, input.Frequency, input.IntervalCount, input.NextRunAt.UTC(), input.EndAt, input.Status, input.Note))
+		input.AmountMinor, input.Frequency, input.IntervalCount, input.NextRunAt.UTC(), input.EndAt, input.Status, input.Note,
+		input.Color, input.Icon))
 }
 
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {
@@ -197,7 +199,7 @@ func (r *Repository) runOneDue(ctx context.Context, now time.Time) (Run, bool, e
 	rule, err := scanRule(tx.QueryRow(ctx, `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 		FROM recurring_transaction_rules
 		WHERE status = 'active'
 			AND next_run_at <= $1
@@ -235,7 +237,7 @@ func (r *Repository) get(ctx context.Context, q interface {
 	sql := `
 		SELECT id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 		FROM recurring_transaction_rules
 		WHERE user_id = $1 AND id = $2
 	`
@@ -329,7 +331,7 @@ func (r *Repository) advanceLockedRule(ctx context.Context, tx pgx.Tx, rule Rule
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
 			COALESCE(category_id::text, ''), amount_minor, frequency, interval_count, next_run_at,
-			end_at, last_run_at, status, note, created_at, updated_at
+			end_at, last_run_at, status, note, color, icon, created_at, updated_at
 	`, rule.UserID, rule.ID, nextRunAt, now, nextStatus))
 }
 
@@ -410,6 +412,8 @@ func scanRule(row rowScanner) (Rule, error) {
 		&rule.LastRunAt,
 		&rule.Status,
 		&rule.Note,
+		&rule.Color,
+		&rule.Icon,
 		&rule.CreatedAt,
 		&rule.UpdatedAt,
 	)
