@@ -22,6 +22,8 @@ type Goal struct {
 	CollectedAmountMinor int64      `json:"collected_amount_minor"` // Computed from wallets
 	Deadline             *time.Time `json:"deadline"`
 	Status               string     `json:"status"`
+	Color                string     `json:"color"`
+	Icon                 string     `json:"icon"`
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 
@@ -41,6 +43,8 @@ type CreateGoalInput struct {
 	Name              string     `json:"name" binding:"required"`
 	TargetAmountMinor int64      `json:"target_amount_minor" binding:"required,gt=0"`
 	Deadline          *time.Time `json:"deadline" binding:"required"`
+	Color             string     `json:"color"`
+	Icon              string     `json:"icon"`
 }
 
 type UpdateGoalInput struct {
@@ -50,6 +54,8 @@ type UpdateGoalInput struct {
 	// Status is optional. When provided it transitions the goal lifecycle
 	// (active/achieved/cancelled); when omitted the current status is kept.
 	Status string `json:"status" binding:"omitempty,oneof=active achieved cancelled"`
+	Color  string `json:"color"`
+	Icon   string `json:"icon"`
 }
 
 type InviteMemberInput struct {

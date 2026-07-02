@@ -38,22 +38,23 @@ func (r *InstallmentRepository) Create(ctx context.Context, userID string, insta
 	return scanInstallment(r.pool.QueryRow(ctx, `
 		INSERT INTO installments (
 			user_id, name, wallet_id, category_id, total_amount_minor, monthly_amount_minor,
-			tenor_months, remaining_months, start_date, due_day, status, note
+			tenor_months, remaining_months, start_date, due_day, status, note, color, icon
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
-			start_date, due_day, status, note, created_at, updated_at
+			start_date, due_day, status, note, color, icon, created_at, updated_at
 	`, userID, installment.Name, installment.WalletID, installment.CategoryID, installment.TotalAmountMinor,
 		installment.MonthlyAmountMinor, installment.TenorMonths, installment.RemainingMonths,
-		installment.StartDate, installment.DueDay, installment.Status, installment.Note))
+		installment.StartDate, installment.DueDay, installment.Status, installment.Note,
+		installment.Color, installment.Icon))
 }
 
 func (r *InstallmentRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Installment], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
-			start_date, due_day, status, note, created_at, updated_at
+			start_date, due_day, status, note, color, icon, created_at, updated_at
 		FROM installments
 		WHERE user_id = $1
 		ORDER BY `+installmentOrderBy(pagination.Sort)+`
@@ -118,15 +119,15 @@ func (r *InstallmentRepository) Update(ctx context.Context, userID string, id st
 		UPDATE installments
 		SET name = $3, wallet_id = $4, category_id = $5, total_amount_minor = $6,
 			monthly_amount_minor = $7, tenor_months = $8, remaining_months = $9,
-			start_date = $10, due_day = $11, status = $12, note = $13, updated_at = now()
+			start_date = $10, due_day = $11, status = $12, note = $13, color = $14, icon = $15, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
-			start_date, due_day, status, note, created_at, updated_at
+			start_date, due_day, status, note, color, icon, created_at, updated_at
 	`, userID, id, installment.Name, installment.WalletID, installment.CategoryID,
 		installment.TotalAmountMinor, installment.MonthlyAmountMinor, installment.TenorMonths,
 		installment.RemainingMonths, installment.StartDate, installment.DueDay,
-		installment.Status, installment.Note))
+		installment.Status, installment.Note, installment.Color, installment.Icon))
 }
 
 func (r *InstallmentRepository) Delete(ctx context.Context, userID string, id string) error {
@@ -181,7 +182,7 @@ func (r *InstallmentRepository) Pay(ctx context.Context, userID string, id strin
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
-			start_date, due_day, status, note, created_at, updated_at
+			start_date, due_day, status, note, color, icon, created_at, updated_at
 	`, userID, id, nextState.RemainingMonths, nextState.Status))
 	if err != nil {
 		return InstallmentPayment{}, err
@@ -199,7 +200,7 @@ func (r *InstallmentRepository) get(ctx context.Context, q interface {
 	sql := `
 		SELECT id::text, user_id::text, name, wallet_id::text, category_id::text,
 			total_amount_minor, monthly_amount_minor, tenor_months, remaining_months,
-			start_date, due_day, status, note, created_at, updated_at
+			start_date, due_day, status, note, color, icon, created_at, updated_at
 		FROM installments
 		WHERE user_id = $1 AND id = $2
 	`
@@ -225,6 +226,8 @@ func scanInstallment(row rowScanner) (Installment, error) {
 		&installment.DueDay,
 		&installment.Status,
 		&installment.Note,
+		&installment.Color,
+		&installment.Icon,
 		&installment.CreatedAt,
 		&installment.UpdatedAt,
 	)

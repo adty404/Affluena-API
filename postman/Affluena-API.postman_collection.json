@@ -5720,7 +5720,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2000000\n}"
+              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2000000,\n  \"color\": \"#E67E22\",\n  \"icon\": \"food\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/category-budgets",
@@ -6140,7 +6140,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2500000\n}"
+              "raw": "{\n  \"category_id\": \"{{expense_category_id}}\",\n  \"month\": \"2026-06\",\n  \"limit_minor\": 2500000,\n  \"color\": \"#C0392B\",\n  \"icon\": \"food\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/category-budgets/{{category_budget_id}}",
@@ -6835,7 +6835,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Gym Membership {{$timestamp}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"note\": \"Quarterly membership\"\n}"
+              "raw": "{\n  \"name\": \"Gym Membership {{$timestamp}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"note\": \"Quarterly membership\",\n  \"color\": \"#3E72B8\",\n  \"icon\": \"gym\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/installments",
@@ -7250,7 +7250,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Gym Membership Updated\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"remaining_months\": 2,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"status\": \"active\",\n  \"note\": \"Updated\"\n}"
+              "raw": "{\n  \"name\": \"Gym Membership Updated\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"total_amount_minor\": 900000,\n  \"monthly_amount_minor\": 300000,\n  \"tenor_months\": 3,\n  \"remaining_months\": 2,\n  \"start_date\": \"2026-06-01\",\n  \"due_day\": 5,\n  \"status\": \"active\",\n  \"note\": \"Updated\",\n  \"color\": \"#2E8B57\",\n  \"icon\": \"gym\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/installments/{{installment_id}}",
@@ -7390,7 +7390,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Google One {{$timestamp}}\",\n  \"account_detail\": \"personal@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\"\n}"
+              "raw": "{\n  \"name\": \"Google One {{$timestamp}}\",\n  \"account_detail\": \"personal@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-12\",\n  \"note\": \"Weekly subscription\",\n  \"color\": \"#8E44AD\",\n  \"icon\": \"streaming\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/subscriptions",
@@ -7875,7 +7875,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Google One Updated\",\n  \"account_detail\": \"work@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\"\n}"
+              "raw": "{\n  \"name\": \"Google One Updated\",\n  \"account_detail\": \"work@example.com\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 250000,\n  \"billing_cycle\": \"weekly\",\n  \"next_due_date\": \"2026-06-19\",\n  \"status\": \"active\",\n  \"note\": \"Updated subscription\",\n  \"color\": \"#8E44AD\",\n  \"icon\": \"cloud\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
@@ -8054,7 +8054,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Monthly Internet {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 350000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-06-01T00:00:00Z\",\n  \"note\": \"Internet bill\"\n}"
+              "raw": "{\n  \"name\": \"Monthly Internet {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 350000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-06-01T00:00:00Z\",\n  \"note\": \"Internet bill\",\n  \"color\": \"#16A085\",\n  \"icon\": \"internet\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/recurring-transactions",
@@ -8469,7 +8469,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Monthly Internet Updated\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 360000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-07-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"note\": \"Updated internet bill\"\n}"
+              "raw": "{\n  \"name\": \"Monthly Internet Updated\",\n  \"type\": \"expense\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{expense_category_id}}\",\n  \"amount_minor\": 360000,\n  \"frequency\": \"monthly\",\n  \"interval_count\": 1,\n  \"next_run_at\": \"2026-07-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"note\": \"Updated internet bill\",\n  \"color\": \"#16A085\",\n  \"icon\": \"internet\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/recurring-transactions/{{recurring_id}}",
@@ -8610,7 +8610,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Emergency Fund\",\n  \"target_amount_minor\": 10000000,\n  \"deadline\": \"2026-12-31T00:00:00Z\"\n}",
+              "raw": "{\n  \"name\": \"Emergency Fund\",\n  \"target_amount_minor\": 10000000,\n  \"deadline\": \"2026-12-31T00:00:00Z\",\n  \"color\": \"#F1C40F\",\n  \"icon\": \"emergency\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

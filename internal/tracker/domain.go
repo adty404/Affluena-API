@@ -20,6 +20,8 @@ type Installment struct {
 	DueDay             int               `json:"due_day"`
 	Status             InstallmentStatus `json:"status"`
 	Note               string            `json:"note"`
+	Color              string            `json:"color"`
+	Icon               string            `json:"icon"`
 	CreatedAt          time.Time         `json:"created_at"`
 	UpdatedAt          time.Time         `json:"updated_at"`
 }
@@ -41,6 +43,8 @@ type Subscription struct {
 	NextDueDate   time.Time          `json:"next_due_date"`
 	Status        SubscriptionStatus `json:"status"`
 	Note          string             `json:"note"`
+	Color         string             `json:"color"`
+	Icon          string             `json:"icon"`
 	CreatedAt     time.Time          `json:"created_at"`
 	UpdatedAt     time.Time          `json:"updated_at"`
 }

@@ -20,11 +20,11 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) Create(ctx context.Context, userID string, input CreateGoalInput) (Goal, error) {
 	var goal Goal
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO goals (user_id, name, target_amount_minor, deadline, status)
-		VALUES ($1, $2, $3, $4, 'active')
-		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, created_at, updated_at
-	`, userID, input.Name, input.TargetAmountMinor, input.Deadline).Scan(
-		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt,
+		INSERT INTO goals (user_id, name, target_amount_minor, deadline, status, color, icon)
+		VALUES ($1, $2, $3, $4, 'active', $5, $6)
+		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, color, icon, created_at, updated_at
+	`, userID, input.Name, input.TargetAmountMinor, input.Deadline, input.Color, input.Icon).Scan(
+		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.Color, &goal.Icon, &goal.CreatedAt, &goal.UpdatedAt,
 	)
 	return goal, err
 }
@@ -61,11 +61,11 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 	err := r.pool.QueryRow(ctx, `
 		UPDATE goals
 		SET name = $3, target_amount_minor = $4, deadline = $5,
-		    status = COALESCE($6, status), updated_at = now()
+		    status = COALESCE($6, status), color = $7, icon = $8, updated_at = now()
 		WHERE user_id = $1 AND id = $2
-		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, created_at, updated_at
-	`, userID, id, input.Name, input.TargetAmountMinor, input.Deadline, status).Scan(
-		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt,
+		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, color, icon, created_at, updated_at
+	`, userID, id, input.Name, input.TargetAmountMinor, input.Deadline, status, input.Color, input.Icon).Scan(
+		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.Color, &goal.Icon, &goal.CreatedAt, &goal.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Goal{}, ErrNotFound
@@ -80,7 +80,7 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 
 func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at,
+		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.color, g.icon, g.created_at, g.updated_at,
 			CASE WHEN g.user_id = $1 THEN 'joined' ELSE gm.status END AS member_status
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
@@ -96,7 +96,7 @@ func (r *Repository) List(ctx context.Context, userID string) ([]Goal, error) {
 	for rows.Next() {
 		var goal Goal
 		var memberStatus string
-		if err := rows.Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus); err != nil {
+		if err := rows.Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.Color, &goal.Icon, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus); err != nil {
 			return nil, err
 		}
 		// Pending invitees see the goal (to accept it) but not the collective
@@ -113,12 +113,12 @@ func (r *Repository) Get(ctx context.Context, userID string, id string) (Goal, e
 	var goal Goal
 	var memberStatus string
 	err := r.pool.QueryRow(ctx, `
-		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.created_at, g.updated_at,
+		SELECT DISTINCT g.id::text, g.user_id::text, g.name, g.target_amount_minor, g.deadline, g.status, g.color, g.icon, g.created_at, g.updated_at,
 			CASE WHEN g.user_id = $1 THEN 'joined' ELSE COALESCE(gm.status, 'pending') END AS member_status
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
 		WHERE (g.user_id = $1 OR (gm.user_id = $1 AND gm.status IN ('pending', 'joined'))) AND g.id = $2
-	`, userID, id).Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus)
+	`, userID, id).Scan(&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.Color, &goal.Icon, &goal.CreatedAt, &goal.UpdatedAt, &memberStatus)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Goal{}, ErrNotFound
@@ -265,11 +265,11 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (string,
 func createGoal(ctx context.Context, tx pgx.Tx, userID string, input CreateGoalInput) (Goal, error) {
 	var goal Goal
 	err := tx.QueryRow(ctx, `
-		INSERT INTO goals (user_id, name, target_amount_minor, deadline, status)
-		VALUES ($1, $2, $3, $4, 'active')
-		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, created_at, updated_at
-	`, userID, input.Name, input.TargetAmountMinor, input.Deadline).Scan(
-		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.CreatedAt, &goal.UpdatedAt,
+		INSERT INTO goals (user_id, name, target_amount_minor, deadline, status, color, icon)
+		VALUES ($1, $2, $3, $4, 'active', $5, $6)
+		RETURNING id::text, user_id::text, name, target_amount_minor, deadline, status, color, icon, created_at, updated_at
+	`, userID, input.Name, input.TargetAmountMinor, input.Deadline, input.Color, input.Icon).Scan(
+		&goal.ID, &goal.UserID, &goal.Name, &goal.TargetAmountMinor, &goal.Deadline, &goal.Status, &goal.Color, &goal.Icon, &goal.CreatedAt, &goal.UpdatedAt,
 	)
 	return goal, err
 }

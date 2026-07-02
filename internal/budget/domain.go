@@ -13,6 +13,8 @@ type Budget struct {
 	CategoryID string    `json:"category_id"`
 	Month      time.Time `json:"month"`
 	LimitMinor int64     `json:"limit_minor"`
+	Color      string    `json:"color"`
+	Icon       string    `json:"icon"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
@@ -63,6 +65,8 @@ type CreateBudgetInput struct {
 	Month      string
 	MonthDate  time.Time
 	LimitMinor int64
+	Color      string
+	Icon       string
 }
 
 type UpdateBudgetInput struct {
@@ -70,6 +74,8 @@ type UpdateBudgetInput struct {
 	Month      string
 	MonthDate  time.Time
 	LimitMinor int64
+	Color      string
+	Icon       string
 }
 
 func NotFound(err error) bool {

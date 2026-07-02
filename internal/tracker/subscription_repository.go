@@ -29,18 +29,19 @@ func (r *SubscriptionRepository) Create(ctx context.Context, userID string, subs
 	}
 
 	return scanSubscription(r.pool.QueryRow(ctx, `
-		INSERT INTO subscriptions (user_id, name, account_detail, wallet_id, category_id, amount_minor, billing_cycle, next_due_date, status, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO subscriptions (user_id, name, account_detail, wallet_id, category_id, amount_minor, billing_cycle, next_due_date, status, note, color, icon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
-			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
+			amount_minor, billing_cycle, next_due_date, status, note, color, icon, created_at, updated_at
 	`, userID, subscription.Name, subscription.AccountDetail, subscription.WalletID, subscription.CategoryID,
-		subscription.AmountMinor, subscription.BillingCycle, subscription.NextDueDate, subscription.Status, subscription.Note))
+		subscription.AmountMinor, subscription.BillingCycle, subscription.NextDueDate, subscription.Status, subscription.Note,
+		subscription.Color, subscription.Icon))
 }
 
 func (r *SubscriptionRepository) List(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
-			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
+			amount_minor, billing_cycle, next_due_date, status, note, color, icon, created_at, updated_at
 		FROM subscriptions
 		WHERE user_id = $1
 		ORDER BY `+subscriptionOrderBy(pagination.Sort)+`
@@ -98,13 +99,13 @@ func (r *SubscriptionRepository) Update(ctx context.Context, userID string, id s
 	return scanSubscription(r.pool.QueryRow(ctx, `
 		UPDATE subscriptions
 		SET name = $3, account_detail = $4, wallet_id = $5, category_id = $6, amount_minor = $7,
-			billing_cycle = $8, next_due_date = $9, status = $10, note = $11, updated_at = now()
+			billing_cycle = $8, next_due_date = $9, status = $10, note = $11, color = $12, icon = $13, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
-			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
+			amount_minor, billing_cycle, next_due_date, status, note, color, icon, created_at, updated_at
 	`, userID, id, subscription.Name, subscription.AccountDetail, subscription.WalletID, subscription.CategoryID,
 		subscription.AmountMinor, subscription.BillingCycle, subscription.NextDueDate,
-		subscription.Status, subscription.Note))
+		subscription.Status, subscription.Note, subscription.Color, subscription.Icon))
 }
 
 func (r *SubscriptionRepository) Delete(ctx context.Context, userID string, id string) error {
@@ -159,7 +160,7 @@ func (r *SubscriptionRepository) Pay(ctx context.Context, userID string, id stri
 		SET next_due_date = $3, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
-			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
+			amount_minor, billing_cycle, next_due_date, status, note, color, icon, created_at, updated_at
 	`, userID, id, nextDueDate))
 	if err != nil {
 		return SubscriptionPayment{}, err
@@ -176,7 +177,7 @@ func (r *SubscriptionRepository) get(ctx context.Context, q interface {
 }, userID string, id string, forUpdate bool) (Subscription, error) {
 	sql := `
 		SELECT id::text, user_id::text, name, account_detail, wallet_id::text, category_id::text,
-			amount_minor, billing_cycle, next_due_date, status, note, created_at, updated_at
+			amount_minor, billing_cycle, next_due_date, status, note, color, icon, created_at, updated_at
 		FROM subscriptions
 		WHERE user_id = $1 AND id = $2
 	`
@@ -200,6 +201,8 @@ func scanSubscription(row rowScanner) (Subscription, error) {
 		&subscription.NextDueDate,
 		&subscription.Status,
 		&subscription.Note,
+		&subscription.Color,
+		&subscription.Icon,
 		&subscription.CreatedAt,
 		&subscription.UpdatedAt,
 	)
