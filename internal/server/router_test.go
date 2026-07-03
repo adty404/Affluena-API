@@ -1,10 +1,15 @@
 package server
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"affluena-api/internal/config"
+
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,6 +81,69 @@ func TestAllowedCORSOrigins(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := allowedCORSOrigins(tc.input)
 			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// TestApplyTrustedProxies_ClientIPHonoursForwardedForOnlyFromTrustedHop verifies
+// that the trusted-proxy list drives ClientIP(): a forged X-Forwarded-For from an
+// UNtrusted remote address is ignored (so the real remote addr is used for the
+// per-IP AuthLimiter), while X-Forwarded-For from the trusted nginx hop is
+// honoured (so the real end-user IP is recovered behind the proxy).
+func TestApplyTrustedProxies_ClientIPHonoursForwardedForOnlyFromTrustedHop(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	newEngine := func(proxies []string) *gin.Engine {
+		e := gin.New()
+		applyTrustedProxies(e, proxies)
+		e.GET("/whoami", func(c *gin.Context) {
+			c.String(http.StatusOK, c.ClientIP())
+		})
+		return e
+	}
+
+	// Default private/loopback ranges from config.
+	trusted := config.Load().TrustedProxies
+
+	tests := []struct {
+		name       string
+		proxies    []string
+		remoteAddr string
+		forwarded  string
+		wantIP     string
+	}{
+		{
+			name:       "untrusted client cannot spoof via X-Forwarded-For",
+			proxies:    trusted,
+			remoteAddr: "203.0.113.10:5555", // public, NOT in trusted ranges
+			forwarded:  "1.2.3.4",
+			wantIP:     "203.0.113.10", // forged header ignored, real remote used
+		},
+		{
+			name:       "trusted nginx hop forwards the real end-user IP",
+			proxies:    trusted,
+			remoteAddr: "10.0.0.5:5555", // private, in trusted ranges (nginx)
+			forwarded:  "1.2.3.4",
+			wantIP:     "1.2.3.4", // header honoured, real user recovered
+		},
+		{
+			name:       "malformed list fails closed: no proxy trusted",
+			proxies:    []string{"not-a-cidr"},
+			remoteAddr: "10.0.0.5:5555",
+			forwarded:  "1.2.3.4",
+			wantIP:     "10.0.0.5", // header ignored because trust reset to nil
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEngine(tc.proxies)
+			req := httptest.NewRequest(http.MethodGet, "/whoami", nil)
+			req.RemoteAddr = tc.remoteAddr
+			req.Header.Set("X-Forwarded-For", tc.forwarded)
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+			assert.Equal(t, tc.wantIP, rec.Body.String())
 		})
 	}
 }

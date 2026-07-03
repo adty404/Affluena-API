@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +43,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	apilogRepo := apilog.NewRepository(pool)
 	apilogHandler := apilog.NewHandler(apilogRepo)
 	router := gin.New()
+	applyTrustedProxies(router, cfg.TrustedProxies)
 	router.Use(gin.Recovery())
 	router.Use(securityHeaders(cfg.Env))
 
@@ -64,7 +66,22 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	activityUC := activity.NewUseCase(activityRepo)
 	activityHandler := activity.NewHandler(activityUC)
 
-	authService := auth.NewService(authRepo, tokenManager, activityUC)
+	// Build the SMTP mailer once, unconditionally when SMTP is configured, and
+	// reuse it for BOTH transactional auth email (password reset) and budget
+	// alerts. Previously the mailer was constructed only inside the alert guard,
+	// so auth was always wired without a mailer and forgot-password silently sent
+	// nothing.
+	var smtpMailer mailer.Mailer
+	if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
+		smtpMailer = mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	}
+
+	var authService *auth.Service
+	if smtpMailer != nil {
+		authService = auth.NewServiceWithMailer(authRepo, tokenManager, activityUC, mailer.AsSingleRecipient(smtpMailer), cfg.SMTPFrom, cfg.AppBaseURL)
+	} else {
+		authService = auth.NewService(authRepo, tokenManager, activityUC)
+	}
 	authHandler := auth.NewHandler(authService)
 
 	walletRepo := wallet.NewRepository(pool)
@@ -76,8 +93,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	budgetHandler := budget.NewHandler(budgetUC)
 
 	var alertUC alert.UseCase
-	if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
-		smtpMailer := mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	if smtpMailer != nil {
 		alertUC = alert.NewUseCase(alert.NewRepository(pool), budgetUC, smtpMailer)
 	}
 
@@ -252,6 +268,21 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.POST("/recurring-transactions/:id/run", recurringHandler.RunManual)
 
 	return router
+}
+
+// applyTrustedProxies configures which proxy hops gin trusts for the
+// X-Forwarded-For header when resolving ClientIP(). The API sits behind an nginx
+// reverse proxy on the same host / Docker network, so only that proxy should be
+// trusted. Without this, gin trusts ALL proxies and a client-forged
+// X-Forwarded-For lets a single attacker rotate ClientIP() and bypass the per-IP
+// AuthLimiter on /auth/login and /auth/register. On a malformed list we fall back
+// to trusting NO proxy (ClientIP == direct remote address) rather than
+// everything, so we always fail closed.
+func applyTrustedProxies(engine *gin.Engine, proxies []string) {
+	if err := engine.SetTrustedProxies(proxies); err != nil {
+		slog.Error("invalid TRUSTED_PROXIES; trusting no proxy (ClientIP will use the direct remote address)", "error", err)
+		_ = engine.SetTrustedProxies(nil)
+	}
 }
 
 // allowedCORSOrigins parses and validates CORS origins, returning defaults if empty.

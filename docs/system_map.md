@@ -736,11 +736,15 @@ make verify
 | `RECURRING_SCHEDULER_INTERVAL` | 1m | Interval pengecekan scheduler |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | 20 | Max rules per tick |
 | `CORS_ALLOWED_ORIGINS` | http://localhost:5173 | Allowed CORS origins (comma-separated) |
+| `TRUSTED_PROXIES` | 127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 | CIDR/IP reverse-proxy yang `X-Forwarded-For`-nya dipercaya untuk `ClientIP()` (comma-separated). Mencegah client memalsukan IP untuk menembus rate limiter auth. |
+| `API_LOG_RETENTION_DAYS` | 30 | Umur (hari) row `api_logs` yang dipangkas job retention background |
+| `API_LOG_RETENTION_INTERVAL` | 6h | Interval job retention `api_logs` |
 | `SMTP_HOST` | sandbox.smtp.mailtrap.io | SMTP server host |
 | `SMTP_PORT` | 2525 | SMTP server port |
 | `SMTP_USER` | (kosong) | SMTP username |
 | `SMTP_PASS` | (kosong) | SMTP password |
 | `SMTP_FROM` | noreply@affluena.com | Alamat pengirim email |
+| `APP_BASE_URL` | http://localhost:5173 | Base URL WEB frontend untuk link email transaksional (mis. reset password) |
 | `AUTH_RATE_LIMIT_RPS` | 5 | Rate limit auth endpoint (request per detik) |
 | `AUTH_RATE_LIMIT_BURST` | 10 | Burst size rate limit auth endpoint |
 
