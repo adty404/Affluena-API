@@ -22,16 +22,18 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) Create(ctx context.Context, userID string, input CreateCategoryInput) (Category, error) {
 	var category Category
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO categories (user_id, name, type, parent_id)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id::text, user_id::text, parent_id::text, name, type, created_at, updated_at
-	`, userID, input.Name, input.Type, input.ParentID).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt)
+		INSERT INTO categories (user_id, name, type, parent_id, icon, color, position)
+		SELECT $1, $2, $3, $4, $5, $6, COALESCE(MAX(position) + 1, 0)
+		FROM categories
+		WHERE user_id = $1
+		RETURNING id::text, user_id::text, parent_id::text, name, type, icon, color, position, created_at, updated_at
+	`, userID, input.Name, input.Type, input.ParentID, input.Icon, input.Color).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.Icon, &category.Color, &category.Position, &category.CreatedAt, &category.UpdatedAt)
 	return category, err
 }
 
 func (r *Repository) List(ctx context.Context, userID string, categoryType string, pagination page.Params) (page.Result[Category], error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id::text, user_id::text, parent_id::text, name, type, created_at, updated_at
+		SELECT id::text, user_id::text, parent_id::text, name, type, icon, color, position, created_at, updated_at
 		FROM categories
 		WHERE user_id = $1 AND ($2 = '' OR type = $2)
 		ORDER BY `+categoryOrderBy(pagination.Sort)+`
@@ -45,7 +47,7 @@ func (r *Repository) List(ctx context.Context, userID string, categoryType strin
 	var categories []Category
 	for rows.Next() {
 		var category Category
-		if err := rows.Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt); err != nil {
+		if err := rows.Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.Icon, &category.Color, &category.Position, &category.CreatedAt, &category.UpdatedAt); err != nil {
 			return page.Result[Category]{}, err
 		}
 		categories = append(categories, category)
@@ -66,6 +68,8 @@ func (r *Repository) List(ctx context.Context, userID string, categoryType strin
 
 func categoryOrderBy(sort string) string {
 	switch sort {
+	case "type_name_asc":
+		return "type ASC, name ASC"
 	case "type_name_desc":
 		return "type DESC, name DESC"
 	case "name_asc":
@@ -77,17 +81,18 @@ func categoryOrderBy(sort string) string {
 	case "created_at_asc":
 		return "created_at ASC"
 	default:
-		return "type ASC, name ASC"
+		// position_asc: the user-arranged order, name as tie-break.
+		return "position ASC, name ASC"
 	}
 }
 
 func (r *Repository) Get(ctx context.Context, userID string, id string) (Category, error) {
 	var category Category
 	err := r.pool.QueryRow(ctx, `
-		SELECT id::text, user_id::text, parent_id::text, name, type, created_at, updated_at
+		SELECT id::text, user_id::text, parent_id::text, name, type, icon, color, position, created_at, updated_at
 		FROM categories
 		WHERE user_id = $1 AND id = $2
-	`, userID, id).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt)
+	`, userID, id).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.Icon, &category.Color, &category.Position, &category.CreatedAt, &category.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Category{}, ErrNotFound
 	}
@@ -98,14 +103,42 @@ func (r *Repository) Update(ctx context.Context, userID string, id string, input
 	var category Category
 	err := r.pool.QueryRow(ctx, `
 		UPDATE categories
-		SET name = $3, type = $4, parent_id = $5, updated_at = now()
+		SET name = $3, type = $4, parent_id = $5, icon = $6, color = $7, updated_at = now()
 		WHERE user_id = $1 AND id = $2
-		RETURNING id::text, user_id::text, parent_id::text, name, type, created_at, updated_at
-	`, userID, id, input.Name, input.Type, input.ParentID).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.CreatedAt, &category.UpdatedAt)
+		RETURNING id::text, user_id::text, parent_id::text, name, type, icon, color, position, created_at, updated_at
+	`, userID, id, input.Name, input.Type, input.ParentID, input.Icon, input.Color).Scan(&category.ID, &category.UserID, &category.ParentID, &category.Name, &category.Type, &category.Icon, &category.Color, &category.Position, &category.CreatedAt, &category.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Category{}, ErrNotFound
 	}
 	return category, err
+}
+
+// Reorder sets position = array index for every id, scoped to the user, in a
+// single transaction. If any id is not owned by the user the whole reorder is
+// rolled back with ErrNotFound. Ids omitted from the list keep their position.
+func (r *Repository) Reorder(ctx context.Context, userID string, ids []string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE categories
+		SET position = ordered.new_position, updated_at = now()
+		FROM (
+			SELECT id, ordinality - 1 AS new_position
+			FROM unnest($2::uuid[]) WITH ORDINALITY AS ids(id, ordinality)
+		) ordered
+		WHERE categories.user_id = $1 AND categories.id = ordered.id
+	`, userID, ids)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != int64(len(ids)) {
+		return ErrNotFound
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *Repository) Delete(ctx context.Context, userID string, id string) error {

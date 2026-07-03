@@ -129,6 +129,7 @@ Existing high-value integration tests:
 - `internal/server/financial_flow_integration_test.go`: proves transaction lifecycle preserves balances.
 - `internal/server/category_filter_integration_test.go`: proves category type filtering.
 - `internal/server/category_hierarchy_test.go`: proves category parent nesting, max-depth behavior, and cyclic-reference protection.
+- `internal/server/category_reorder_integration_test.go`: proves category icon/color round-trip, position-based default ordering, the reorder endpoint (full and partial), and that reorder rejects non-owned ids without partial writes.
 - `internal/server/transaction_filter_integration_test.go`: proves transaction list filters.
 - `internal/server/pagination_integration_test.go`: proves list endpoint pagination metadata and wallet sorting.
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
@@ -164,6 +165,8 @@ Current notable API decisions:
 - `GET /api/v1/categories?type=income` lists income categories.
 - `GET /api/v1/categories?type=expense` lists expense categories.
 - `POST/PUT /api/v1/categories` accept optional `parent_id`; category trees are limited to 3 levels and parents must be owned by the authenticated user with the same category type.
+- `POST/PUT /api/v1/categories` also accept optional client-owned `icon` and `color` strings (not validated by the server, same as wallets). `position` is returned but not settable via create/update: creates append at `MAX(position)+1` per user.
+- `PUT /api/v1/categories/reorder` accepts `{ "ids": [...] }` and sets `position` = array index per id in one transaction, scoped to the user; ids omitted keep their position, any non-owned id returns 404 and rolls everything back. Category list ordering defaults to `position_asc` (position, then name).
 - `GET/PUT/DELETE /api/v1/categories/:id` remain generic category CRUD.
 - `POST/GET/PUT/DELETE /api/v1/tags` manage user-owned transaction labels.
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
@@ -192,7 +195,7 @@ Current notable API decisions:
 - Migration files are executed in full by the native Go migration runner. Keep them as forward-only SQL for this project; do not include goose-style `Down` blocks in files consumed by `internal/db/migrate.go`.
 - Prefer backward-compatible migrations for existing data, for example `NOT NULL DEFAULT ''` for new optional text fields.
 - When adding user-owned references, enforce user ownership in database constraints where practical, following `000005_user_owned_foreign_keys.sql`.
-- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), sent alerts (`000020`), wallet display metadata (`000021`), user profile fields (`000022`), password reset tokens (`000023`), export jobs (`000024`), notification rules (`000025`), and the shared-wallet `role` column (`000026`, `wallet_shares.role` ∈ {`member`,`viewer`} default `member`).
+- Current later migrations include financial goals (`000007`), tags (`000008`), category hierarchy (`000009`), transaction tag ownership (`000010`), category parent ownership/type checks (`000011`), shared-wallet compatibility migrations through debt records (`000016`-`000019`), sent alerts (`000020`), wallet display metadata (`000021`), user profile fields (`000022`), password reset tokens (`000023`), export jobs (`000024`), notification rules (`000025`), the shared-wallet `role` column (`000026`, `wallet_shares.role` ∈ {`member`,`viewer`} default `member`), account-level partner links (`000027`-`000028`), wallet icon (`000029`), entity colors/icons (`000030`), and category icon/color plus user-arrangeable `position` with per-user backfill (`000031`).
 - After adding migrations, run `make verify` so Docker and integration tests apply them.
 
 ## Known Tech Debt

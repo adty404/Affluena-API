@@ -13,6 +13,7 @@ type RepositoryPort interface {
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
+	Reorder(ctx context.Context, userID string, ids []string) error
 	CheckParent(ctx context.Context, userID string, categoryType string, parentID *string) error
 	CheckDepth(ctx context.Context, parentID *string) error
 	CheckCycle(ctx context.Context, categoryID string, newParentID *string) error
@@ -73,6 +74,21 @@ func (u *UseCase) Update(ctx context.Context, userID string, id string, input Up
 		u.activityUC.LogActivity(ctx, userID, "UPDATE", "CATEGORY", &id, "Mengubah kategori: "+input.Name)
 	}
 	return c, err
+}
+
+func (u *UseCase) Reorder(ctx context.Context, userID string, ids []string) error {
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			return ErrDuplicateReorderID
+		}
+		seen[id] = struct{}{}
+	}
+	err := u.repo.Reorder(ctx, userID, ids)
+	if err == nil && u.activityUC != nil {
+		u.activityUC.LogActivity(ctx, userID, "UPDATE", "CATEGORY", nil, "Mengubah urutan kategori")
+	}
+	return err
 }
 
 func (u *UseCase) Delete(ctx context.Context, userID string, id string) error {
