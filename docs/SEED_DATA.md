@@ -44,7 +44,7 @@ Seeded data:
 
 ## Appearance values (color & icon)
 
-The seed showcases the appearance feature: every module that supports `color`/`icon` (wallets, categories, category budgets, goals, installments, subscriptions, recurring rules) gets values from the shared client catalogs — the 10-swatch color palette (stored uppercase `#RRGGBB`) plus `kWalletIconCatalog` ids for wallets and `kCategoryIconCatalog` ids for categories and the entity modules. A few rows are deliberately left **colorless** (empty `color`) so clients can verify their fallback rendering.
+The seed showcases the appearance feature: every module that supports `color`/`icon` (wallets, categories, category budgets, goals, installments, subscriptions, recurring rules) gets values from the shared client catalogs — the 10-swatch color palette (stored uppercase `#RRGGBB`) plus `kWalletIconCatalog` ids for wallets and `kCategoryIconCatalog` ids for categories and the entity modules. **Every category carries both a color and an icon** — categories surface in transaction history across every screen, so a colorless one would look unfinished. A few *other-module* rows (a wallet, a budget) are deliberately left **colorless** so clients can still verify their fallback rendering.
 
 | Module | Item | Color | Icon |
 |--------|------|-------|------|
@@ -54,13 +54,13 @@ The seed showcases the appearance feature: every module that supports `color`/`i
 | Wallet (goal) | Europe Trip Fund | `#3E72B8` denim | `travel` |
 | Category | Salary | `#2E8B57` green | `salary` |
 | Category | Freelance | `#9E7B4F` bronze | `work` |
-| Category | Loan Repayment | — (fallback) | `misc` |
+| Category | Loan Repayment | `#2BB3A3` teal | `savings` |
 | Category | Food & Dining | `#C2553F` coral | `food` |
 | Category | Transportation | `#E0A23B` amber | `transport` |
 | Category | Entertainment | `#7C5BC2` purple | `entertainment` |
 | Category | Bills & Utilities | `#4256B8` indigo | `bills` |
 | Category | Shopping | `#C2588A` pink | `shopping` |
-| Category | Loan Given | — (fallback) | `misc` |
+| Category | Loan Given | `#5E6E80` slate | `gift` |
 | Budget | Food & Dining | `#C2553F` coral | `food` |
 | Budget | Transportation | `#E0A23B` amber | `transport` |
 | Budget | Entertainment | `#7C5BC2` purple | `entertainment` |
