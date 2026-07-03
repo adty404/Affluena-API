@@ -22,6 +22,13 @@ type Config struct {
 	RecurringSchedulerBatchSize int
 	CORSAllowedOrigins          string
 
+	// NotificationSchedulerEnabled toggles the background notification scheduler
+	// (due reminders at H-3/H-1 and the weekly cashflow summary). Interval is how
+	// often it ticks; sends are gated on notification_rules and de-duped, so a
+	// frequent interval never spams.
+	NotificationSchedulerEnabled  bool
+	NotificationSchedulerInterval time.Duration
+
 	// APILogRetentionDays is the age (in days) beyond which api_logs rows are
 	// pruned by the background retention job. api_logs stores full request +
 	// response payloads on every call, so without pruning the table grows without
@@ -78,10 +85,14 @@ func Load() Config {
 		RecurringSchedulerInterval:  getDurationEnv("RECURRING_SCHEDULER_INTERVAL", time.Minute),
 		RecurringSchedulerBatchSize: getIntEnv("RECURRING_SCHEDULER_BATCH_SIZE", 20),
 		CORSAllowedOrigins:          getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
-		APILogRetentionDays:         getPositiveIntEnv("API_LOG_RETENTION_DAYS", 30),
-		APILogRetentionInterval:     getDurationEnv("API_LOG_RETENTION_INTERVAL", 6*time.Hour),
-		TrustedProxies:              getCSVEnv("TRUSTED_PROXIES", defaultTrustedProxies),
-		AllowInsecureDB:             getBoolEnv("ALLOW_INSECURE_DB", false),
+
+		NotificationSchedulerEnabled:  getBoolEnv("NOTIFICATION_SCHEDULER_ENABLED", true),
+		NotificationSchedulerInterval: getDurationEnv("NOTIFICATION_SCHEDULER_INTERVAL", time.Hour),
+		APILogRetentionDays:           getPositiveIntEnv("API_LOG_RETENTION_DAYS", 30),
+		APILogRetentionInterval:       getDurationEnv("API_LOG_RETENTION_INTERVAL", 6*time.Hour),
+		TrustedProxies:                getCSVEnv("TRUSTED_PROXIES", defaultTrustedProxies),
+
+		AllowInsecureDB: getBoolEnv("ALLOW_INSECURE_DB", false),
 
 		SMTPHost: getEnv("SMTP_HOST", "sandbox.smtp.mailtrap.io"),
 		SMTPPort: getIntEnv("SMTP_PORT", 2525),

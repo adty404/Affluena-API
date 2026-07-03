@@ -21,10 +21,27 @@ type budgetProvider interface {
 	List(ctx context.Context, userID string, monthValue string, pagination page.Params) (page.Result[budget.BudgetSummary], error)
 }
 
+// notificationGate consults the user's notification_rules row for the
+// budget-alert rule so the alert respects the enabled flag + channel. Satisfied
+// by an adapter over *notification.Notifier (Decide). Kept as a local interface
+// to avoid an import cycle (notification must not import alert).
+type notificationGate interface {
+	Decide(ctx context.Context, userID, ruleKey string) (ChannelDecision, error)
+}
+
+// ChannelDecision mirrors notification.Decision without importing it directly in
+// the interface signature. The adapter in the composition root maps between them.
+type ChannelDecision struct {
+	Send  bool
+	Email bool
+	InApp bool
+}
+
 type useCase struct {
 	repo       Repository
 	budgetUC   budgetProvider
 	mailSender mailer.Mailer
+	gate       notificationGate
 }
 
 func NewUseCase(repo Repository, budgetUC budgetProvider, mailSender mailer.Mailer) UseCase {
@@ -32,6 +49,18 @@ func NewUseCase(repo Repository, budgetUC budgetProvider, mailSender mailer.Mail
 		repo:       repo,
 		budgetUC:   budgetUC,
 		mailSender: mailSender,
+	}
+}
+
+// NewUseCaseWithGate is like NewUseCase but consults the notification gate before
+// sending, so the budget-alert respects the user's notification_rules
+// (enabled + email/in-app channel). When gate is nil the behaviour is unchanged.
+func NewUseCaseWithGate(repo Repository, budgetUC budgetProvider, mailSender mailer.Mailer, gate notificationGate) UseCase {
+	return &useCase{
+		repo:       repo,
+		budgetUC:   budgetUC,
+		mailSender: mailSender,
+		gate:       gate,
 	}
 }
 
@@ -82,6 +111,24 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 		return
 	}
 
+	// Gate on the user's budget-alert notification rule (enabled + channel). A
+	// disabled or missing rule means no send at all; the channel decides whether
+	// email goes out. When no gate is wired we preserve the legacy always-email
+	// behaviour so existing deployments keep working.
+	sendEmail := true
+	if u.gate != nil {
+		decision, err := u.gate.Decide(ctx, userID, "budget-alert")
+		if err != nil {
+			slog.Error("failed to consult budget-alert notification rule", "error", err, "user_id", userID)
+			return
+		}
+		if !decision.Send {
+			// Rule disabled (or missing): respect the user's choice, send nothing.
+			return
+		}
+		sendEmail = decision.Email
+	}
+
 	// Atomically try to mark alert as sending (prevents duplicate emails)
 	shouldSend, err := u.repo.TryInsertSentAlert(ctx, userID, categoryID, monthValue, alertType)
 	if err != nil {
@@ -90,6 +137,13 @@ func (u *useCase) CheckBudgetAndAlert(ctx context.Context, userID, categoryID st
 	}
 	if !shouldSend {
 		// Alert already sent for this month/category/type
+		return
+	}
+
+	// If the channel is in-app only, there is nothing to email — the sent_alerts
+	// row above already records the (deduped) in-app alert surfaced by the feed.
+	if !sendEmail {
+		slog.Info("budget alert recorded (in-app only, email channel disabled)", "user_id", userID, "alert_type", alertType)
 		return
 	}
 

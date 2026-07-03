@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -92,9 +93,20 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	budgetUC := budget.NewUseCase(budget.NewRepository(pool), activityUC)
 	budgetHandler := budget.NewHandler(budgetUC)
 
+	// The notifier is the single rule-gated send path (reuses the smtpMailer
+	// built above); the alert use case consults it so budget-alerts respect
+	// notification_rules.
+	notifDeliveryRepo := notification.NewDeliveryRepository(pool)
+	var notifMailer notification.MailerPort
+	if smtpMailer != nil {
+		notifMailer = singleRecipientMailer{smtpMailer}
+	}
+	notifier := notification.NewNotifier(notifDeliveryRepo, notifMailer)
+
 	var alertUC alert.UseCase
 	if smtpMailer != nil {
-		alertUC = alert.NewUseCase(alert.NewRepository(pool), budgetUC, smtpMailer)
+		// Gate the budget-alert send on the user's notification_rules row.
+		alertUC = alert.NewUseCaseWithGate(alert.NewRepository(pool), budgetUC, smtpMailer, alertGate{notifier})
 	}
 
 	feedRepo := alert.NewFeedRepository(pool)
@@ -268,6 +280,31 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.POST("/recurring-transactions/:id/run", recurringHandler.RunManual)
 
 	return router
+}
+
+// singleRecipientMailer adapts mailer.Mailer (which sends to a []string) to the
+// single-recipient notification.MailerPort used by the notifier.
+type singleRecipientMailer struct {
+	inner mailer.Mailer
+}
+
+func (m singleRecipientMailer) Send(ctx context.Context, to string, subject string, htmlBody string) error {
+	return m.inner.SendEmail(ctx, []string{to}, subject, htmlBody)
+}
+
+// alertGate adapts *notification.Notifier to the alert package's notificationGate
+// interface, mapping notification.Decision onto alert.channelDecision without
+// creating an import cycle (alert never imports notification).
+type alertGate struct {
+	notifier *notification.Notifier
+}
+
+func (g alertGate) Decide(ctx context.Context, userID, ruleKey string) (alert.ChannelDecision, error) {
+	d, err := g.notifier.Decide(ctx, userID, ruleKey)
+	if err != nil {
+		return alert.ChannelDecision{}, err
+	}
+	return alert.ChannelDecision{Send: d.Send, Email: d.Email, InApp: d.InApp}, nil
 }
 
 // applyTrustedProxies configures which proxy hops gin trusts for the

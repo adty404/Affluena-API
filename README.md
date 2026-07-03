@@ -59,6 +59,8 @@ The application is configured via environment variables. Copy `.env.example` to 
 | `RECURRING_SCHEDULER_ENABLED` | Enable recurring transaction scheduler | `true` | No |
 | `RECURRING_SCHEDULER_INTERVAL` | Scheduler check interval | `1m` | No |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | Scheduler batch size | `20` | No |
+| `NOTIFICATION_SCHEDULER_ENABLED` | Enable the notification scheduler (due reminders H-3/H-1 + weekly summary) | `true` | No |
+| `NOTIFICATION_SCHEDULER_INTERVAL` | Notification scheduler tick interval (sends are gated + de-duped, so a frequent tick is safe) | `1h` | No |
 | `CORS_ALLOWED_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No |
 | `TRUSTED_PROXIES` | Reverse-proxy CIDRs/IPs whose `X-Forwarded-For` is trusted for `ClientIP()` (comma-separated). Only these hops can set the client IP used by the auth rate limiter. | `127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | No |
 | `API_LOG_RETENTION_DAYS` | Age (days) beyond which `api_logs` rows (full request/response payloads) are pruned by the background retention job | `30` | No |

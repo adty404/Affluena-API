@@ -19,6 +19,8 @@ func TestLoadUsesDefaultsWhenEnvIsMissingOrInvalid(t *testing.T) {
 	t.Setenv("RECURRING_SCHEDULER_BATCH_SIZE", "not-int")
 	t.Setenv("AUTH_RATE_LIMIT_RPS", "invalid")
 	t.Setenv("AUTH_RATE_LIMIT_BURST", "-5")
+	t.Setenv("NOTIFICATION_SCHEDULER_ENABLED", "not-bool")
+	t.Setenv("NOTIFICATION_SCHEDULER_INTERVAL", "bad-duration")
 
 	cfg := Load()
 
@@ -36,6 +38,9 @@ func TestLoadUsesDefaultsWhenEnvIsMissingOrInvalid(t *testing.T) {
 	}
 	if cfg.AuthRateLimitRPS != 5 || cfg.AuthRateLimitBurst != 10 {
 		t.Fatalf("expected default auth rate limits, got RPS %d Burst %d", cfg.AuthRateLimitRPS, cfg.AuthRateLimitBurst)
+	}
+	if !cfg.NotificationSchedulerEnabled || cfg.NotificationSchedulerInterval != time.Hour {
+		t.Fatalf("expected default notification scheduler (enabled, 1h), got enabled=%v interval=%s", cfg.NotificationSchedulerEnabled, cfg.NotificationSchedulerInterval)
 	}
 	wantProxies := []string{"127.0.0.1/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
 	if !slices.Equal(cfg.TrustedProxies, wantProxies) {
@@ -80,9 +85,14 @@ func TestLoadParsesExplicitEnv(t *testing.T) {
 	t.Setenv("RECURRING_SCHEDULER_BATCH_SIZE", "7")
 	t.Setenv("AUTH_RATE_LIMIT_RPS", "20")
 	t.Setenv("AUTH_RATE_LIMIT_BURST", "50")
+	t.Setenv("NOTIFICATION_SCHEDULER_ENABLED", "false")
+	t.Setenv("NOTIFICATION_SCHEDULER_INTERVAL", "30m")
 
 	cfg := Load()
 
+	if cfg.NotificationSchedulerEnabled || cfg.NotificationSchedulerInterval != 30*time.Minute {
+		t.Fatalf("unexpected notification scheduler config, got enabled=%v interval=%s", cfg.NotificationSchedulerEnabled, cfg.NotificationSchedulerInterval)
+	}
 	if cfg.Env != "test" || cfg.HTTPAddr != ":9090" || cfg.DatabaseURL != "postgres://example" || cfg.JWTSecret != "secret" {
 		t.Fatalf("unexpected string config values: %+v", cfg)
 	}

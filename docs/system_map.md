@@ -122,7 +122,7 @@ graph TB
 | **dashboard** | `internal/dashboard/` | 5 src | 613 | Summary, Cashflow Trend, Expense Distribution, Spend Forecast. |
 | **export** | `internal/export/` | 4 src | 432 | Ekspor transaksi ke CSV dan audit `export_jobs`. |
 | **report** | `internal/report/` | 4 src + 2 test | 779 + 129 | Laporan income, expense, cashflow, debt, goal, dan overview. |
-| **notification** | `internal/notification/` | 4 src + 2 test | 230 + 197 | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`). |
+| **notification** | `internal/notification/` | 8 src + 4 test | — | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`), disajikan dalam Bahasa Indonesia (dilokalkan server-side per `rule_key`). **Notification scheduler** (mirror recurring scheduler): pengingat jatuh tempo H-3/H-1 (langganan/cicilan/utang) + ringkasan arus kas mingguan. Semua kiriman **digerbang** pada `notification_rules` (enabled + channel) dan di-de-dupe via tabel `notification_deliveries`. |
 
 ### 2.4. Cross-Cutting Concerns
 
@@ -735,6 +735,8 @@ make verify
 | `RECURRING_SCHEDULER_ENABLED` | true | Aktifkan background scheduler |
 | `RECURRING_SCHEDULER_INTERVAL` | 1m | Interval pengecekan scheduler |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | 20 | Max rules per tick |
+| `NOTIFICATION_SCHEDULER_ENABLED` | true | Aktifkan notification scheduler (pengingat jatuh tempo H-3/H-1 + ringkasan mingguan) |
+| `NOTIFICATION_SCHEDULER_INTERVAL` | 1h | Interval tick notification scheduler (send digerbang + de-dupe, aman untuk tick sering) |
 | `CORS_ALLOWED_ORIGINS` | http://localhost:5173 | Allowed CORS origins (comma-separated) |
 | `TRUSTED_PROXIES` | 127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 | CIDR/IP reverse-proxy yang `X-Forwarded-For`-nya dipercaya untuk `ClientIP()` (comma-separated). Mencegah client memalsukan IP untuk menembus rate limiter auth. |
 | `API_LOG_RETENTION_DAYS` | 30 | Umur (hari) row `api_logs` yang dipangkas job retention background |
