@@ -122,7 +122,7 @@ graph TB
 | **dashboard** | `internal/dashboard/` | 5 src | 613 | Summary, Cashflow Trend, Expense Distribution, Spend Forecast. |
 | **export** | `internal/export/` | 4 src | 432 | Ekspor transaksi ke CSV dan audit `export_jobs`. |
 | **report** | `internal/report/` | 4 src + 2 test | 779 + 129 | Laporan income, expense, cashflow, debt, goal, dan overview. |
-| **notification** | `internal/notification/` | 4 src + 2 test | 230 + 197 | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`). |
+| **notification** | `internal/notification/` | 8 src + 4 test | — | Preferensi notification rules per user (`budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, `weekly-summary`), disajikan dalam Bahasa Indonesia (dilokalkan server-side per `rule_key`). **Notification scheduler** (mirror recurring scheduler): pengingat jatuh tempo H-3/H-1 (langganan/cicilan/utang) + ringkasan arus kas mingguan. Semua kiriman **digerbang** pada `notification_rules` (enabled + channel) dan di-de-dupe via tabel `notification_deliveries`. |
 
 ### 2.4. Cross-Cutting Concerns
 
@@ -735,6 +735,8 @@ make verify
 | `RECURRING_SCHEDULER_ENABLED` | true | Aktifkan background scheduler |
 | `RECURRING_SCHEDULER_INTERVAL` | 1m | Interval pengecekan scheduler |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | 20 | Max rules per tick |
+| `NOTIFICATION_SCHEDULER_ENABLED` | true | Aktifkan notification scheduler (pengingat jatuh tempo H-3/H-1 + ringkasan mingguan) |
+| `NOTIFICATION_SCHEDULER_INTERVAL` | 1h | Interval tick notification scheduler (send digerbang + de-dupe, aman untuk tick sering) |
 | `CORS_ALLOWED_ORIGINS` | http://localhost:5173 | Allowed CORS origins (comma-separated) |
 | `SMTP_HOST` | sandbox.smtp.mailtrap.io | SMTP server host |
 | `SMTP_PORT` | 2525 | SMTP server port |

@@ -432,6 +432,34 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
   ```
 - *Note:* The system lazy-seeds 5 default rules for each user: `budget-alert`, `due-reminder`, `recurring-run`, `security-alert`, and `weekly-summary`.
 - *Note:* Supported channels are `email`, `in-app`, and `both`.
+- *Note:* `title`/`description` are returned in **Indonesian** (localized server-side by `rule_key`); the DB stores English copy but the API presents id_ID.
+
+#### Notification delivery (scheduler + gating)
+
+A background **notification scheduler** (mirrors the recurring scheduler; toggled
+by `NOTIFICATION_SCHEDULER_ENABLED`, interval `NOTIFICATION_SCHEDULER_INTERVAL`,
+default hourly) periodically emits notifications. **Every** send — including the
+existing budget-alert email — is gated on the user's `notification_rules` row:
+
+- **Disabled rule (or missing row) → nothing is sent** (fail closed).
+- **Channel decides delivery:** `email` sends email only, `in-app` records an
+  in-app row only, `both` does both.
+
+What the scheduler emits:
+
+- **Due reminders** (`due-reminder` rule): for each user with the rule enabled,
+  subscriptions / installments / debts due at **H-3** and **H-1** produce a
+  notification. De-duped per `entity + window + due-date`, so a due item is never
+  re-notified on subsequent ticks (but a new billing cycle re-notifies).
+- **Weekly summary** (`weekly-summary` rule, disabled by default): once per ISO
+  week, a short cashflow summary (income / expense / net) for the previous
+  completed week. De-duped on the ISO-week key, so at most one per week.
+
+Sends are recorded in `notification_deliveries` (unique on
+`(user_id, rule_key, dedupe_key)`), which is both the de-dupe log and the in-app
+store (rendered Indonesian `title`/`message`, `severity`, `action_path`). All new
+notification copy is Indonesian with rupiah grouped via `money.GroupIDR`
+(e.g. `Rp 186.000`).
 
 ## HTTP Status Codes
 - `200 OK` - Success, reading data, or updates.

@@ -22,6 +22,13 @@ type Config struct {
 	RecurringSchedulerBatchSize int
 	CORSAllowedOrigins          string
 
+	// NotificationSchedulerEnabled toggles the background notification scheduler
+	// (due reminders at H-3/H-1 and the weekly cashflow summary). Interval is how
+	// often it ticks; sends are gated on notification_rules and de-duped, so a
+	// frequent interval never spams.
+	NotificationSchedulerEnabled  bool
+	NotificationSchedulerInterval time.Duration
+
 	// AllowInsecureDB opts out of the production sslmode=disable guard. It exists
 	// for deployments where Postgres runs on the same trusted host/Docker network
 	// (no TLS terminator), where cleartext traffic never leaves the host. Default
@@ -51,7 +58,11 @@ func Load() Config {
 		RecurringSchedulerInterval:  getDurationEnv("RECURRING_SCHEDULER_INTERVAL", time.Minute),
 		RecurringSchedulerBatchSize: getIntEnv("RECURRING_SCHEDULER_BATCH_SIZE", 20),
 		CORSAllowedOrigins:          getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
-		AllowInsecureDB:             getBoolEnv("ALLOW_INSECURE_DB", false),
+
+		NotificationSchedulerEnabled:  getBoolEnv("NOTIFICATION_SCHEDULER_ENABLED", true),
+		NotificationSchedulerInterval: getDurationEnv("NOTIFICATION_SCHEDULER_INTERVAL", time.Hour),
+
+		AllowInsecureDB: getBoolEnv("ALLOW_INSECURE_DB", false),
 
 		SMTPHost: getEnv("SMTP_HOST", "sandbox.smtp.mailtrap.io"),
 		SMTPPort: getIntEnv("SMTP_PORT", 2525),

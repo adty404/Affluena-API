@@ -59,6 +59,8 @@ The application is configured via environment variables. Copy `.env.example` to 
 | `RECURRING_SCHEDULER_ENABLED` | Enable recurring transaction scheduler | `true` | No |
 | `RECURRING_SCHEDULER_INTERVAL` | Scheduler check interval | `1m` | No |
 | `RECURRING_SCHEDULER_BATCH_SIZE` | Scheduler batch size | `20` | No |
+| `NOTIFICATION_SCHEDULER_ENABLED` | Enable the notification scheduler (due reminders H-3/H-1 + weekly summary) | `true` | No |
+| `NOTIFICATION_SCHEDULER_INTERVAL` | Notification scheduler tick interval (sends are gated + de-duped, so a frequent tick is safe) | `1h` | No |
 | `CORS_ALLOWED_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No |
 | `SMTP_HOST` | SMTP server host | `sandbox.smtp.mailtrap.io` | No |
 | `SMTP_PORT` | SMTP server port | `2525` | No |

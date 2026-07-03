@@ -14,10 +14,22 @@ import (
 	"affluena-api/internal/config"
 	"affluena-api/internal/db"
 	"affluena-api/internal/httpx"
+	"affluena-api/internal/mailer"
+	"affluena-api/internal/notification"
 	"affluena-api/internal/recurring"
 	"affluena-api/internal/server"
 	"affluena-api/internal/transaction"
 )
+
+// notificationMailer adapts mailer.Mailer (which sends to a []string) to the
+// single-recipient notification.MailerPort used by the notification scheduler.
+type notificationMailer struct {
+	inner mailer.Mailer
+}
+
+func (m notificationMailer) Send(ctx context.Context, to string, subject string, htmlBody string) error {
+	return m.inner.SendEmail(ctx, []string{to}, subject, htmlBody)
+}
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -58,6 +70,17 @@ func main() {
 		recurringRepo := recurring.NewRepository(pool, transactionRepo)
 		recurring.NewScheduler(recurring.NewUseCase(recurringRepo, activityUC), cfg.RecurringSchedulerInterval, cfg.RecurringSchedulerBatchSize).Start(appCtx)
 		slog.Info("recurring scheduler enabled", "interval", cfg.RecurringSchedulerInterval, "batch_size", cfg.RecurringSchedulerBatchSize)
+	}
+
+	if cfg.NotificationSchedulerEnabled {
+		deliveryRepo := notification.NewDeliveryRepository(pool)
+		var notifMailer notification.MailerPort
+		if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
+			notifMailer = notificationMailer{mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)}
+		}
+		notifier := notification.NewNotifier(deliveryRepo, notifMailer)
+		notification.NewScheduler(deliveryRepo, notifier, cfg.NotificationSchedulerInterval).Start(appCtx)
+		slog.Info("notification scheduler enabled", "interval", cfg.NotificationSchedulerInterval)
 	}
 
 	httpx.InitRateLimiters(cfg)

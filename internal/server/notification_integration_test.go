@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -118,4 +119,101 @@ func TestNotificationIntegration(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+// TestNotificationRulesLocalizedToIndonesian asserts the settings list returns
+// Indonesian title/description (keyed on rule_key) even though the DB seeds
+// English copy.
+func TestNotificationRulesLocalizedToIndonesian(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	router := NewRouter(config.Config{
+		Env:                  "test",
+		JWTSecret:            "integration-test-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	userID, token := registerIntegrationAPIUser(t, router, "notif-id-copy")
+	defer cleanupServerIntegrationUsers(t, pool, userID)
+
+	req, _ := http.NewRequest("GET", "/api/v1/notifications/rules", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp struct {
+		Rules []notification.NotificationRule `json:"rules"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Len(t, resp.Rules, 5)
+
+	want := map[string]string{
+		"budget-alert":   "Peringatan anggaran",
+		"due-reminder":   "Pengingat jatuh tempo",
+		"recurring-run":  "Hasil transaksi berulang",
+		"security-alert": "Peringatan keamanan",
+		"weekly-summary": "Ringkasan keuangan mingguan",
+	}
+	for _, r := range resp.Rules {
+		if wantTitle, ok := want[r.RuleKey]; ok {
+			assert.Equal(t, wantTitle, r.Title, "rule %s title should be Indonesian", r.RuleKey)
+		}
+	}
+}
+
+// TestNotificationDeliveryGatingAndDedup exercises the real gating + de-dupe SQL:
+// a disabled rule yields no send, an enabled rule delivers once, and a repeat
+// with the same dedupe_key is suppressed.
+func TestNotificationDeliveryGatingAndDedup(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	ctx := context.Background()
+	router := NewRouter(config.Config{
+		Env:                  "test",
+		JWTSecret:            "integration-test-secret",
+		AccessTokenDuration:  time.Hour,
+		RefreshTokenDuration: 24 * time.Hour,
+	}, pool)
+
+	// Registering + listing seeds the default rules (due-reminder enabled=true).
+	userID, token := registerIntegrationAPIUser(t, router, "notif-deliver")
+	defer cleanupServerIntegrationUsers(t, pool, userID)
+	listReq, _ := http.NewRequest("GET", "/api/v1/notifications/rules", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	router.ServeHTTP(httptest.NewRecorder(), listReq)
+
+	repo := notification.NewDeliveryRepository(pool)
+	notifier := notification.NewNotifier(repo, nil) // no mailer: in-app only path
+
+	notif := notification.Notification{
+		RuleKey:   "due-reminder",
+		DedupeKey: "subscription:test:H-3:2026-07-10",
+		Subject:   "s", Title: "Langganan jatuh tempo", Message: "m",
+	}
+
+	// due-reminder is enabled by default → first send records a delivery.
+	sent, err := notifier.Send(ctx, userID, notif)
+	require.NoError(t, err)
+	require.True(t, sent, "first send should record a delivery")
+
+	// Repeat with the same dedupe_key → suppressed.
+	sent, err = notifier.Send(ctx, userID, notif)
+	require.NoError(t, err)
+	require.False(t, sent, "repeat send should be de-duped")
+
+	var count int
+	require.NoError(t, pool.QueryRow(ctx,
+		`SELECT count(*) FROM notification_deliveries WHERE user_id = $1 AND rule_key = 'due-reminder'`, userID,
+	).Scan(&count))
+	require.Equal(t, 1, count, "exactly one delivery row expected")
+
+	// Disable the rule → subsequent send with a NEW dedupe key must not deliver.
+	_, err = pool.Exec(ctx, `UPDATE notification_rules SET enabled = false WHERE user_id = $1 AND rule_key = 'due-reminder'`, userID)
+	require.NoError(t, err)
+
+	notif2 := notif
+	notif2.DedupeKey = "subscription:test:H-1:2026-07-12"
+	sent, err = notifier.Send(ctx, userID, notif2)
+	require.NoError(t, err)
+	require.False(t, sent, "disabled rule must not deliver")
 }
