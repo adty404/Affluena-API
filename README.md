@@ -62,11 +62,15 @@ The application is configured via environment variables. Copy `.env.example` to 
 | `NOTIFICATION_SCHEDULER_ENABLED` | Enable the notification scheduler (due reminders H-3/H-1 + weekly summary) | `true` | No |
 | `NOTIFICATION_SCHEDULER_INTERVAL` | Notification scheduler tick interval (sends are gated + de-duped, so a frequent tick is safe) | `1h` | No |
 | `CORS_ALLOWED_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No |
+| `TRUSTED_PROXIES` | Reverse-proxy CIDRs/IPs whose `X-Forwarded-For` is trusted for `ClientIP()` (comma-separated). Only these hops can set the client IP used by the auth rate limiter. | `127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | No |
+| `API_LOG_RETENTION_DAYS` | Age (days) beyond which `api_logs` rows (full request/response payloads) are pruned by the background retention job | `30` | No |
+| `API_LOG_RETENTION_INTERVAL` | How often the `api_logs` retention prune runs | `6h` | No |
 | `SMTP_HOST` | SMTP server host | `sandbox.smtp.mailtrap.io` | No |
 | `SMTP_PORT` | SMTP server port | `2525` | No |
 | `SMTP_USER` | SMTP username | - | No |
 | `SMTP_PASS` | SMTP password | - | No |
 | `SMTP_FROM` | Sender email address | `noreply@affluena.com` | No |
+| `APP_BASE_URL` | Public base URL of the WEB frontend, used to build links in transactional emails (e.g. the password-reset link `<APP_BASE_URL>/reset-password?token=…`) | `http://localhost:5173` | No |
 | `AUTH_RATE_LIMIT_RPS` | Authentication rate limit requests per second | `5` | No |
 | `AUTH_RATE_LIMIT_BURST` | Authentication rate limit burst allowance | `10` | No |
 
@@ -93,7 +97,8 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 
 - **Auth**: JWT alg-pinned (HS256), bcrypt password hashing, `crypto/rand` refresh/reset tokens stored as SHA-256, automatic refresh-token rotation.
 - **Credential changes revoke all sessions** — `PUT /auth/password` returns a fresh token pair (clients persist it); reset-password forces re-login everywhere.
-- **Rate limiting** — per-IP on `/auth/*` (5 req/s, burst 10) and the whole authenticated API (100 req/s, burst 200) → `429`.
+- **Rate limiting** — per-IP on `/auth/*` (5 req/s, burst 10) and the whole authenticated API (100 req/s, burst 200) → `429`. `TRUSTED_PROXIES` restricts which hops may set `X-Forwarded-For`, so a client-forged header cannot spoof its source IP to bypass the per-IP limiter (the API only trusts the reverse proxy on the same host/network).
+- **Log retention** — `api_logs` stores full request/response payloads per call; a background job prunes rows older than `API_LOG_RETENTION_DAYS` (default 30) so the table stays bounded.
 - **Response headers** — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, plus HSTS in production. CORS rejects wildcard origins when credentials are enabled.
 - **Data**: CSV export defuses formula injection; auth payloads masked in logs.
 - **Config fail-fast** — refuses to boot with a default/weak `JWT_SECRET`, or with `sslmode=disable` in production unless `ALLOW_INSECURE_DB=true` is set explicitly (for Postgres on the same trusted host/Docker network).

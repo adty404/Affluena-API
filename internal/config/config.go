@@ -29,6 +29,21 @@ type Config struct {
 	NotificationSchedulerEnabled  bool
 	NotificationSchedulerInterval time.Duration
 
+	// APILogRetentionDays is the age (in days) beyond which api_logs rows are
+	// pruned by the background retention job. api_logs stores full request +
+	// response payloads on every call, so without pruning the table grows without
+	// bound. APILogRetentionInterval is how often the prune runs.
+	APILogRetentionDays     int
+	APILogRetentionInterval time.Duration
+
+	// TrustedProxies is the list of CIDR ranges / IPs whose X-Forwarded-For
+	// header gin is allowed to trust when resolving ClientIP(). The API sits
+	// behind an nginx reverse proxy on the same host/Docker network, so only
+	// loopback + RFC1918 private ranges are trusted by default. Anything else is
+	// treated as a direct (untrusted) client, so a client-forged X-Forwarded-For
+	// cannot spoof its source IP and slip past the per-IP AuthLimiter.
+	TrustedProxies []string
+
 	// AllowInsecureDB opts out of the production sslmode=disable guard. It exists
 	// for deployments where Postgres runs on the same trusted host/Docker network
 	// (no TLS terminator), where cleartext traffic never leaves the host. Default
@@ -41,9 +56,21 @@ type Config struct {
 	SMTPPass string
 	SMTPFrom string
 
+	// AppBaseURL is the public base URL of the WEB frontend, used to build links
+	// in transactional emails (e.g. the password-reset link points at
+	// <AppBaseURL>/reset-password?token=…). Defaults to the WEB dev origin.
+	AppBaseURL string
+
 	AuthRateLimitRPS   int
 	AuthRateLimitBurst int
 }
+
+// defaultTrustedProxies covers loopback plus the RFC1918 private ranges. The API
+// runs behind an nginx reverse proxy on the same host / Docker network, so the
+// only hop that sets X-Forwarded-For is a private/loopback address. A public
+// client hitting the API directly is NOT in this list, so gin ignores its
+// forged X-Forwarded-For and uses the real remote address for rate limiting.
+const defaultTrustedProxies = "127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
 func Load() Config {
 	return Config{
@@ -61,6 +88,9 @@ func Load() Config {
 
 		NotificationSchedulerEnabled:  getBoolEnv("NOTIFICATION_SCHEDULER_ENABLED", true),
 		NotificationSchedulerInterval: getDurationEnv("NOTIFICATION_SCHEDULER_INTERVAL", time.Hour),
+		APILogRetentionDays:           getPositiveIntEnv("API_LOG_RETENTION_DAYS", 30),
+		APILogRetentionInterval:       getDurationEnv("API_LOG_RETENTION_INTERVAL", 6*time.Hour),
+		TrustedProxies:                getCSVEnv("TRUSTED_PROXIES", defaultTrustedProxies),
 
 		AllowInsecureDB: getBoolEnv("ALLOW_INSECURE_DB", false),
 
@@ -69,6 +99,8 @@ func Load() Config {
 		SMTPUser: getEnv("SMTP_USER", ""),
 		SMTPPass: getEnv("SMTP_PASS", ""),
 		SMTPFrom: getEnv("SMTP_FROM", "noreply@affluena.com"),
+
+		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:5173"),
 
 		AuthRateLimitRPS:   getPositiveIntEnv("AUTH_RATE_LIMIT_RPS", 5),
 		AuthRateLimitBurst: getPositiveIntEnv("AUTH_RATE_LIMIT_BURST", 10),
@@ -81,6 +113,28 @@ func getEnv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+// getCSVEnv reads a comma-separated env value, trims each entry, and drops
+// blanks. If the var is unset or contains no usable entries it returns the
+// parsed fallback so callers always get a non-empty, cleaned list.
+func getCSVEnv(key string, fallback string) []string {
+	raw := os.Getenv(key)
+	if strings.TrimSpace(raw) == "" {
+		raw = fallback
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if v := strings.TrimSpace(p); v != "" {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		// Fallback itself was blank/garbage; fall back to the built-in default.
+		return getCSVEnv("", defaultTrustedProxies)
+	}
+	return out
 }
 
 func getDurationEnv(key string, fallback time.Duration) time.Duration {

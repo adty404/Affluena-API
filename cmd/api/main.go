@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"affluena-api/internal/activity"
+	"affluena-api/internal/apilog"
 	"affluena-api/internal/config"
 	"affluena-api/internal/db"
 	"affluena-api/internal/httpx"
@@ -82,6 +83,11 @@ func main() {
 		notification.NewScheduler(deliveryRepo, notifier, cfg.NotificationSchedulerInterval).Start(appCtx)
 		slog.Info("notification scheduler enabled", "interval", cfg.NotificationSchedulerInterval)
 	}
+
+	// api_logs retention: prune request/response payload rows older than the
+	// configured window so the table does not grow without bound.
+	apilog.NewRetentionScheduler(apilog.NewRepository(pool), cfg.APILogRetentionInterval, cfg.APILogRetentionDays).Start(appCtx)
+	slog.Info("api_logs retention enabled", "interval", cfg.APILogRetentionInterval, "retention_days", cfg.APILogRetentionDays)
 
 	httpx.InitRateLimiters(cfg)
 	httpx.AuthLimiter.StartCleanup(appCtx, httpx.CleanupInterval)

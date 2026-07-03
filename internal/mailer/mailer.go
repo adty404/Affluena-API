@@ -12,6 +12,25 @@ type Mailer interface {
 	SendEmail(ctx context.Context, to []string, subject string, htmlBody string) error
 }
 
+// SingleRecipient adapts a Mailer (which sends to a []string of recipients) to a
+// single-recipient Send(ctx, to, subject, body) signature. It exists so packages
+// that only ever email one address (e.g. auth's password-reset flow, whose
+// MailerPort is Send(ctx, to string, ...)) can reuse the same underlying SMTP
+// mailer without re-implementing it.
+type SingleRecipient struct {
+	inner Mailer
+}
+
+// AsSingleRecipient wraps a Mailer for single-recipient sends.
+func AsSingleRecipient(m Mailer) *SingleRecipient {
+	return &SingleRecipient{inner: m}
+}
+
+// Send delivers one HTML email to a single recipient.
+func (s *SingleRecipient) Send(ctx context.Context, to string, subject string, htmlBody string) error {
+	return s.inner.SendEmail(ctx, []string{to}, subject, htmlBody)
+}
+
 // SMTPMailer implements Mailer using standard net/smtp.
 type SMTPMailer struct {
 	host     string

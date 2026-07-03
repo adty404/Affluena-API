@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	apilogRepo := apilog.NewRepository(pool)
 	apilogHandler := apilog.NewHandler(apilogRepo)
 	router := gin.New()
+	applyTrustedProxies(router, cfg.TrustedProxies)
 	router.Use(gin.Recovery())
 	router.Use(securityHeaders(cfg.Env))
 
@@ -65,7 +67,22 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	activityUC := activity.NewUseCase(activityRepo)
 	activityHandler := activity.NewHandler(activityUC)
 
-	authService := auth.NewService(authRepo, tokenManager, activityUC)
+	// Build the SMTP mailer once, unconditionally when SMTP is configured, and
+	// reuse it for BOTH transactional auth email (password reset) and budget
+	// alerts. Previously the mailer was constructed only inside the alert guard,
+	// so auth was always wired without a mailer and forgot-password silently sent
+	// nothing.
+	var smtpMailer mailer.Mailer
+	if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
+		smtpMailer = mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	}
+
+	var authService *auth.Service
+	if smtpMailer != nil {
+		authService = auth.NewServiceWithMailer(authRepo, tokenManager, activityUC, mailer.AsSingleRecipient(smtpMailer), cfg.SMTPFrom, cfg.AppBaseURL)
+	} else {
+		authService = auth.NewService(authRepo, tokenManager, activityUC)
+	}
 	authHandler := auth.NewHandler(authService)
 
 	walletRepo := wallet.NewRepository(pool)
@@ -76,14 +93,9 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	budgetUC := budget.NewUseCase(budget.NewRepository(pool), activityUC)
 	budgetHandler := budget.NewHandler(budgetUC)
 
-	// SMTP mailer (built once, reused for budget alerts and the notification
-	// scheduler). The notifier is the single rule-gated send path; the alert
-	// use case consults it so the budget-alert respects notification_rules.
-	var smtpMailer mailer.Mailer
-	if cfg.SMTPHost != "" && cfg.SMTPPort > 0 {
-		smtpMailer = mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
-	}
-
+	// The notifier is the single rule-gated send path (reuses the smtpMailer
+	// built above); the alert use case consults it so budget-alerts respect
+	// notification_rules.
 	notifDeliveryRepo := notification.NewDeliveryRepository(pool)
 	var notifMailer notification.MailerPort
 	if smtpMailer != nil {
@@ -293,6 +305,21 @@ func (g alertGate) Decide(ctx context.Context, userID, ruleKey string) (alert.Ch
 		return alert.ChannelDecision{}, err
 	}
 	return alert.ChannelDecision{Send: d.Send, Email: d.Email, InApp: d.InApp}, nil
+}
+
+// applyTrustedProxies configures which proxy hops gin trusts for the
+// X-Forwarded-For header when resolving ClientIP(). The API sits behind an nginx
+// reverse proxy on the same host / Docker network, so only that proxy should be
+// trusted. Without this, gin trusts ALL proxies and a client-forged
+// X-Forwarded-For lets a single attacker rotate ClientIP() and bypass the per-IP
+// AuthLimiter on /auth/login and /auth/register. On a malformed list we fall back
+// to trusting NO proxy (ClientIP == direct remote address) rather than
+// everything, so we always fail closed.
+func applyTrustedProxies(engine *gin.Engine, proxies []string) {
+	if err := engine.SetTrustedProxies(proxies); err != nil {
+		slog.Error("invalid TRUSTED_PROXIES; trusting no proxy (ClientIP will use the direct remote address)", "error", err)
+		_ = engine.SetTrustedProxies(nil)
+	}
 }
 
 // allowedCORSOrigins parses and validates CORS origins, returning defaults if empty.

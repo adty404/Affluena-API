@@ -427,6 +427,17 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+> **Trusted proxies & real client IP.** nginx forwards the caller with
+> `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` (above) while
+> `proxy_pass http://127.0.0.1:8080` reaches the api container's published port.
+> The api therefore sees the connection from loopback or the Docker bridge
+> gateway (a `172.16.0.0/12` address), both covered by the default
+> `TRUSTED_PROXIES` (`127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`).
+> gin only honours `X-Forwarded-For` from these hops, so a public client cannot
+> forge it to spoof its IP past the auth rate limiter. If your proxy reaches the
+> api from a different address (e.g. a custom Docker network or a separate host),
+> set `TRUSTED_PROXIES` to that exact CIDR/IP in the api env.
+
 Cek dari VPS:
 
 ```bash

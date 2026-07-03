@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"affluena-api/internal/apilog"
 	"affluena-api/internal/config"
 )
 
@@ -152,4 +153,54 @@ func TestAuthResponsesAreMaskedInAPILogs(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatalf("iterate auth api log: %v", err)
 	}
+}
+
+// TestAPILogRetentionDeleteOlderThan verifies the retention prune removes rows
+// older than the cutoff while leaving recent rows intact. Backed by the
+// idx_api_logs_created_at index (migration 000013).
+func TestAPILogRetentionDeleteOlderThan(t *testing.T) {
+	pool := openServerIntegrationPool(t)
+	ctx := context.Background()
+
+	// Two rows with an explicit created_at: one old (45 days) and one fresh.
+	oldPath := "/retention-old-" + time.Now().UTC().Format("20060102150405.000000000")
+	newPath := "/retention-new-" + time.Now().UTC().Format("20060102150405.000000000")
+	insert := func(path string, createdAt time.Time) {
+		_, err := pool.Exec(ctx, `
+			INSERT INTO api_logs (method, path, status_code, latency_ms, client_ip, created_at)
+			VALUES ('GET', $1, 200, 1, '127.0.0.1', $2)`, path, createdAt)
+		if err != nil {
+			t.Fatalf("insert api_log: %v", err)
+		}
+	}
+	now := time.Now().UTC()
+	insert(oldPath, now.AddDate(0, 0, -45))
+	insert(newPath, now)
+
+	repo := apilog.NewRepository(pool)
+	cutoff := now.AddDate(0, 0, -30)
+	deleted, err := repo.DeleteOlderThan(ctx, cutoff)
+	if err != nil {
+		t.Fatalf("DeleteOlderThan: %v", err)
+	}
+	if deleted < 1 {
+		t.Fatalf("expected at least the old row deleted, got %d", deleted)
+	}
+
+	var oldCount, newCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM api_logs WHERE path = $1`, oldPath).Scan(&oldCount); err != nil {
+		t.Fatalf("count old: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM api_logs WHERE path = $1`, newPath).Scan(&newCount); err != nil {
+		t.Fatalf("count new: %v", err)
+	}
+	if oldCount != 0 {
+		t.Fatalf("expected old row pruned, still present (%d)", oldCount)
+	}
+	if newCount != 1 {
+		t.Fatalf("expected fresh row retained, got %d", newCount)
+	}
+
+	// Cleanup the fresh row we inserted.
+	_, _ = pool.Exec(ctx, `DELETE FROM api_logs WHERE path = $1`, newPath)
 }
