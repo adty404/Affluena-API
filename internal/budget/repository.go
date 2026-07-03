@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena-api/internal/page"
+	"affluena-api/internal/pkg/money"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -140,14 +141,14 @@ func (r *Repository) ListAlerts(ctx context.Context, userID string, month time.T
 		if alert.UsagePercent >= 100 {
 			alert.Threshold = 100
 			alert.Severity = "danger"
-			alert.Title = fmt.Sprintf("%s budget exceeded", alert.CategoryName)
+			alert.Title = fmt.Sprintf("Anggaran %s terlampaui", alert.CategoryName)
 		} else {
 			alert.Threshold = 80
 			alert.Severity = "warning"
-			alert.Title = fmt.Sprintf("%s budget warning", alert.CategoryName)
+			alert.Title = fmt.Sprintf("Anggaran %s hampir habis", alert.CategoryName)
 		}
 
-		alert.Message = fmt.Sprintf("Usage reached %.0f%%. Limit Rp %d, actual Rp %d.", alert.UsagePercent, alert.LimitMinor, alert.SpentMinor)
+		alert.Message = fmt.Sprintf("Pemakaian %.0f%%. Batas Rp %s, terpakai Rp %s.", alert.UsagePercent, money.GroupIDR(alert.LimitMinor), money.GroupIDR(alert.SpentMinor))
 
 		if notifiedAt != nil {
 			notifiedAtStr := notifiedAt.Format(time.RFC3339)

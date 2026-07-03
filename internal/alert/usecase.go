@@ -10,6 +10,7 @@ import (
 	"affluena-api/internal/budget"
 	"affluena-api/internal/mailer"
 	"affluena-api/internal/page"
+	"affluena-api/internal/pkg/money"
 )
 
 type UseCase interface {
@@ -152,6 +153,7 @@ func buildBudgetEmailBody(categoryName string, spent, limit int64, alertType str
 }
 
 func formatMoney(minor int64) string {
-	// Simple formatter since we don't have currency code here
-	return fmt.Sprintf("%d", minor)
+	// IDR minor units have no decimal subunit; group thousands with "." so the
+	// email shows Rp 20.000.000 instead of a raw 20000000.
+	return money.GroupIDR(minor)
 }

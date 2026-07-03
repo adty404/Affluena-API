@@ -109,13 +109,13 @@ func TestFeedUseCase_List(t *testing.T) {
 	// Debt alert uses DueDate (yesterday)
 	assert.Equal(t, "debt", alerts[2].Type)
 	assert.Equal(t, "debt-debt-1", alerts[2].ID)
-	assert.Equal(t, "John Doe overdue", alerts[2].Title)
+	assert.Equal(t, "John Doe jatuh tempo", alerts[2].Title)
 	assert.Equal(t, "warning", alerts[2].Severity)
 
 	// Activity alert uses CreatedAt (twoDaysAgo)
 	assert.Equal(t, "recurring", alerts[3].Type)
 	assert.Equal(t, "recurring-act-1", alerts[3].ID)
-	assert.Equal(t, "Recurring rule failed", alerts[3].Title)
+	assert.Equal(t, "Aturan berulang gagal dijalankan", alerts[3].Title)
 	assert.Equal(t, "warning", alerts[3].Severity)
 	assert.Equal(t, "/recurring/rec-1/history", alerts[3].ActionPath)
 }
