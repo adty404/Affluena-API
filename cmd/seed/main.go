@@ -94,9 +94,11 @@ func main() {
 		uID, testEmail, string(pwHash))
 
 	// color/icon values come from the shared client catalogs (10-swatch color
-	// palette + kWalletIconCatalog / kCategoryIconCatalog ids). A couple of
-	// rows are intentionally left without a color to exercise the client-side
-	// fallback rendering.
+	// palette + kWalletIconCatalog / kCategoryIconCatalog ids). EVERY category
+	// carries both a color and an icon (they surface in transaction history
+	// everywhere, so a colorless category would look unfinished); a couple of
+	// wallet/other-module rows are still left colorless on purpose to exercise
+	// the client-side fallback rendering.
 	mustExec(db, `INSERT INTO wallets (id, user_id, name, type, currency_code, balance_minor, color, icon) VALUES
 		($1, $2, 'Cash Wallet', 'cash', 'IDR', 850000, '', 'cash'),
 		($3, $2, 'BCA Primary', 'bank', 'IDR', 15200000, '#3E72B8', 'bank'),
@@ -106,13 +108,13 @@ func main() {
 	mustExec(db, `INSERT INTO categories (id, user_id, name, type, color, icon) VALUES
 		($1, $2, 'Salary', 'income', '#2E8B57', 'salary'),
 		($3, $2, 'Freelance', 'income', '#9E7B4F', 'work'),
-		($4, $2, 'Loan Repayment', 'income', '', 'misc'),
+		($4, $2, 'Loan Repayment', 'income', '#2BB3A3', 'savings'),
 		($5, $2, 'Food & Dining', 'expense', '#C2553F', 'food'),
 		($6, $2, 'Transportation', 'expense', '#E0A23B', 'transport'),
 		($7, $2, 'Entertainment', 'expense', '#7C5BC2', 'entertainment'),
 		($8, $2, 'Bills & Utilities', 'expense', '#4256B8', 'bills'),
 		($9, $2, 'Shopping', 'expense', '#C2588A', 'shopping'),
-		($10, $2, 'Loan Given', 'expense', '', 'misc')
+		($10, $2, 'Loan Given', 'expense', '#5E6E80', 'gift')
 		ON CONFLICT DO NOTHING`,
 		cSalary, uID, cFreelance, cDebtPay, cFood, cTrans, cEnt, cBills, cShop, cDebtDisb)
 
