@@ -350,7 +350,7 @@ erDiagram
 
 | File | Deskripsi |
 |------|-----------|
-| `cmd/seed` | Seeder Go idempotent untuk demo user `demo@affluena.com`, fixed UUID demo wallets/categories/tags, transaksi, budget, debt, subscription, installment, recurring rule, goal, dan quick entry template. |
+| `cmd/seed` | Seeder Go idempotent untuk demo user `demo@affluena.com`, fixed UUID demo wallets/categories/tags, transaksi, budget, debt, subscription, installment, recurring rule, goal, dan quick entry template. Termasuk nilai demo `color`/`icon` (appearance) untuk wallet, kategori, budget, goal, installment, subscription, dan recurring rule (lihat `docs/SEED_DATA.md`). |
 | `scripts/seed.sql` | Seeder SQL dummy data komprehensif untuk testing frontend/manual DB fixture. |
 | `scripts/verify.sh` | Full verification gate yang dipanggil oleh `make verify`. |
 
