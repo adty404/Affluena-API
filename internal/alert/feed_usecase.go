@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"affluena-api/internal/page"
+	"affluena-api/internal/pkg/money"
 )
 
 type FeedUseCase interface {
@@ -42,9 +43,9 @@ func (u *feedUseCase) List(ctx context.Context, userID string, monthValue string
 				severity = "danger"
 			}
 
-			title := fmt.Sprintf("Budget warning")
+			title := "Anggaran hampir habis"
 			if b.UsagePercent >= 100 {
-				title = fmt.Sprintf("Budget exceeded")
+				title = "Anggaran terlampaui"
 			}
 
 			alerts = append(alerts, Alert{
@@ -52,7 +53,7 @@ func (u *feedUseCase) List(ctx context.Context, userID string, monthValue string
 				Type:        "budget",
 				Title:       title,
 				Module:      "Budget",
-				Description: fmt.Sprintf("Usage reached %.0f%%. Limit Rp %d, actual Rp %d.", b.UsagePercent, b.LimitMinor, b.SpentMinor),
+				Description: fmt.Sprintf("Pemakaian %.0f%%. Batas Rp %s, terpakai Rp %s.", b.UsagePercent, money.GroupIDR(b.LimitMinor), money.GroupIDR(b.SpentMinor)),
 				Severity:    severity,
 				CreatedAt:   time.Now().UTC(),
 				ActionPath:  "/budgets/alerts",
@@ -84,9 +85,9 @@ func (u *feedUseCase) List(ctx context.Context, userID string, monthValue string
 		alerts = append(alerts, Alert{
 			ID:          fmt.Sprintf("debt-%s", d.ID),
 			Type:        "debt",
-			Title:       fmt.Sprintf("%s overdue", d.CounterpartyName),
+			Title:       fmt.Sprintf("%s jatuh tempo", d.CounterpartyName),
 			Module:      "Debt",
-			Description: fmt.Sprintf("Payable is %d days overdue. Send reminder or record collection.", daysOverdue),
+			Description: fmt.Sprintf("Utang telah lewat jatuh tempo %d hari. Kirim pengingat atau catat pembayaran.", daysOverdue),
 			Severity:    severity,
 			CreatedAt:   *d.DueDate,
 			ActionPath:  fmt.Sprintf("/debts/%s", d.ID),
@@ -102,10 +103,10 @@ func (u *feedUseCase) List(ctx context.Context, userID string, monthValue string
 
 	for _, a := range activities {
 		severity := "success"
-		title := "Recurring rule executed"
+		title := "Aturan berulang berhasil dijalankan"
 		if a.ActionType == "RUN_FAILED" {
 			severity = "warning"
-			title = "Recurring rule failed"
+			title = "Aturan berulang gagal dijalankan"
 		}
 
 		actionPath := "/recurring"
