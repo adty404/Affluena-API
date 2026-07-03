@@ -40,6 +40,37 @@ Seeded data:
 - 1 financial goal with a goal wallet.
 - 1 quick entry template.
 - 2 extra accounts for the "Berbagi Dompet" demo (a connected viewer + a pending invite) — see [Berbagi Dompet demo](#berbagi-dompet-demo).
+- Demo `color`/`icon` appearance values on wallets, categories, budgets, the goal, the installment, the subscription, and the recurring rule — see [Appearance values](#appearance-values-color--icon).
+
+## Appearance values (color & icon)
+
+The seed showcases the appearance feature: every module that supports `color`/`icon` (wallets, categories, category budgets, goals, installments, subscriptions, recurring rules) gets values from the shared client catalogs — the 10-swatch color palette (stored uppercase `#RRGGBB`) plus `kWalletIconCatalog` ids for wallets and `kCategoryIconCatalog` ids for categories and the entity modules. A few rows are deliberately left **colorless** (empty `color`) so clients can verify their fallback rendering.
+
+| Module | Item | Color | Icon |
+|--------|------|-------|------|
+| Wallet | Cash Wallet | — (fallback) | `cash` |
+| Wallet | BCA Primary | `#3E72B8` denim | `bank` |
+| Wallet | GoPay | `#2BB3A3` teal | `ewallet` |
+| Wallet (goal) | Europe Trip Fund | `#3E72B8` denim | `travel` |
+| Category | Salary | `#2E8B57` green | `salary` |
+| Category | Freelance | `#9E7B4F` bronze | `work` |
+| Category | Loan Repayment | — (fallback) | `misc` |
+| Category | Food & Dining | `#C2553F` coral | `food` |
+| Category | Transportation | `#E0A23B` amber | `transport` |
+| Category | Entertainment | `#7C5BC2` purple | `entertainment` |
+| Category | Bills & Utilities | `#4256B8` indigo | `bills` |
+| Category | Shopping | `#C2588A` pink | `shopping` |
+| Category | Loan Given | — (fallback) | `misc` |
+| Budget | Food & Dining | `#C2553F` coral | `food` |
+| Budget | Transportation | `#E0A23B` amber | `transport` |
+| Budget | Entertainment | `#7C5BC2` purple | `entertainment` |
+| Budget | Shopping | — (fallback) | `shopping` |
+| Goal | Europe Trip 2027 | `#3E72B8` denim | `travel` |
+| Installment | MacBook M5 Pro | `#4256B8` indigo | `work` |
+| Subscription | Netflix Premium | `#7C5BC2` purple | `entertainment` |
+| Recurring rule | Spotify Family | `#2E8B57` green | `entertainment` |
+
+The "Berbagi Dompet" accounts follow the same scheme: `Mandiri Pengamat` (`#E0A23B`/`bank`), `Dana` (`#4256B8`/`ewallet`), `Jenius` (colorless/`bank`), and pengamat's categories `Gaji` (`#2E8B57`/`salary`), `Belanja` (`#C2588A`/`shopping`), `Makan` (`#C2553F`/`food`). Budgets intentionally mirror their category's color/icon so the anggaran list reads consistently.
 
 ## Berbagi Dompet demo
 
