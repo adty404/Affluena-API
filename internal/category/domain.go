@@ -9,7 +9,9 @@ var (
 	ErrNotFound            = errors.New("category not found")
 	ErrInvalidCategoryType = errors.New("invalid category type")
 	ErrParentTypeMismatch  = errors.New("invalid: parent category must have the same type")
-	ErrDuplicateReorderID  = errors.New("invalid reorder request: duplicate category id")
+	// "repeated", not "duplicate": httpx.WriteError keyword-maps "duplicate"
+	// to 409 Conflict before the "invalid" → 400 match (see httpx/response.go).
+	ErrDuplicateReorderID = errors.New("invalid reorder request: repeated category id")
 )
 
 type Category struct {
