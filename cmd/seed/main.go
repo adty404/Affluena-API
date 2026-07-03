@@ -395,12 +395,22 @@ func main() {
 	fmt.Printf("  Email:    %s\n", testEmail)
 	fmt.Printf("  Password: %s\n", testPassword)
 	fmt.Println()
+	// The transaction counts are DERIVED from the slices actually built above so
+	// the printout never drifts from the generator. The day loop produces ~7
+	// expense rows per day for the whole current month, so the total varies with
+	// month length (roughly 206–227). incomes/expenses are the built slices;
+	// transfers and the debt disbursement are fixed inserts.
+	const transferCount = 3
+	const debtDisbursementCount = 1
+	demoTxTotal := len(incomes) + len(expenses) + transferCount + debtDisbursementCount
+
 	fmt.Println("Seeded data:")
 	fmt.Println("  5 wallets (Cash, BCA Bank, GoPay, Jenius bank, OVO e-wallet)")
 	fmt.Println("  9 categories (3 income, 6 expense)")
 	fmt.Println("  2 tags")
-	fmt.Println("  ~44 transactions spread across the current month")
-	fmt.Println("    (4 income, 36 expense, 3 transfer + 1 debt disbursement)")
+	fmt.Printf("  %d transactions spread across the current month\n", demoTxTotal)
+	fmt.Printf("    (%d income, %d expense, %d transfer + %d debt disbursement)\n",
+		len(incomes), len(expenses), transferCount, debtDisbursementCount)
 	fmt.Println("  4 budgets (Food, Transport, Entertainment, Shopping)")
 	fmt.Println("  1 payable debt (BCA KTA)")
 	fmt.Println("  1 subscription (Netflix)")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,6 +14,9 @@ type Repository interface {
 	SaveLog(ctx context.Context, logEntry APILog) error
 	ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error)
 	GetLogByID(ctx context.Context, userID string, id string) (*APILog, error)
+	// DeleteOlderThan prunes api_logs rows created before the cutoff and returns
+	// the number of rows removed. Used by the retention job to bound table growth.
+	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type repository struct {
@@ -72,6 +76,16 @@ func (r *repository) SaveLog(ctx context.Context, logEntry APILog) error {
 		return err
 	}
 	return nil
+}
+
+// DeleteOlderThan removes api_logs rows older than cutoff. The query filters on
+// created_at, which is backed by idx_api_logs_created_at (migration 000013).
+func (r *repository) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM api_logs WHERE created_at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *repository) GetLogByID(ctx context.Context, userID string, id string) (*APILog, error) {

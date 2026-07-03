@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -35,6 +36,34 @@ func TestLoadUsesDefaultsWhenEnvIsMissingOrInvalid(t *testing.T) {
 	}
 	if cfg.AuthRateLimitRPS != 5 || cfg.AuthRateLimitBurst != 10 {
 		t.Fatalf("expected default auth rate limits, got RPS %d Burst %d", cfg.AuthRateLimitRPS, cfg.AuthRateLimitBurst)
+	}
+	wantProxies := []string{"127.0.0.1/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	if !slices.Equal(cfg.TrustedProxies, wantProxies) {
+		t.Fatalf("expected default trusted proxies %v, got %v", wantProxies, cfg.TrustedProxies)
+	}
+}
+
+func TestLoadTrustedProxiesParsing(t *testing.T) {
+	defaults := []string{"127.0.0.1/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	tests := []struct {
+		name string
+		env  string
+		want []string
+	}{
+		{name: "unset falls back to default", env: "", want: defaults},
+		{name: "whitespace-only falls back to default", env: "   ", want: defaults},
+		{name: "single entry", env: "10.1.2.0/24", want: []string{"10.1.2.0/24"}},
+		{name: "trims and drops blanks", env: " 10.0.0.0/8 , , 172.16.0.0/12 ", want: []string{"10.0.0.0/8", "172.16.0.0/12"}},
+		{name: "all-blank entries fall back to default", env: ",, ,", want: defaults},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("TRUSTED_PROXIES", tc.env)
+			cfg := Load()
+			if !slices.Equal(cfg.TrustedProxies, tc.want) {
+				t.Fatalf("TrustedProxies = %v, want %v", cfg.TrustedProxies, tc.want)
+			}
+		})
 	}
 }
 

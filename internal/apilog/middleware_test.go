@@ -237,3 +237,7 @@ func (m *mockRepo) GetLogByID(ctx context.Context, userID string, id string) (*A
 func (m *mockRepo) ListLogs(ctx context.Context, userID string, limit int) ([]APILog, error) {
 	return nil, nil
 }
+
+func (m *mockRepo) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	return 0, nil
+}

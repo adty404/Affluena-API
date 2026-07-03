@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -121,6 +122,55 @@ func (f *fakeAuthRepository) ConsumePasswordResetToken(ctx context.Context, toke
 		return "", f.err
 	}
 	return f.createdUser.ID, nil
+}
+
+type recordingMailer struct {
+	calls    int
+	to       string
+	subject  string
+	htmlBody string
+	err      error
+}
+
+func (m *recordingMailer) Send(ctx context.Context, to string, subject string, htmlBody string) error {
+	m.calls++
+	m.to = to
+	m.subject = subject
+	m.htmlBody = htmlBody
+	return m.err
+}
+
+func TestRequestPasswordResetSendsEmailWithResetLink(t *testing.T) {
+	repo := &fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com"}}
+	mm := &recordingMailer{}
+	service := NewServiceWithMailer(repo, NewTokenManager("secret", time.Minute, time.Hour), nil, mm, "noreply@affluena.com", "https://app.example.com")
+
+	if err := service.RequestPasswordReset(context.Background(), "USER@Example.COM"); err != nil {
+		t.Fatalf("RequestPasswordReset returned error: %v", err)
+	}
+	if mm.calls != 1 {
+		t.Fatalf("expected exactly one email send, got %d", mm.calls)
+	}
+	if mm.to != "user@example.com" {
+		t.Fatalf("expected email to normalized address, got %q", mm.to)
+	}
+	if !strings.Contains(mm.htmlBody, "https://app.example.com/reset-password?token=") {
+		t.Fatalf("expected reset link with app base URL in body, got %q", mm.htmlBody)
+	}
+}
+
+func TestRequestPasswordResetUnknownEmailDoesNotSend(t *testing.T) {
+	repo := &fakeAuthRepository{err: errors.New("not found")}
+	mm := &recordingMailer{}
+	service := NewServiceWithMailer(repo, NewTokenManager("secret", time.Minute, time.Hour), nil, mm, "noreply@affluena.com", "https://app.example.com")
+
+	// Must swallow not-found (no enumeration) AND must not send an email.
+	if err := service.RequestPasswordReset(context.Background(), "ghost@example.com"); err != nil {
+		t.Fatalf("expected nil error for unknown email, got %v", err)
+	}
+	if mm.calls != 0 {
+		t.Fatalf("expected no email for unknown address, got %d sends", mm.calls)
+	}
 }
 
 func TestServiceUsesRepositoryPort(t *testing.T) {
