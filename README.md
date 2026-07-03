@@ -154,10 +154,11 @@ Protected with `Authorization: Bearer <access_token>`:
 
 ### Categories, Tags, Transactions
 
-- `POST /api/v1/categories` (Supports same-user, same-type `parent_id` for nesting)
-- `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=type_name_asc]`
+- `POST /api/v1/categories` (Supports same-user, same-type `parent_id` for nesting, plus optional client-owned `icon`/`color`; new categories append at the end of the user's arranged order)
+- `GET /api/v1/categories[?type=income|expense&limit=100&offset=0&sort=position_asc]` (Default order is `position` ascending — the user-arranged order)
+- `PUT /api/v1/categories/reorder` (`{"ids": ["<category_id>", ...]}` sets `position` = array index per id in one transaction; omitted ids keep their position; any id not owned by the caller returns 404 and changes nothing)
 - `GET /api/v1/categories/:id`
-- `PUT /api/v1/categories/:id` (Supports updating same-user, same-type `parent_id`)
+- `PUT /api/v1/categories/:id` (Supports updating same-user, same-type `parent_id`, plus optional `icon`/`color`)
 - `DELETE /api/v1/categories/:id`
 - `POST /api/v1/tags`
 - `GET /api/v1/tags[?limit=100&offset=0&sort=created_at_desc]`
@@ -228,7 +229,7 @@ List endpoints for wallets, categories, tags, transactions, quick entry template
 Supported `sort` values:
 
 - Wallets: `created_at_desc`, `created_at_asc`, `name_asc`, `name_desc`, `balance_desc`, `balance_asc`.
-- Categories: `type_name_asc`, `type_name_desc`, `name_asc`, `name_desc`, `created_at_desc`, `created_at_asc`.
+- Categories: `position_asc` (default), `type_name_asc`, `type_name_desc`, `name_asc`, `name_desc`, `created_at_desc`, `created_at_asc`.
 - Transactions: `transaction_at_desc`, `transaction_at_asc`, `created_at_desc`, `created_at_asc`, `amount_desc`, `amount_asc`.
 - Quick entry templates: `name_asc`, `name_desc`, `created_at_desc`, `created_at_asc`.
 - Category budgets: `created_at_desc`, `created_at_asc`, `limit_desc`, `limit_asc`, `spent_desc`, `spent_asc`.
@@ -269,7 +270,16 @@ Create expense category:
 curl -s http://localhost:8080/api/v1/categories \
   -H 'content-type: application/json' \
   -H "authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"name":"Lunch","type":"expense"}'
+  -d '{"name":"Lunch","type":"expense","icon":"utensils","color":"#FF8800"}'
+```
+
+Reorder categories (position = array index; omitted categories keep their position):
+
+```bash
+curl -s -X PUT http://localhost:8080/api/v1/categories/reorder \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"ids":["<category_id_1>","<category_id_2>"]}'
 ```
 
 List expense categories:

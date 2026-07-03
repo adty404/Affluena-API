@@ -19,6 +19,7 @@ type fakeCategoryRepository struct {
 	updated     Category
 	updateInput UpdateCategoryInput
 	deletedID   string
+	reorderIDs  []string
 	err         error
 	depthErr    error
 	cycleErr    error
@@ -62,12 +63,17 @@ func (f *fakeCategoryRepository) Delete(ctx context.Context, userID string, id s
 	return f.err
 }
 
+func (f *fakeCategoryRepository) Reorder(ctx context.Context, userID string, ids []string) error {
+	f.reorderIDs = ids
+	return f.err
+}
+
 func TestCategoryUseCaseCreateDelegatesValidCategory(t *testing.T) {
 	repo := &fakeCategoryRepository{created: Category{ID: "category-1"}}
 	uc := NewUseCase(repo, nil)
 
 	parentID := "parent-1"
-	created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income", ParentID: &parentID})
+	created, err := uc.Create(context.Background(), "user-1", CreateCategoryInput{Name: "Salary", Type: "income", ParentID: &parentID, Icon: "wallet", Color: "#00AA00"})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -77,6 +83,9 @@ func TestCategoryUseCaseCreateDelegatesValidCategory(t *testing.T) {
 	if repo.createInput.Type != "income" || repo.createInput.Name != "Salary" || repo.createInput.ParentID == nil || *repo.createInput.ParentID != "parent-1" {
 		t.Fatalf("unexpected create input %+v", repo.createInput)
 	}
+	if repo.createInput.Icon != "wallet" || repo.createInput.Color != "#00AA00" {
+		t.Fatalf("expected icon/color to reach repository, got %+v", repo.createInput)
+	}
 }
 
 func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
@@ -84,7 +93,7 @@ func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
 	uc := NewUseCase(repo, nil)
 
 	parentID := "parent-2"
-	updated, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Side Hustle", Type: "income", ParentID: &parentID})
+	updated, err := uc.Update(context.Background(), "user-1", "category-1", UpdateCategoryInput{Name: "Side Hustle", Type: "income", ParentID: &parentID, Icon: "briefcase", Color: "#123456"})
 	if err != nil {
 		t.Fatalf("Update returned error: %v", err)
 	}
@@ -93,6 +102,9 @@ func TestCategoryUseCaseUpdateDelegatesValidCategory(t *testing.T) {
 	}
 	if repo.updateInput.Type != "income" || repo.updateInput.Name != "Side Hustle" || repo.updateInput.ParentID == nil || *repo.updateInput.ParentID != "parent-2" {
 		t.Fatalf("unexpected update input %+v", repo.updateInput)
+	}
+	if repo.updateInput.Icon != "briefcase" || repo.updateInput.Color != "#123456" {
+		t.Fatalf("expected icon/color to reach repository, got %+v", repo.updateInput)
 	}
 }
 
@@ -141,6 +153,35 @@ func TestCategoryUseCasePropagatesRepositoryErrors(t *testing.T) {
 	}
 	if err := uc.Delete(context.Background(), "user-1", "category-1"); !errors.Is(err, repoErr) {
 		t.Fatalf("expected delete repo error, got %v", err)
+	}
+	if err := uc.Reorder(context.Background(), "user-1", []string{"category-1"}); !errors.Is(err, repoErr) {
+		t.Fatalf("expected reorder repo error, got %v", err)
+	}
+}
+
+func TestCategoryUseCaseReorderDelegatesIDsInOrder(t *testing.T) {
+	repo := &fakeCategoryRepository{}
+	uc := NewUseCase(repo, nil)
+
+	ids := []string{"category-2", "category-1", "category-3"}
+	if err := uc.Reorder(context.Background(), "user-1", ids); err != nil {
+		t.Fatalf("Reorder returned error: %v", err)
+	}
+	if len(repo.reorderIDs) != 3 || repo.reorderIDs[0] != "category-2" || repo.reorderIDs[1] != "category-1" || repo.reorderIDs[2] != "category-3" {
+		t.Fatalf("expected ids to reach repository in order, got %v", repo.reorderIDs)
+	}
+}
+
+func TestCategoryUseCaseReorderRejectsDuplicateIDs(t *testing.T) {
+	repo := &fakeCategoryRepository{}
+	uc := NewUseCase(repo, nil)
+
+	err := uc.Reorder(context.Background(), "user-1", []string{"category-1", "category-2", "category-1"})
+	if !errors.Is(err, ErrDuplicateReorderID) {
+		t.Fatalf("expected duplicate reorder id error, got %v", err)
+	}
+	if repo.reorderIDs != nil {
+		t.Fatalf("expected duplicate ids to skip repository, got %v", repo.reorderIDs)
 	}
 }
 

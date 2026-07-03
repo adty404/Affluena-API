@@ -8,6 +8,7 @@ import (
 	"affluena-api/internal/page"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -20,6 +21,7 @@ type categoryUseCase interface {
 	Get(ctx context.Context, userID string, id string) (Category, error)
 	Update(ctx context.Context, userID string, id string, input UpdateCategoryInput) (Category, error)
 	Delete(ctx context.Context, userID string, id string) error
+	Reorder(ctx context.Context, userID string, ids []string) error
 }
 
 func NewHandler(usecase categoryUseCase) *Handler {
@@ -30,6 +32,8 @@ type categoryRequest struct {
 	Name     string  `json:"name" binding:"required"`
 	Type     string  `json:"type" binding:"required"`
 	ParentID *string `json:"parent_id"`
+	Icon     string  `json:"icon"`
+	Color    string  `json:"color"`
 }
 
 func (h *Handler) Create(c *gin.Context) {
@@ -43,7 +47,7 @@ func (h *Handler) Create(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
+	category, err := h.usecase.Create(c.Request.Context(), userID, CreateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID, Icon: req.Icon, Color: req.Color})
 	if err != nil {
 		httpx.WriteError(c, err)
 		return
@@ -57,7 +61,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	pagination, ok := httpx.ParsePage(c, "type_name_asc", categorySorts)
+	pagination, ok := httpx.ParsePage(c, "position_asc", categorySorts)
 	if !ok {
 		return
 	}
@@ -70,12 +74,41 @@ func (h *Handler) List(c *gin.Context) {
 }
 
 var categorySorts = map[string]struct{}{
+	"position_asc":    {},
 	"type_name_asc":   {},
 	"type_name_desc":  {},
 	"name_asc":        {},
 	"name_desc":       {},
 	"created_at_desc": {},
 	"created_at_asc":  {},
+}
+
+type reorderCategoriesRequest struct {
+	IDs []string `json:"ids" binding:"required,min=1"`
+}
+
+func (h *Handler) Reorder(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	var req reorderCategoriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	for _, id := range req.IDs {
+		if _, err := uuid.Parse(id); err != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid category id format")
+			return
+		}
+	}
+	if err := h.usecase.Reorder(c.Request.Context(), userID, req.IDs); err != nil {
+		httpx.WriteError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 func (h *Handler) Get(c *gin.Context) {
@@ -111,7 +144,7 @@ func (h *Handler) Update(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	category, err := h.usecase.Update(c.Request.Context(), userID, id, UpdateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID})
+	category, err := h.usecase.Update(c.Request.Context(), userID, id, UpdateCategoryInput{Name: req.Name, Type: req.Type, ParentID: req.ParentID, Icon: req.Icon, Color: req.Color})
 	if err != nil {
 		httpx.WriteError(c, err)
 		return

@@ -9,6 +9,7 @@ var (
 	ErrNotFound            = errors.New("category not found")
 	ErrInvalidCategoryType = errors.New("invalid category type")
 	ErrParentTypeMismatch  = errors.New("invalid: parent category must have the same type")
+	ErrDuplicateReorderID  = errors.New("invalid reorder request: duplicate category id")
 )
 
 type Category struct {
@@ -17,6 +18,9 @@ type Category struct {
 	ParentID  *string   `json:"parent_id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`
+	Icon      string    `json:"icon"`
+	Color     string    `json:"color"`
+	Position  int       `json:"position"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -25,12 +29,16 @@ type CreateCategoryInput struct {
 	Name     string
 	Type     string
 	ParentID *string
+	Icon     string
+	Color    string
 }
 
 type UpdateCategoryInput struct {
 	Name     string
 	Type     string
 	ParentID *string
+	Icon     string
+	Color    string
 }
 
 func IsValidType(categoryType string) bool {

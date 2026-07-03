@@ -178,6 +178,10 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 
 	protected.POST("/categories", categoryHandler.Create)
 	protected.GET("/categories", categoryHandler.List)
+	// Static route registered before the ":id" params below; Gin resolves
+	// static children ahead of param nodes, so PUT /categories/reorder never
+	// hits PUT /categories/:id.
+	protected.PUT("/categories/reorder", categoryHandler.Reorder)
 	protected.GET("/categories/:id", categoryHandler.Get)
 	protected.PUT("/categories/:id", categoryHandler.Update)
 	protected.DELETE("/categories/:id", categoryHandler.Delete)

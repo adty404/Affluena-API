@@ -76,12 +76,13 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
 - *Note:* One-way and read-only — the invited viewer cannot record transactions, and the owner does not gain access to the viewer's wallets. Budgets remain personal.
 
 ### Category
-- `POST /api/v1/categories` - `{ name, type, parent_id }`
-- `GET /api/v1/categories?type=income|expense` - List (optionally filtered by type).
+- `POST /api/v1/categories` - `{ name, type, parent_id, color?, icon? }`
+- `GET /api/v1/categories?type=income|expense` - List (optionally filtered by type). Default order is `position` ascending (the user-arranged order, name as tie-break); other `sort` keys (`type_name_asc`, `name_asc`, `created_at_desc`, ...) still work.
 - `GET /api/v1/categories/:id`
-- `PUT /api/v1/categories/:id` - `{ name, type, parent_id }`
+- `PUT /api/v1/categories/:id` - `{ name, type, parent_id, color?, icon? }`
+- `PUT /api/v1/categories/reorder` - `{ ids: ["<category_id>", ...] }`. Sets each listed category's `position` to its array index (0-based) in one transaction. Ids omitted from the array keep their position. Any id not owned by the caller -> `404` and nothing changes. Returns `204`.
 - `DELETE /api/v1/categories/:id`
-- *Note:* Tree depth max 3 levels. Parent and child must be the same type.
+- *Note:* Tree depth max 3 levels. Parent and child must be the same type. `color`/`icon` are client-owned semantic strings (same as wallets; the server does not validate them). `position` is returned on every category but is not settable via create/update: new categories append at the end (`MAX(position)+1` for the user) and rearranging goes through the reorder endpoint.
 
 ### Tag
 - `POST /api/v1/tags` - `{ name }`

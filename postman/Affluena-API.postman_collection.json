@@ -2067,7 +2067,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Salary {{$timestamp}}\",\n  \"type\": \"income\"\n}"
+              "raw": "{\n  \"name\": \"Salary {{$timestamp}}\",\n  \"type\": \"income\",\n  \"icon\": \"wallet\",\n  \"color\": \"#2E7D32\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/categories",
@@ -2261,7 +2261,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Food {{$timestamp}}\",\n  \"type\": \"expense\"\n}"
+              "raw": "{\n  \"name\": \"Food {{$timestamp}}\",\n  \"type\": \"expense\",\n  \"icon\": \"utensils\",\n  \"color\": \"#FF8800\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/categories",
@@ -2436,7 +2436,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/categories?limit=100&offset=0&sort=type_name_asc",
+              "raw": "{{base_url}}/api/v1/categories?limit=100&offset=0&sort=position_asc",
               "host": [
                 "{{base_url}}"
               ],
@@ -2456,7 +2456,7 @@
                 },
                 {
                   "key": "sort",
-                  "value": "type_name_asc"
+                  "value": "position_asc"
                 }
               ]
             }
@@ -3044,7 +3044,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Food Updated\",\n  \"type\": \"expense\",\n  \"parent_id\": null\n}"
+              "raw": "{\n  \"name\": \"Food Updated\",\n  \"type\": \"expense\",\n  \"parent_id\": null,\n  \"icon\": \"basket\",\n  \"color\": \"#00CC66\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/categories/{{expense_category_id}}",
@@ -3178,6 +3178,36 @@
               "body": "{\n  \"error\": \"category not found\"\n}"
             }
           ]
+        },
+        {
+          "name": "Reorder Categories",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{expense_category_id}}\",\n    \"{{income_category_id}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "reorder"
+              ]
+            },
+            "description": "Sets each category's position to its array index (0-based) in one transaction. Ids omitted from the array keep their position; any id not owned by the caller returns 404 and nothing changes. Returns 204 No Content."
+          },
+          "response": []
         },
         {
           "name": "Delete Category (Optional / Run Last)",

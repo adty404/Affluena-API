@@ -92,7 +92,7 @@ graph TB
 | Modul | Lokasi | Deskripsi | Dependensi |
 |-------|--------|-----------|------------|
 | **config** | `internal/config/` | Membaca environment variables dengan fallback defaults dan validasi. 18 parameter konfigurasi. Validasi JWT_SECRET (min 32 chars). Fail-fast pada startup. | stdlib |
-| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (25 file SQL). | pgx |
+| **db** | `internal/db/` | Koneksi pool PostgreSQL (`pgxpool`) dan sistem migrasi file-based (31 file SQL). | pgx |
 | **page** | `internal/page/` | Struct generik `Result[T]` untuk pagination (`limit`, `offset`, `total`). | stdlib |
 | **httpx** | `internal/httpx/` | Helper HTTP: `MustUserID`, `GetUUIDParam`, `ParsePage`, `BindOptionalJSON`, `WriteError` (error mapping), `Error`, `JSON`, `InternalError`, `PublicError`, `RateLimiter` (auth/API rate limiting). | page, gin, golang.org/x/time/rate |
 | **caldate** | `internal/caldate/` | Fungsi `AddMonthsClamped` — menambah bulan dengan clamping hari ke akhir bulan target. | stdlib |
@@ -104,7 +104,7 @@ graph TB
 |-------|--------|------|-------|-----------|
 | **auth** | `internal/auth/` | 6 src + 2 test | 870 + 287 | Registrasi, login, refresh token (JWT HS256 + bcrypt), forgot/reset password, profile, password change, dan session revocation. Token rotation otomatis. Atomic refresh token consume (UPDATE...RETURNING) mencegah race condition. **Password change & reset merevoke SEMUA sesi lalu menerbitkan token pair baru** (change-password mengembalikan `{user, tokens}` sehingga device aktif tetap login; device lain logout). |
 | **wallet** | `internal/wallet/` | 5 src + 2 test | 918 + 313 | Multi-dompet (cash/bank/e_wallet/investment/goal). Sharing antar user dengan role `member` (baca+tulis) atau `viewer` (hanya-baca). Access control: `AccessLevel` (None/Viewer/Member/Owner), `CheckOwnerAccess`, `CheckMemberAccess` (≥ member, menolak viewer), `CheckViewAccess`, dan `AccessChecker` untuk shared-wallet-aware checks. |
-| **category** | `internal/category/` | 4 src + 1 test | 489 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. |
+| **category** | `internal/category/` | 4 src + 1 test | 489 + 267 | Hierarki hingga 3 level. Validasi: same-user, same-type, no cycle. Metadata tampilan `icon`/`color` (string milik client, tidak divalidasi server) + `position` yang bisa diatur user via `PUT /categories/reorder`; list default terurut `position`. |
 | **transaction** | `internal/transaction/` | 5 src + 3 test | 982 + 376 | CRUD transaksi (income/expense/transfer/adjustment). Saldo wallet diubah secara atomik. Hanya creator yang boleh edit/delete transaksi. Category/tag adalah metadata personal pembuat. |
 
 ### 2.3. Feature Modules
@@ -289,7 +289,7 @@ erDiagram
 | 2 | `refresh_tokens` | id, user_id (FK), token_hash (UNIQUE), expires_at, revoked_at | CASCADE on user delete |
 | 3 | `wallets` | id, user_id (FK), name, type, currency_code, balance_minor, goal_id | UNIQUE(user_id, name), CHECK type ∈ {cash,bank,e_wallet,investment,goal} |
 | 4 | `wallet_shares` | wallet_id (FK), user_id (FK), status, role | PK(wallet_id, user_id), CHECK status ∈ {pending,joined,rejected}, CHECK role ∈ {member,viewer} (default member) |
-| 5 | `categories` | id, user_id (FK), name, type, parent_id (self-FK) | UNIQUE(user_id, name, type), CHECK type ∈ {income,expense}, max depth 3 |
+| 5 | `categories` | id, user_id (FK), name, type, parent_id (self-FK), icon, color, position | UNIQUE(user_id, name, type), CHECK type ∈ {income,expense}, max depth 3, index (user_id, position) |
 | 6 | `transactions` | id, user_id (FK), type, wallet_id (FK), to_wallet_id, category_id, amount_minor, transaction_at, note | CHECK type rules, CHECK amount ≠ 0 |
 | 7 | `transaction_tags` | user_id, transaction_id (FK), tag_id (FK) | PK(transaction_id, tag_id), composite FK ownership |
 | 8 | `tags` | id, user_id (FK), name | UNIQUE(user_id, name) |
@@ -310,7 +310,7 @@ erDiagram
 | 23 | `export_jobs` | id, user_id, format, from_at, to_at, row_count, status, created_at | CSV export audit trail |
 | 24 | `notification_rules` | id, user_id, rule_key, title, enabled, channel | UNIQUE(user_id, rule_key), CHECK channel in email/in-app/both |
 
-### 4.2. Migrasi (26 File)
+### 4.2. Migrasi (31 File)
 
 | File | Deskripsi |
 |------|-----------|
@@ -340,6 +340,11 @@ erDiagram
 | `000024_export_jobs.sql` | Export job audit table |
 | `000025_notification_rules.sql` | User notification rule preferences |
 | `000026_wallet_share_role.sql` | Adds `role` (member/viewer) to wallet_shares for read-only sharing |
+| `000027_partners.sql` | partner_links table: account-level one-way read-only sharing ("Berbagi Dompet") |
+| `000028_rename_partner_links.sql` | Renames partner_links to wallet_share_links (owner_id/viewer_id) + wallet_shares.source |
+| `000029_wallet_icon.sql` | Adds client-owned `icon` to wallets |
+| `000030_entity_colors_icons.sql` | Adds client-owned `color`/`icon` to budgets, goals, installments, subscriptions, recurring rules |
+| `000031_category_appearance_order.sql` | Adds client-owned `icon`/`color` + user-arrangeable `position` (with per-user backfill and (user_id, position) index) to categories |
 
 ### 4.3. Scripts (Development)
 
@@ -396,11 +401,12 @@ erDiagram
 | GET | `/api/v1/wallets/:id/members` | wallet.ListMembers |
 | GET | `/api/v1/wallets/:id/analytics` | wallet.Analytics |
 
-#### Categories (CRUD + Hierarchy)
+#### Categories (CRUD + Hierarchy + Reorder)
 | Method | Path | Handler |
 |--------|------|---------|
 | POST | `/api/v1/categories` | category.Create |
 | GET | `/api/v1/categories` | category.List |
+| PUT | `/api/v1/categories/reorder` | category.Reorder |
 | GET | `/api/v1/categories/:id` | category.Get |
 | PUT | `/api/v1/categories/:id` | category.Update |
 | DELETE | `/api/v1/categories/:id` | category.Delete |
