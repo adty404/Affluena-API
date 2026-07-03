@@ -28,10 +28,10 @@ Password: password123
 
 Seeded data:
 
-- 3 wallets: cash, bank, and e-wallet.
+- 5 wallets: Cash Wallet (cash), BCA Primary (bank), GoPay (e-wallet), Jenius (bank), OVO (e-wallet).
 - 9 categories: 3 income and 6 expense.
 - 2 tags.
-- 10 transactions: 2 income, 7 expense, 1 transfer.
+- ~44 transactions spread across the **current calendar month** — a living one-month simulation so Kalender, Wawasan, and history screens are populated: 4 income (1 salary + 3 freelance), 36 expense, 3 transfers, plus 1 debt-disbursement expense. Dates are anchored to the first of the month plus a day/time offset (via `time.Date(now.Year(), now.Month(), day, ...)`), so they always land in the current month and stay stable across re-seeds; they cover ~28 distinct days, several days with multiple transactions, and some empty days. Expense mix is intentional so the Wawasan breakdown is interesting: **Food & Dining is the largest bucket (~38%)**, then Transportation, Bills & Utilities, Shopping, and Entertainment; income is mostly Salary with some Freelance. Amounts are realistic IDR whole-rupiah minor units. Wallet `balance_minor` values are fixed, illustrative opening balances — the seeder does **not** recompute them from the transaction ledger (matching the long-standing seed convention), so there is no balance/ledger invariant to maintain.
 - 4 category budgets for the current month.
 - 1 payable debt.
 - 1 subscription.
@@ -51,6 +51,8 @@ The seed showcases the appearance feature: every module that supports `color`/`i
 | Wallet | Cash Wallet | — (fallback) | `cash` |
 | Wallet | BCA Primary | `#3E72B8` denim | `bank` |
 | Wallet | GoPay | `#2BB3A3` teal | `ewallet` |
+| Wallet | Jenius | `#4256B8` indigo | `bank` |
+| Wallet | OVO | `#7C5BC2` purple | `ewallet` |
 | Wallet (goal) | Europe Trip Fund | `#3E72B8` denim | `travel` |
 | Category | Salary | `#2E8B57` green | `salary` |
 | Category | Freelance | `#9E7B4F` bronze | `work` |
@@ -99,6 +101,8 @@ The seed uses fixed UUIDs for core lookup data so local UI and QA checks can be 
 | `22222222-2222-2222-2222-222222220001` | Wallet | Cash Wallet |
 | `22222222-2222-2222-2222-222222220002` | Wallet | BCA Primary |
 | `22222222-2222-2222-2222-222222220003` | Wallet | GoPay |
+| `22222222-2222-2222-2222-222222220004` | Wallet | Jenius |
+| `22222222-2222-2222-2222-222222220005` | Wallet | OVO |
 | `33333333-3333-3333-3333-333333330001` | Income category | Salary |
 | `33333333-3333-3333-3333-333333330002` | Income category | Freelance |
 | `33333333-3333-3333-3333-333333330003` | Income category | Loan Repayment |
