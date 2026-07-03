@@ -1,0 +1,47 @@
+name: Seed Demo Data
+
+# Manual operator button: refreshes the demo accounts' seed data on the VPS
+# (runs scripts/seed-prod.sh there). Reuses the same SSH secrets as deploy.
+# Demo accounts are recreated from scratch (delete-then-seed, idempotent);
+# real user data is untouched.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: api-vps
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed demo data on VPS
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_DEPLOY_ROOT: ${{ secrets.VPS_DEPLOY_ROOT || '/opt/affluena' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+
+    steps:
+      - name: Validate deploy secrets
+        run: |
+          test -n "$VPS_HOST" || { echo "Missing VPS_HOST secret"; exit 1; }
+          test -n "$VPS_USER" || { echo "Missing VPS_USER secret"; exit 1; }
+          test -n "$VPS_SSH_KEY" || { echo "Missing VPS_SSH_KEY secret"; exit 1; }
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run seed on VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "DEPLOY_ROOT='$VPS_DEPLOY_ROOT' bash -se" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_ROOT/Affluena-API"
+          bash scripts/seed-prod.sh
+          REMOTE

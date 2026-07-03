@@ -38,7 +38,8 @@ JWT_SECRET='<≥32 random chars>' DATABASE_URL='postgres://…/affluena_api?sslm
 make verify           # uses AFFLUENA_API_TEST_DATABASE_URL (or the compose DB)
 
 # Demo/seed data (idempotent; demo@/pengamat@/calon@affluena.com / password123):
-make seed             # see docs/SEED_DATA.md ; on the VPS use scripts/seed-prod.sh
+make seed             # see docs/SEED_DATA.md ; on the VPS use scripts/seed-prod.sh,
+                      # or trigger the "Seed Demo Data" workflow (Actions → workflow_dispatch)
 ```
 
 `JWT_SECRET` must be a real value (startup `config.Validate()` rejects the placeholder), and
