@@ -129,7 +129,7 @@ func main() {
 
 	// --- One-month transaction simulation ----------------------------------
 	// The Kalender / Wawasan / history screens need a LIVING month, so we spread
-	// a realistic set of ~55 transactions across the CURRENT calendar month.
+	// ~7 transactions PER DAY across the CURRENT calendar month (~210 total).
 	//
 	// Dates are anchored to monthStart (day 1 of this month) plus a day/time
 	// offset so they always land in the current month regardless of today's
@@ -162,65 +162,105 @@ func main() {
 		note     string
 	}
 
-	// Income: salary (BCA) + a few freelance payments. Salary dominates income;
-	// freelance adds variety to the Wawasan income breakdown.
+	// Income: salary (BCA) + freelance payments spread through the month. Salary
+	// dominates income; freelance adds variety to the Wawasan income breakdown.
 	incomes := []tx{
 		{wBank, cSalary, 18500000, 1, 9, "Gaji bulanan"},
-		{wBank, cFreelance, 3200000, 6, 14, "Freelance - landing page"},
-		{wBank, cFreelance, 1750000, 17, 11, "Freelance - logo design"},
-		{wBank, cFreelance, 2400000, 24, 16, "Freelance - app maintenance"},
+		{wBank, cFreelance, 3200000, 5, 14, "Freelance - landing page"},
+		{wBank, cFreelance, 1750000, 12, 11, "Freelance - logo design"},
+		{wBank, cFreelance, 2400000, 19, 16, "Freelance - app maintenance"},
+		{wBank, cFreelance, 1400000, 26, 15, "Freelance - bug fixing"},
 	}
 
-	// Expenses. Food & Dining is deliberately the biggest bucket (many small,
-	// frequent spends on Cash/GoPay/OVO), then Transportation, Shopping,
-	// Entertainment, and Bills. Amounts are realistic IDR whole-rupiah values.
-	expenses := []tx{
-		// Food & Dining (deliberately the biggest expense bucket) — frequent
-		// daily spends on Cash / GoPay / OVO plus a few weekly grocery runs.
-		{wCash, cFood, 45000, 1, 12, "Makan siang warteg"},
-		{wGoPay, cFood, 72000, 2, 19, "GoFood makan malam"},
-		{wCash, cFood, 38000, 3, 8, "Sarapan bubur ayam"},
-		{wGoPay, cFood, 55000, 4, 13, "Kopi + roti"},
-		{wOVO, cFood, 265000, 5, 20, "Dinner bareng teman"},
-		{wCash, cFood, 85000, 7, 12, "Makan siang padang"},
-		{wGoPay, cFood, 42000, 9, 9, "Kopi pagi"},
-		{wCash, cFood, 235000, 11, 19, "Groceries Superindo"},
-		{wGoPay, cFood, 68000, 13, 12, "GoFood ayam geprek"},
-		{wCash, cFood, 120000, 15, 20, "Makan malam keluarga"},
-		{wOVO, cFood, 48000, 18, 13, "Kopi kekinian"},
-		{wCash, cFood, 245000, 20, 11, "Belanja mingguan"},
-		{wGoPay, cFood, 78000, 22, 19, "GoFood martabak"},
-		{wCash, cFood, 52000, 25, 8, "Sarapan + kopi"},
-		{wGoPay, cFood, 95000, 27, 13, "Makan siang mall"},
-		{wOVO, cFood, 130000, 28, 20, "Dinner date"},
+	// Expenses — a LIVED-IN month: ~7 transactions per day, every day, generated
+	// deterministically (no randomness) so the seed stays idempotent across runs
+	// (the delete-then-recreate keeps content identical; only the UUIDs differ).
+	// Food & Dining stays the biggest bucket (3 of the 7 daily slots), then
+	// Transportation, with Shopping / Entertainment / Bills rotating through the
+	// remaining slots. Amounts are realistic IDR whole-rupiah values, nudged a
+	// little per day so rows are not carbon copies.
+	//
+	// Balances follow the existing convention: wallets keep their fixed opening
+	// balance_minor and are NOT recomputed from this ledger.
+	type slot struct {
+		wallet   string
+		category string
+		base     int64
+		notes    []string
+	}
+	// Daily food/transport pools (small, frequent) + occasional bigger buckets.
+	foodPool := []slot{
+		{wCash, cFood, 38000, []string{"Sarapan bubur ayam", "Sarapan lontong", "Nasi uduk pagi"}},
+		{wGoPay, cFood, 45000, []string{"Kopi pagi", "Kopi + roti", "Es kopi susu"}},
+		{wCash, cFood, 47000, []string{"Makan siang warteg", "Makan siang padang", "Nasi ayam"}},
+		{wGoPay, cFood, 68000, []string{"GoFood makan malam", "GoFood ayam geprek", "GoFood martabak"}},
+		{wOVO, cFood, 52000, []string{"Cemilan sore", "Kopi kekinian", "Boba + snack"}},
+		{wGoPay, cFood, 60000, []string{"Makan siang mall", "Bakso malam", "Mie ayam"}},
+	}
+	foodBigPool := []slot{
+		{wCash, cFood, 235000, []string{"Groceries Superindo", "Belanja mingguan", "Groceries Indomaret"}},
+		{wOVO, cFood, 175000, []string{"Dinner bareng teman", "Dinner date", "Makan malam keluarga"}},
+	}
+	transportPool := []slot{
+		{wGoPay, cTrans, 28000, []string{"GoRide ke kantor", "GoRide", "GoRide meeting"}},
+		{wGoPay, cTrans, 45000, []string{"GoCar pulang", "GoCar malam", "GrabCar"}},
+		{wOVO, cTrans, 22000, []string{"Parkir", "Ojek pangkalan", "Angkot"}},
+	}
+	transportBigPool := []slot{
+		{wCash, cTrans, 290000, []string{"Bensin mobil", "Isi Pertamax", "Bensin + tol"}},
+	}
+	rotatePool := []slot{
+		{wBank, cShop, 210000, []string{"Baju kerja", "Skincare Shopee", "Aksesoris HP", "Sepatu baru"}},
+		{wGoPay, cEnt, 60000, []string{"Nonton bioskop", "Game top-up", "Karaoke", "Langganan streaming"}},
+		{wOVO, cFood, 55000, []string{"Ngopi sore", "Jajan pasar", "Gorengan"}},
+	}
+	// Bills land on a few fixed days (like real monthly utilities).
+	billsByDay := map[int][]slot{
+		3:  {{wBank, cBills, 285000, []string{"Listrik PLN"}}, {wBank, cBills, 155000, []string{"Air PDAM"}}},
+		10: {{wBank, cBills, 250000, []string{"Internet + TV"}}},
+		15: {{wBank, cBills, 150000, []string{"Pulsa + paket data"}}},
+		25: {{wBank, cBills, 120000, []string{"Langganan cloud"}}},
+	}
 
-		// Transportation (2nd biggest).
-		{wGoPay, cTrans, 28000, 2, 8, "GoRide ke kantor"},
-		{wCash, cTrans, 300000, 4, 17, "Bensin mobil"},
-		{wGoPay, cTrans, 32000, 8, 9, "GoRide"},
-		{wGoPay, cTrans, 45000, 12, 18, "GoCar pulang"},
-		{wOVO, cTrans, 65000, 16, 8, "Parkir + tol bulanan"},
-		{wCash, cTrans, 280000, 21, 17, "Bensin mobil"},
-		{wGoPay, cTrans, 52000, 26, 9, "GoRide meeting"},
-		{wGoPay, cTrans, 44000, 28, 18, "GoCar malam"},
+	// Deterministic pick helpers (no randomness → stable across seed runs).
+	pick := func(pool []slot, k int) slot { return pool[((k%len(pool))+len(pool))%len(pool)] }
+	note := func(s slot, k int) string { return s.notes[((k%len(s.notes))+len(s.notes))%len(s.notes)] }
+	amount := func(base int64, k int) int64 { return base + int64((k*7)%9)*1000 }
 
-		// Shopping (3rd).
-		{wBank, cShop, 320000, 5, 15, "Baju kerja"},
-		{wBank, cShop, 189000, 10, 20, "Skincare Shopee"},
-		{wCash, cShop, 75000, 14, 16, "Alat tulis + printer"},
-		{wBank, cShop, 210000, 23, 14, "Aksesoris HP"},
-
-		// Entertainment (4th).
-		{wGoPay, cEnt, 60000, 6, 20, "Nonton bioskop"},
-		{wOVO, cEnt, 45000, 11, 21, "Game top-up"},
-		{wBank, cEnt, 150000, 16, 19, "Konser tiket"},
-		{wGoPay, cEnt, 55000, 24, 20, "Karaoke"},
-
-		// Bills & Utilities (kept modest so Food & the daily buckets stay on top).
-		{wBank, cBills, 285000, 3, 10, "Listrik PLN"},
-		{wBank, cBills, 155000, 3, 10, "Air PDAM"},
-		{wBank, cBills, 250000, 10, 10, "Internet + TV"},
-		{wBank, cBills, 150000, 15, 10, "Pulsa + paket data"},
+	var expenses []tx
+	for d := 1; d <= daysInMonth; d++ {
+		day := []tx{}
+		// 3 everyday food spends (breakfast, lunch, dinner-ish) at spread hours.
+		foodHours := []int{8, 12, 19}
+		for i, h := range foodHours {
+			s := pick(foodPool, d+i)
+			day = append(day, tx{s.wallet, s.category, amount(s.base, d*3+i), d, h, note(s, d+i)})
+		}
+		// A bigger food/grocery run roughly twice a week.
+		if d%4 == 0 {
+			s := pick(foodBigPool, d)
+			day = append(day, tx{s.wallet, s.category, amount(s.base, d), d, 11, note(s, d)})
+		}
+		// 1 daily transport + a fuel fill-up about weekly.
+		st := pick(transportPool, d)
+		day = append(day, tx{st.wallet, st.category, amount(st.base, d*2), d, 9, note(st, d)})
+		if d%7 == 3 {
+			sb := pick(transportBigPool, d)
+			day = append(day, tx{sb.wallet, sb.category, amount(sb.base, d), d, 17, note(sb, d)})
+		}
+		// A rotating shopping / entertainment / extra-food spend.
+		sr := pick(rotatePool, d)
+		day = append(day, tx{sr.wallet, sr.category, amount(sr.base, d), d, 16, note(sr, d)})
+		// Fixed monthly bills on their days.
+		for _, sb := range billsByDay[d] {
+			day = append(day, tx{sb.wallet, sb.category, sb.base, d, 10, sb.notes[0]})
+		}
+		// Top up to ~7/day when a day fell short (no big food/fuel that day).
+		for len(day) < 7 {
+			s := pick(foodPool, d+len(day))
+			day = append(day, tx{s.wallet, s.category, amount(s.base, d*5+len(day)), d, 14 + len(day)%4, note(s, d+len(day))})
+		}
+		expenses = append(expenses, day...)
 	}
 
 	for _, e := range incomes {
