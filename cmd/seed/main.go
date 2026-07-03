@@ -50,6 +50,8 @@ func main() {
 		wCash      = "22222222-2222-2222-2222-222222220001"
 		wBank      = "22222222-2222-2222-2222-222222220002"
 		wGoPay     = "22222222-2222-2222-2222-222222220003"
+		wJenius    = "22222222-2222-2222-2222-222222220004"
+		wOVO       = "22222222-2222-2222-2222-222222220005"
 		cSalary    = "33333333-3333-3333-3333-333333330001"
 		cFreelance = "33333333-3333-3333-3333-333333330002"
 		cFood      = "44444444-4444-4444-4444-444444440001"
@@ -102,8 +104,10 @@ func main() {
 	mustExec(db, `INSERT INTO wallets (id, user_id, name, type, currency_code, balance_minor, color, icon) VALUES
 		($1, $2, 'Cash Wallet', 'cash', 'IDR', 850000, '', 'cash'),
 		($3, $2, 'BCA Primary', 'bank', 'IDR', 15200000, '#3E72B8', 'bank'),
-		($4, $2, 'GoPay', 'e_wallet', 'IDR', 320000, '#2BB3A3', 'ewallet')
-		ON CONFLICT DO NOTHING`, wCash, uID, wBank, wGoPay)
+		($4, $2, 'GoPay', 'e_wallet', 'IDR', 320000, '#2BB3A3', 'ewallet'),
+		($5, $2, 'Jenius', 'bank', 'IDR', 7400000, '#4256B8', 'bank'),
+		($6, $2, 'OVO', 'e_wallet', 'IDR', 180000, '#7C5BC2', 'ewallet')
+		ON CONFLICT DO NOTHING`, wCash, uID, wBank, wGoPay, wJenius, wOVO)
 
 	mustExec(db, `INSERT INTO categories (id, user_id, name, type, color, icon) VALUES
 		($1, $2, 'Salary', 'income', '#2E8B57', 'salary'),
@@ -123,30 +127,121 @@ func main() {
 		($3, $2, '#MonthlyBill')
 		ON CONFLICT DO NOTHING`, tagBali, uID, tagMonthly)
 
-	// Income transactions
-	mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, category_id, type, amount_minor, transaction_at, note) VALUES
-		(gen_random_uuid(), $1, $2, $3, 'income', 18500000, $4, 'Monthly Salary'),
-		(gen_random_uuid(), $1, $2, $5, 'income', 2500000, $4 - interval '3 days', 'Freelance Project Payment')
-		ON CONFLICT DO NOTHING`,
-		uID, wBank, cSalary, now.AddDate(0, 0, -5), cFreelance)
+	// --- One-month transaction simulation ----------------------------------
+	// The Kalender / Wawasan / history screens need a LIVING month, so we spread
+	// a realistic set of ~55 transactions across the CURRENT calendar month.
+	//
+	// Dates are anchored to monthStart (day 1 of this month) plus a day/time
+	// offset so they always land in the current month regardless of today's
+	// date, and stay stable across re-seeds. `dayAt` clamps the day into the
+	// real length of the month (so a 28-day offset is always valid) and adds a
+	// natural-looking time of day. Backdating/future-dating within the month is
+	// intentional and accepted by the API.
+	//
+	// Balances follow the existing seed convention: wallets carry a fixed,
+	// illustrative opening balance_minor (set above) and are NOT recomputed from
+	// these transactions. The seeder never derived balances from the ledger, so
+	// we keep that pattern and do not introduce a balance/ledger invariant.
+	daysInMonth := monthStart.AddDate(0, 1, -1).Day()
+	dayAt := func(day, hour, minsec int) time.Time {
+		if day < 1 {
+			day = 1
+		}
+		if day > daysInMonth {
+			day = daysInMonth
+		}
+		return time.Date(now.Year(), now.Month(), day, hour, minsec/60, minsec%60, 0, time.UTC)
+	}
 
-	// Expense transactions (this month)
-	mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, category_id, type, amount_minor, transaction_at, note) VALUES
-		(gen_random_uuid(), $1, $2, $3, 'expense', 450000, $4, 'Groceries at Indomaret'),
-		(gen_random_uuid(), $1, $2, $3, 'expense', 180000, $4 - interval '1 day', 'Lunch Meeting'),
-		(gen_random_uuid(), $1, $5, $6, 'expense', 350000, $4 - interval '2 days', 'Fuel and Parking'),
-		(gen_random_uuid(), $1, $5, $7, 'expense', 220000, $4 - interval '3 days', 'Movie Night'),
-		(gen_random_uuid(), $1, $2, $8, 'expense', 850000, $4 - interval '4 days', 'Electricity and Water Bill'),
-		(gen_random_uuid(), $1, $2, $9, 'expense', 1200000, $4 - interval '5 days', 'New Running Shoes'),
-		(gen_random_uuid(), $1, $2, $3, 'expense', 95000, $4 - interval '6 days', 'Coffee x5')
-		ON CONFLICT DO NOTHING`,
-		uID, wGoPay, cFood, now.AddDate(0, 0, -1), wCash, cTrans, cEnt, cBills, cShop)
+	type tx struct {
+		wallet   string
+		category string
+		amount   int64
+		day      int
+		hour     int
+		note     string
+	}
 
-	// Transfer
+	// Income: salary (BCA) + a few freelance payments. Salary dominates income;
+	// freelance adds variety to the Wawasan income breakdown.
+	incomes := []tx{
+		{wBank, cSalary, 18500000, 1, 9, "Gaji bulanan"},
+		{wBank, cFreelance, 3200000, 6, 14, "Freelance - landing page"},
+		{wBank, cFreelance, 1750000, 17, 11, "Freelance - logo design"},
+		{wBank, cFreelance, 2400000, 24, 16, "Freelance - app maintenance"},
+	}
+
+	// Expenses. Food & Dining is deliberately the biggest bucket (many small,
+	// frequent spends on Cash/GoPay/OVO), then Transportation, Shopping,
+	// Entertainment, and Bills. Amounts are realistic IDR whole-rupiah values.
+	expenses := []tx{
+		// Food & Dining (deliberately the biggest expense bucket) — frequent
+		// daily spends on Cash / GoPay / OVO plus a few weekly grocery runs.
+		{wCash, cFood, 45000, 1, 12, "Makan siang warteg"},
+		{wGoPay, cFood, 72000, 2, 19, "GoFood makan malam"},
+		{wCash, cFood, 38000, 3, 8, "Sarapan bubur ayam"},
+		{wGoPay, cFood, 55000, 4, 13, "Kopi + roti"},
+		{wOVO, cFood, 265000, 5, 20, "Dinner bareng teman"},
+		{wCash, cFood, 85000, 7, 12, "Makan siang padang"},
+		{wGoPay, cFood, 42000, 9, 9, "Kopi pagi"},
+		{wCash, cFood, 235000, 11, 19, "Groceries Superindo"},
+		{wGoPay, cFood, 68000, 13, 12, "GoFood ayam geprek"},
+		{wCash, cFood, 120000, 15, 20, "Makan malam keluarga"},
+		{wOVO, cFood, 48000, 18, 13, "Kopi kekinian"},
+		{wCash, cFood, 245000, 20, 11, "Belanja mingguan"},
+		{wGoPay, cFood, 78000, 22, 19, "GoFood martabak"},
+		{wCash, cFood, 52000, 25, 8, "Sarapan + kopi"},
+		{wGoPay, cFood, 95000, 27, 13, "Makan siang mall"},
+		{wOVO, cFood, 130000, 28, 20, "Dinner date"},
+
+		// Transportation (2nd biggest).
+		{wGoPay, cTrans, 28000, 2, 8, "GoRide ke kantor"},
+		{wCash, cTrans, 300000, 4, 17, "Bensin mobil"},
+		{wGoPay, cTrans, 32000, 8, 9, "GoRide"},
+		{wGoPay, cTrans, 45000, 12, 18, "GoCar pulang"},
+		{wOVO, cTrans, 65000, 16, 8, "Parkir + tol bulanan"},
+		{wCash, cTrans, 280000, 21, 17, "Bensin mobil"},
+		{wGoPay, cTrans, 52000, 26, 9, "GoRide meeting"},
+		{wGoPay, cTrans, 44000, 28, 18, "GoCar malam"},
+
+		// Shopping (3rd).
+		{wBank, cShop, 320000, 5, 15, "Baju kerja"},
+		{wBank, cShop, 189000, 10, 20, "Skincare Shopee"},
+		{wCash, cShop, 75000, 14, 16, "Alat tulis + printer"},
+		{wBank, cShop, 210000, 23, 14, "Aksesoris HP"},
+
+		// Entertainment (4th).
+		{wGoPay, cEnt, 60000, 6, 20, "Nonton bioskop"},
+		{wOVO, cEnt, 45000, 11, 21, "Game top-up"},
+		{wBank, cEnt, 150000, 16, 19, "Konser tiket"},
+		{wGoPay, cEnt, 55000, 24, 20, "Karaoke"},
+
+		// Bills & Utilities (kept modest so Food & the daily buckets stay on top).
+		{wBank, cBills, 285000, 3, 10, "Listrik PLN"},
+		{wBank, cBills, 155000, 3, 10, "Air PDAM"},
+		{wBank, cBills, 250000, 10, 10, "Internet + TV"},
+		{wBank, cBills, 150000, 15, 10, "Pulsa + paket data"},
+	}
+
+	for _, e := range incomes {
+		mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, category_id, type, amount_minor, transaction_at, note) VALUES
+			(gen_random_uuid(), $1, $2, $3, 'income', $4, $5, $6) ON CONFLICT DO NOTHING`,
+			uID, e.wallet, e.category, e.amount, dayAt(e.day, e.hour, 0), e.note)
+	}
+	for _, e := range expenses {
+		mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, category_id, type, amount_minor, transaction_at, note) VALUES
+			(gen_random_uuid(), $1, $2, $3, 'expense', $4, $5, $6) ON CONFLICT DO NOTHING`,
+			uID, e.wallet, e.category, e.amount, dayAt(e.day, e.hour, 0), e.note)
+	}
+
+	// Transfers (topups) — spread across the month between wallets.
 	mustExec(db, `INSERT INTO transactions (id, user_id, wallet_id, to_wallet_id, type, amount_minor, transaction_at, note) VALUES
-		(gen_random_uuid(), $1, $2, $3, 'transfer', 2000000, $4, 'Topup GoPay')
+		(gen_random_uuid(), $1, $2, $3, 'transfer', 1500000, $6, 'Topup GoPay'),
+		(gen_random_uuid(), $1, $2, $4, 'transfer', 500000, $7, 'Topup OVO'),
+		(gen_random_uuid(), $1, $2, $5, 'transfer', 1000000, $8, 'Pindah ke Jenius')
 		ON CONFLICT DO NOTHING`,
-		uID, wBank, wGoPay, now.AddDate(0, 0, -7))
+		uID, wBank, wGoPay, wOVO, wJenius,
+		dayAt(2, 8, 0), dayAt(9, 8, 0), dayAt(18, 8, 0))
 
 	// Budgets (current month); appearance follows each budget's category.
 	// The Shopping budget is intentionally colorless (client fallback).
@@ -261,10 +356,11 @@ func main() {
 	fmt.Printf("  Password: %s\n", testPassword)
 	fmt.Println()
 	fmt.Println("Seeded data:")
-	fmt.Println("  3 wallets (Cash, BCA Bank, GoPay e-wallet)")
+	fmt.Println("  5 wallets (Cash, BCA Bank, GoPay, Jenius bank, OVO e-wallet)")
 	fmt.Println("  9 categories (3 income, 6 expense)")
 	fmt.Println("  2 tags")
-	fmt.Println("  10 transactions (2 income, 7 expense, 1 transfer)")
+	fmt.Println("  ~44 transactions spread across the current month")
+	fmt.Println("    (4 income, 36 expense, 3 transfer + 1 debt disbursement)")
 	fmt.Println("  4 budgets (Food, Transport, Entertainment, Shopping)")
 	fmt.Println("  1 payable debt (BCA KTA)")
 	fmt.Println("  1 subscription (Netflix)")
