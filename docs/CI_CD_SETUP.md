@@ -4,6 +4,15 @@ This project uses GitHub Actions for deployment to the VPS.
 
 For the complete beginner-friendly manual deploy and CI/CD guide, read [`DEPLOYMENT_VPS_STEP_BY_STEP.md`](DEPLOYMENT_VPS_STEP_BY_STEP.md).
 
+## Workflows
+
+Two workflows share the same test gate (Postgres 17 service, gofmt, `go test ./...`, `go vet`, build, Postman JSON validation):
+
+- **`.github/workflows/ci.yml` (`API CI`)** — the pre-merge gate. Runs on every `pull_request` into `master` and on every push to a non-`master` branch. It runs only the test job (no deploy), so a red PR is blocked before it can be merged. Needs no secrets.
+- **`.github/workflows/deploy.yml` (`API CI/CD`)** — runs on push to `master` (a merged PR). Runs the same test job, then deploys to the VPS and sends the Telegram notification.
+
+Because merging to `master` deploys to production, the `ci.yml` gate exists so PRs are verified before merge instead of only failing after deploy.
+
 Important: GitHub secrets are created one by one. Do not create one big secret that contains all values.
 
 ## 1. Where To Add Secrets

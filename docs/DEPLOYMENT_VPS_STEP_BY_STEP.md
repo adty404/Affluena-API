@@ -625,7 +625,8 @@ git checkout master
 Workflow sudah ada:
 
 ```text
-Affluena-API/.github/workflows/deploy.yml
+Affluena-API/.github/workflows/ci.yml       (gate PR, tanpa deploy)
+Affluena-API/.github/workflows/deploy.yml   (test + deploy ke VPS)
 Affluena-WEB/.github/workflows/deploy.yml
 ```
 
@@ -633,8 +634,8 @@ Jadi kamu tidak perlu membuat workflow baru dari GitHub UI. Yang perlu dilakukan
 
 Alur CI/CD:
 
-1. Push ke `master`.
-2. API workflow menjalankan test, vet, build, lalu deploy API ke VPS.
+1. Buka Pull Request ke `master` (atau push ke branch non-`master`). Workflow `ci.yml` menjalankan test, vet, build memakai Postgres 17 service — tanpa deploy. PR merah tertahan sebelum merge.
+2. Merge/push ke `master`. API workflow `deploy.yml` menjalankan test yang sama, lalu deploy API ke VPS.
 3. Web workflow menjalankan test dan build di GitHub Actions, lalu upload `dist` ke VPS.
 4. Telegram mengirim notifikasi jika secret Telegram diisi.
 
@@ -642,6 +643,7 @@ Checklist CI/CD:
 
 | Item | Tempat | Wajib? | Keterangan |
 | --- | --- | --- | --- |
+| `.github/workflows/ci.yml` API | Repo `Affluena-API` | Wajib | Sudah ada di repo. Gate PR: test, vet, build memakai Postgres 17 service. Tidak deploy, tidak butuh secret. |
 | `.github/workflows/deploy.yml` API | Repo `Affluena-API` | Wajib | Sudah ada di repo. Menjalankan test, build, deploy API, dan notif Telegram. |
 | `.github/workflows/deploy.yml` Web | Repo `Affluena-WEB` | Wajib | Sudah ada di repo. Menjalankan test, build, upload `dist`, reload Nginx, dan notif Telegram. |
 | SSH deploy key | Local + VPS + GitHub Secrets | Wajib | Public key masuk `authorized_keys`, private key masuk secret `VPS_SSH_KEY`. |

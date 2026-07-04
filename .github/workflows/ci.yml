@@ -1,0 +1,75 @@
+name: API CI
+
+# PR gate: run the same test/verify gate as the deploy workflow BEFORE merge,
+# so a red PR is blocked instead of only failing after it deploys to prod.
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches-ignore:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: affluena-api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Test API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: affluena_api
+          POSTGRES_USER: affluena_api
+          POSTGRES_PASSWORD: affluena_api
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U affluena_api -d affluena_api"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
+      AFFLUENA_API_TEST_DATABASE_URL: postgres://affluena_api:affluena_api@localhost:5432/affluena_api?sslmode=disable
+      JWT_SECRET: ci-test-secret-minimum-32-characters
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check formatting
+        run: |
+          unformatted="$(find . -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -l)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            echo "Run gofmt on the files above." >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: go test ./... -count=1
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Build API
+        run: go build -o /tmp/affluena-api ./cmd/api
+
+      - name: Validate Postman collection
+        run: python3 -m json.tool postman/Affluena-API.postman_collection.json >/tmp/affluena-api-postman-validated.json
