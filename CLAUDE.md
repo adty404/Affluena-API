@@ -12,6 +12,9 @@ Clean layering per domain: `handler → usecase → repository`, wired in `inter
 - **Merging to `master` deploys to PRODUCTION.** `.github/workflows/deploy.yml` ("API CI/CD")
   runs on every push to `master` and ships to the VPS. There is no separate "release" step —
   **a merged PR is a prod deploy.** Get explicit confirmation before merging.
+  `.github/workflows/ci.yml` ("API CI") runs the same test gate on `pull_request` and on pushes to
+  non-`master` branches (no deploy), so red PRs are caught before merge — but a green CI still means
+  the next merge ships to prod.
 - **Migrations run automatically at startup** (`RUN_MIGRATIONS` defaults to `true`). They are
   **forward-only** (`migrations/000NNN_*.sql`, applied in order, tracked in `schema_migrations`),
   run inside a tx under an advisory lock by `internal/db/migrate.go`. **A failed migration calls
