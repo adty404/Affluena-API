@@ -41,8 +41,16 @@ func main() {
 		log.Fatalf("failed to hash password: %v", err)
 	}
 
-	now := time.Now().UTC()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	// Anchor all seeded history to the PREVIOUS complete calendar month, in WIB
+	// (UTC+7, the app's audience timezone). Seeding on e.g. 2026-07-04 fills
+	// June 2026 — a fully-past month, so nothing is future-dated — and building
+	// the timestamps in WIB (not UTC) keeps late-evening rows from spilling into
+	// the next month for the WIB reader. `now` is the seed's "present" (the last
+	// moment of that month), used for the relative operational dates below.
+	wib := time.FixedZone("WIB", 7*60*60)
+	firstOfThisMonth := time.Date(time.Now().In(wib).Year(), time.Now().In(wib).Month(), 1, 0, 0, 0, 0, wib)
+	monthStart := firstOfThisMonth.AddDate(0, -1, 0)
+	now := firstOfThisMonth.Add(-time.Second)
 
 	// Fixed UUIDs for idempotency
 	const (
@@ -129,11 +137,11 @@ func main() {
 
 	// --- One-month transaction simulation ----------------------------------
 	// The Kalender / Wawasan / history screens need a LIVING month, so we spread
-	// ~7 transactions PER DAY across the CURRENT calendar month (~210 total).
+	// ~7 transactions PER DAY across the previous complete calendar month (~210 total).
 	//
-	// Dates are anchored to monthStart (day 1 of this month) plus a day/time
-	// offset so they always land in the current month regardless of today's
-	// date, and stay stable across re-seeds. `dayAt` clamps the day into the
+	// Dates are anchored to monthStart (day 1 of that month) plus a day/time
+	// offset so they always land in the previous complete month regardless of
+	// today's date, and stay stable across re-seeds. `dayAt` clamps the day into the
 	// real length of the month (so a 28-day offset is always valid) and adds a
 	// natural-looking time of day. Backdating/future-dating within the month is
 	// intentional and accepted by the API.
@@ -150,7 +158,7 @@ func main() {
 		if day > daysInMonth {
 			day = daysInMonth
 		}
-		return time.Date(now.Year(), now.Month(), day, hour, minsec/60, minsec%60, 0, time.UTC)
+		return time.Date(monthStart.Year(), monthStart.Month(), day, hour, minsec/60, minsec%60, 0, wib)
 	}
 
 	type tx struct {
@@ -397,7 +405,7 @@ func main() {
 	fmt.Println()
 	// The transaction counts are DERIVED from the slices actually built above so
 	// the printout never drifts from the generator. The day loop produces ~7
-	// expense rows per day for the whole current month, so the total varies with
+	// expense rows per day for the whole seeded month, so the total varies with
 	// month length (roughly 206–227). incomes/expenses are the built slices;
 	// transfers and the debt disbursement are fixed inserts.
 	const transferCount = 3
@@ -408,7 +416,7 @@ func main() {
 	fmt.Println("  5 wallets (Cash, BCA Bank, GoPay, Jenius bank, OVO e-wallet)")
 	fmt.Println("  9 categories (3 income, 6 expense)")
 	fmt.Println("  2 tags")
-	fmt.Printf("  %d transactions spread across the current month\n", demoTxTotal)
+	fmt.Printf("  %d transactions spread across %s (previous complete month)\n", demoTxTotal, monthStart.Format("January 2006"))
 	fmt.Printf("    (%d income, %d expense, %d transfer + %d debt disbursement)\n",
 		len(incomes), len(expenses), transferCount, debtDisbursementCount)
 	fmt.Println("  4 budgets (Food, Transport, Entertainment, Shopping)")
