@@ -108,8 +108,8 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 
 The current Gin router registers 102 routes including `GET /healthz`: 5 public auth routes and 96 protected API routes under `/api/v1`.
 
-- `GET /healthz`
-- `POST /api/v1/auth/register`
+- `GET /healthz` (pings the database: `200 {"status":"ok"}` when healthy, `503 {"status":"degraded","db":"unreachable"}` when Postgres is unreachable)
+- `POST /api/v1/auth/register` (also seeds onboarding defaults atomically: 8 Bahasa Indonesia default categories + a "Dompet Utama" starter wallet — see `docs/API_CONTRACT.md`)
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/forgot-password`
@@ -174,7 +174,7 @@ Protected with `Authorization: Bearer <access_token>`:
 - `DELETE /api/v1/tags/:id`
 - `POST /api/v1/transactions`
 - `POST /api/v1/transactions/split` (Macro endpoint for Split Bill)
-- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&tag_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=100&offset=0&sort=transaction_at_desc]`
+- `GET /api/v1/transactions[?type=income|expense|transfer|adjustment&wallet_id=<id>&category_id=<id>&tag_id=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD&search=<text>&limit=100&offset=0&sort=transaction_at_desc]` (`search`: case-insensitive substring over note / category name / source wallet name, max 100 chars, `%`/`_`/`\` literal)
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id`
 - `DELETE /api/v1/transactions/:id`

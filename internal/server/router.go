@@ -133,7 +133,21 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	reportHandler := report.NewHandler(report.NewUseCase(report.NewRepository(pool)))
 	notificationHandler := notification.NewHandler(notification.NewUseCase(notification.NewRepository(pool)))
 
+	// /healthz pings the database so the deploy workflow's `curl -fsS /healthz`
+	// gate (and nginx health checks) fail when Postgres is unreachable, instead
+	// of reporting a dead app as live. The response never carries connection
+	// details — only a terse status ("db":"unreachable"), so nothing sensitive
+	// can leak through the public endpoint. apilog middleware still skips this
+	// path, so health probes never spam api_logs.
 	router.GET("/healthz", func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+
+		var one int
+		if err := pool.QueryRow(ctx, "SELECT 1").Scan(&one); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "degraded", "db": "unreachable"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 

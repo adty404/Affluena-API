@@ -3977,6 +3977,12 @@
                   "key": "tag_id",
                   "value": "{{tag_id}}",
                   "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "kopi",
+                  "description": "Optional free-text filter (max 100 chars): case-insensitive substring over the transaction note, its category name, or its source wallet name. %/_/\\ match literally.",
+                  "disabled": true
                 }
               ]
             }

@@ -8,7 +8,7 @@ Affluena-API is an API-first personal finance backend written in Go. It uses Gin
 
 Core domains:
 
-- Auth: register, login, refresh token, protected routes.
+- Auth: register, login, refresh token, protected routes. Register also seeds onboarding defaults (8 Bahasa Indonesia categories + a "Dompet Utama" starter cash wallet) in the same transaction as the user row — the response shape is unchanged and a failed register writes nothing.
 - Dashboard: monthly summary for net worth, cashflow, budgets, upcoming obligations, plus cashflow trend, expense distribution, and spend forecasting analytics.
 - Wallets: cash, bank, e-wallet, investment/trading wallets. Wallets can be shared with other users; a share carries a `role` of `member` (read+write) or `viewer` (read-only).
 - Categories: user-owned income/expense categories with optional same-user, same-type `parent_id` nesting up to 3 levels. List supports `GET /api/v1/categories?type=income|expense`.
@@ -135,6 +135,10 @@ Existing high-value integration tests:
 - `internal/server/category_hierarchy_test.go`: proves category parent nesting, max-depth behavior, and cyclic-reference protection.
 - `internal/server/category_reorder_integration_test.go`: proves category icon/color round-trip, position-based default ordering, the reorder endpoint (full and partial), and that reorder rejects non-owned ids without partial writes.
 - `internal/server/transaction_filter_integration_test.go`: proves transaction list filters.
+- `internal/server/transaction_search_integration_test.go`: proves the transactions `search` filter (note/category-name/wallet-name matching, literal `%`, user isolation, composition with `type`, pagination total sync, 100-char cap).
+- `internal/server/healthz_integration_test.go`: proves `/healthz` returns 200 with a reachable database and 503 `degraded` (without leaking connection details) when the pool points at a dead address.
+- `internal/server/register_onboarding_integration_test.go`: proves register seeds the 8 default categories (position ASC) + starter wallet, and that a conflicting register writes nothing.
+- `internal/auth/repository_integration_test.go`: proves CreateUser seeds onboarding defaults atomically and rolls the user row back when the seed step fails.
 - `internal/server/pagination_integration_test.go`: proves list endpoint pagination metadata and wallet sorting.
 - `internal/server/dashboard_summary_integration_test.go`: proves dashboard summary aggregation and isolation.
 - `internal/server/dashboard_integration_test.go`: proves advanced dashboard analytics/reporting behavior.
@@ -174,7 +178,8 @@ Current notable API decisions:
 - `GET/PUT/DELETE /api/v1/categories/:id` remain generic category CRUD.
 - `POST/GET/PUT/DELETE /api/v1/tags` manage user-owned transaction labels.
 - `POST/PUT /api/v1/transactions` accept `tag_ids`.
-- `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, and `to` filters.
+- `GET /api/v1/transactions` supports optional `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`, and `search` filters. `search` (trimmed, max 100 chars, else 400) is a case-insensitive substring match over the transaction note, its category name, or its source wallet name, with `%`/`_`/`\` escaped to match literally; it is implemented with EXISTS subqueries so it composes with every other filter/sort/pagination without duplicating rows, and the COUNT query applies the same predicate.
+- `GET /healthz` pings the database (`SELECT 1`, ~2s timeout): `200 {"status":"ok"}` when healthy, `503 {"status":"degraded","db":"unreachable"}` when Postgres is down — so the deploy workflow's health gate fails on a dead database. The response must never include connection details, and the apilog middleware keeps skipping the path.
 - `POST/PUT /api/v1/transactions` accept `transaction_at` as a full RFC3339 timestamp (date **and** time-of-day). Any past or future instant is accepted, so transactions can be backdated or future-dated; it is not date-only or normalized to midnight. Quick-entry execute and split-bill creation parse `transaction_at` the same way. Clients send the user-picked local datetime normalized to UTC.
 - List endpoints for wallets, categories, transactions, quick entry templates, category budgets, debts, installments, subscriptions, recurring transactions, and tags support `limit`, `offset`, and `sort`.
 - Generic wallet create/update/delete endpoints reject direct `goal` wallet writes; goal-managed wallets are created and retained by the financial goal workflow.
