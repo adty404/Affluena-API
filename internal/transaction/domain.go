@@ -32,6 +32,11 @@ type TransactionFilter struct {
 	TagID      string
 	From       time.Time
 	To         time.Time
+	// Search is a trimmed, case-insensitive substring matched against the
+	// transaction note, its category name, or its source wallet name.
+	// Empty means "no search filter". Max 100 characters (validated at the
+	// handler); %/_/\ are treated as literals (escaped in the repository).
+	Search string
 }
 
 func (t Transaction) Input() TransactionInput {

@@ -55,14 +55,15 @@ func TestWalletShareLifecycle(t *testing.T) {
 		"email": "`+userBData.User.Email+`"
 	}`, http.StatusCreated)
 
-	// User B checks their wallets, should see it as pending
+	// User B checks their wallets, should see it as pending. (B also owns the
+	// register-seeded "Dompet Utama" starter wallet, so find the share by id.)
 	resWalletsB := performAPIRequest(t, router, tokenB, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
 	var listResp struct {
 		Wallets []wallet.Wallet `json:"wallets"`
 	}
 	json.Unmarshal(resWalletsB, &listResp)
-	if len(listResp.Wallets) != 1 || listResp.Wallets[0].ShareStatus != "pending" {
-		t.Fatalf("expected 1 pending wallet, got %v", listResp.Wallets)
+	if shared := findSharedWalletByID(t, listResp.Wallets, walletID); shared.ShareStatus != "pending" {
+		t.Fatalf("expected pending shared wallet, got %+v", shared)
 	}
 
 	// B responds with joined
@@ -73,8 +74,8 @@ func TestWalletShareLifecycle(t *testing.T) {
 	// Now B should see share_status = joined
 	resWalletsB2 := performAPIRequest(t, router, tokenB, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
 	json.Unmarshal(resWalletsB2, &listResp)
-	if len(listResp.Wallets) != 1 || listResp.Wallets[0].ShareStatus != "joined" {
-		t.Fatalf("expected joined wallet, got %v", listResp.Wallets)
+	if shared := findSharedWalletByID(t, listResp.Wallets, walletID); shared.ShareStatus != "joined" {
+		t.Fatalf("expected joined shared wallet, got %+v", shared)
 	}
 
 	// C tries to invite themselves (fails, C is not owner and cannot see wallet)
@@ -476,7 +477,8 @@ func TestPendingInviteeCannotSeeWalletBalanceOrRoster(t *testing.T) {
 		t.Fatalf("pending invitee leaked member roster via Get: got %d members", len(pendingWallet.Members))
 	}
 
-	// Same hiding via the list endpoint.
+	// Same hiding via the list endpoint. (The invitee also owns the
+	// register-seeded starter wallet, so pick the pending share by id.)
 	listBody := performAPIRequest(t, router, inviteeToken, http.MethodGet, "/api/v1/wallets", "", http.StatusOK)
 	var listResp struct {
 		Wallets []wallet.Wallet `json:"wallets"`
@@ -484,11 +486,8 @@ func TestPendingInviteeCannotSeeWalletBalanceOrRoster(t *testing.T) {
 	if err := json.Unmarshal(listBody, &listResp); err != nil {
 		t.Fatalf("parse wallet list: %v", err)
 	}
-	if len(listResp.Wallets) != 1 {
-		t.Fatalf("expected 1 wallet for pending invitee, got %d", len(listResp.Wallets))
-	}
-	if listResp.Wallets[0].BalanceMinor != 0 {
-		t.Fatalf("pending invitee leaked balance via List: got %d, want 0", listResp.Wallets[0].BalanceMinor)
+	if shared := findSharedWalletByID(t, listResp.Wallets, walletID); shared.BalanceMinor != 0 {
+		t.Fatalf("pending invitee leaked balance via List: got %d, want 0", shared.BalanceMinor)
 	}
 
 	// After joining, balance and roster become visible.
@@ -630,4 +629,19 @@ func countCSVRowsWithID(records [][]string, id string) int {
 		}
 	}
 	return count
+}
+
+// findSharedWalletByID returns the wallet with the given id from a list
+// response, failing the test when absent. Lets share assertions target the
+// shared wallet specifically now that every account also owns the
+// register-seeded starter wallet.
+func findSharedWalletByID(t *testing.T, wallets []wallet.Wallet, id string) wallet.Wallet {
+	t.Helper()
+	for _, w := range wallets {
+		if w.ID == id {
+			return w
+		}
+	}
+	t.Fatalf("wallet %s not found in list: %+v", id, wallets)
+	return wallet.Wallet{}
 }

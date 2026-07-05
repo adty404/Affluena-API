@@ -11,20 +11,43 @@ import (
 
 type Repository struct {
 	pool *pgxpool.Pool
+	// seedDefaults runs inside CreateUser's transaction to give new accounts
+	// their onboarding defaults. A field (not a direct call) so integration
+	// tests can inject a failure and prove the user row rolls back with it.
+	seedDefaults func(ctx context.Context, tx pgx.Tx, userID string) error
 }
 
 func NewRepository(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool}
+	return &Repository{pool: pool, seedDefaults: seedOnboardingDefaults}
 }
 
+// CreateUser inserts the user row AND its onboarding defaults (8 categories +
+// the starter wallet, see onboarding.go) in one transaction: either the
+// account arrives fully set up, or nothing is written at all.
 func (r *Repository) CreateUser(ctx context.Context, email string, passwordHash string) (User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var user User
-	err := r.pool.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		INSERT INTO users (email, password_hash)
 		VALUES ($1, $2)
 		RETURNING id::text, email, name, avatar_url, password_hash, created_at, updated_at
-	`, email, passwordHash).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
-	return user, err
+	`, email, passwordHash).Scan(&user.ID, &user.Email, &user.Name, &user.AvatarURL, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		return User{}, err
+	}
+
+	if err := r.seedDefaults(ctx, tx, user.ID); err != nil {
+		return User{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, err
+	}
+	return user, nil
 }
 
 func (r *Repository) UserByEmail(ctx context.Context, email string) (User, error) {

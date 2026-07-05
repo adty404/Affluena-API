@@ -24,6 +24,9 @@ func TestCategoryAppearanceAndReorder(t *testing.T) {
 	userID, token := registerIntegrationAPIUser(t, router, "api-category-reorder-a")
 	otherID, otherToken := registerIntegrationAPIUser(t, router, "api-category-reorder-b")
 	defer cleanupServerIntegrationUsers(t, pool, userID, otherID)
+	// Positions below are asserted from 0, so drop the register-seeded
+	// onboarding defaults (they occupy positions 0..7).
+	removeOnboardingDefaults(t, pool, userID, otherID)
 
 	groceriesID := createAPIResource(t, router, token, "/api/v1/categories", `{
 		"name": "Groceries",

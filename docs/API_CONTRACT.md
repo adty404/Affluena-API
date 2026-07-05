@@ -29,8 +29,11 @@ This document serves as the primary contract for the Affluena web app, QA suite,
 
 ## Modules
 
+### Health
+- `GET /healthz` (no auth, outside `/api/v1`) - Pings the database (`SELECT 1`, ~2s timeout). Healthy -> `200 { "status": "ok" }`; database unreachable -> `503 { "status": "degraded", "db": "unreachable" }`. The deploy workflow's health gate and reverse-proxy checks rely on this, so a dead database now fails them. The response never includes connection details.
+
 ### Auth
-- `POST /api/v1/auth/register` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`
+- `POST /api/v1/auth/register` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`. **Side effects (onboarding defaults)**: in the same database transaction as the user row, registration also creates 8 default Bahasa Indonesia categories (expense: Makanan & Minuman, Transportasi, Belanja, Tagihan & Utilitas, Hiburan, Kesehatan; income: Gaji, Penghasilan Lain — positions 0..7, icon/color from the shared client catalogs) and 1 starter wallet ("Dompet Utama", `cash`, `IDR`, balance 0). The response shape is unchanged; a failed registration writes nothing (no half-onboarded accounts).
 - `POST /api/v1/auth/login` - `{ email, password }` -> `{ user, tokens: { access_token, refresh_token } }`
 - `POST /api/v1/auth/refresh` - `{ refresh_token }` -> `{ user: { id, email, created_at, updated_at }, tokens: { access_token, refresh_token } }`
 - `GET /api/v1/auth/me` - Profile data -> `{ user: { id, email, created_at, updated_at } }`
@@ -93,7 +96,7 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
 
 ### Transaction
 - `POST /api/v1/transactions` - `{ type, amount_minor, transaction_at, note, wallet_id, to_wallet_id, category_id, tag_ids }`. `transaction_at` is a full RFC3339 timestamp (date **and** time-of-day, e.g. `2024-01-01T15:04:05Z`). Any date is accepted, so transactions may be backdated or future-dated. Clients should send the local datetime normalized to UTC.
-- `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`. `from`/`to` accept `YYYY-MM-DD` or RFC3339 (both normalized to day granularity; `to` is inclusive). `category_id` matches the category **and all its descendants** (subtree).
+- `GET /api/v1/transactions` - Filter by `type`, `wallet_id`, `category_id`, `tag_id`, `from`, `to`, `search`. `from`/`to` accept `YYYY-MM-DD` or RFC3339 (both normalized to day granularity; `to` is inclusive). `category_id` matches the category **and all its descendants** (subtree). `search` is a free-text filter (trimmed, max 100 characters — longer returns `400`): case-insensitive substring match against the transaction note, its category name, or its source wallet name; `%`, `_`, and `\` match literally. It composes with every other filter plus `sort`/pagination, and the pagination `total` reflects the filtered count.
 - `GET /api/v1/transactions/:id`
 - `PUT /api/v1/transactions/:id` - Fields same as POST (including the full date+time `transaction_at`, which may be backdated or future-dated).
 - `DELETE /api/v1/transactions/:id`

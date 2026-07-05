@@ -20,6 +20,9 @@ func TestCategoryHierarchyIntegration(t *testing.T) {
 
 	user, token := registerIntegrationAPIUser(t, router, "hierarchy_user")
 	defer cleanupServerIntegrationUsers(t, pool, user)
+	// This test asserts the exact category count, so drop the register-seeded
+	// onboarding defaults first.
+	removeOnboardingDefaults(t, pool, user)
 
 	// Create Level 1 Category (Food)
 	l1ID := createAPIResource(t, router, token, "/api/v1/categories", `{
@@ -96,6 +99,9 @@ func TestCategoryHierarchyRejectsCrossUserAndTypeMismatchParents(t *testing.T) {
 	userA, tokenA := registerIntegrationAPIUser(t, router, "hierarchy-parent-a")
 	userB, tokenB := registerIntegrationAPIUser(t, router, "hierarchy-parent-b")
 	defer cleanupServerIntegrationUsers(t, pool, userA, userB)
+	// This test asserts the exact category count, so drop the register-seeded
+	// onboarding defaults first.
+	removeOnboardingDefaults(t, pool, userA, userB)
 
 	otherUserParent := createAPIResource(t, router, tokenB, "/api/v1/categories", `{
 		"name": "Other User Parent",

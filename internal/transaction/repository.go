@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"affluena-api/internal/page"
@@ -35,6 +36,32 @@ const accessibleTransactionPredicate = `(
 	transactions.wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined') OR
 	transactions.to_wallet_id IN (SELECT wallet_id FROM wallet_shares WHERE user_id = $1 AND status = 'joined')
 )`
+
+// searchPredicate matches the caller-visible free-text `search` filter: a
+// case-insensitive substring over the transaction note, the transaction's
+// category name, or its source wallet name. EXISTS subqueries (not JOINs) so
+// a match can never duplicate result rows, keeping the list and COUNT queries
+// in lockstep. The placeholder is the pre-escaped ILIKE pattern; an empty
+// pattern means "no search filter". Escaping happens in searchPattern.
+func searchPredicate(placeholder string) string {
+	return `(` + placeholder + ` = '' OR (
+		transactions.note ILIKE ` + placeholder + ` OR
+		EXISTS (SELECT 1 FROM categories sc WHERE sc.id = transactions.category_id AND sc.name ILIKE ` + placeholder + `) OR
+		EXISTS (SELECT 1 FROM wallets sw WHERE sw.id = transactions.wallet_id AND sw.name ILIKE ` + placeholder + `)
+	))`
+}
+
+// searchPattern builds the ILIKE pattern for a search term, escaping the LIKE
+// metacharacters (backslash first) so `%`, `_`, and `\` in user input match
+// literally instead of acting as wildcards. Empty input stays empty, which the
+// SQL treats as "no search filter".
+func searchPattern(search string) string {
+	if search == "" {
+		return ""
+	}
+	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(search)
+	return "%" + escaped + "%"
+}
 
 func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
@@ -100,9 +127,10 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
 			AND ($9 = '' OR transactions.id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($9, '')::uuid))
+			AND `+searchPredicate("$10")+`
 		ORDER BY `+orderBy+`
 		LIMIT $7 OFFSET $8
-	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset, filter.TagID)
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), pagination.Limit, pagination.Offset, filter.TagID, searchPattern(filter.Search))
 	if err != nil {
 		return page.Result[Transaction]{}, err
 	}
@@ -138,7 +166,8 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 			AND ($5::timestamptz IS NULL OR transaction_at >= $5)
 			AND ($6::timestamptz IS NULL OR transaction_at < $6)
 			AND ($7 = '' OR id IN (SELECT transaction_id FROM transaction_tags WHERE user_id = $1 AND tag_id = NULLIF($7, '')::uuid))
-	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), filter.TagID).Scan(&total); err != nil {
+			AND `+searchPredicate("$8")+`
+	`, userID, filter.Type, filter.WalletID, filter.CategoryID, nullableTime(filter.From), nullableTime(filter.To), filter.TagID, searchPattern(filter.Search)).Scan(&total); err != nil {
 		return page.Result[Transaction]{}, err
 	}
 	return page.NewResult(transactions, pagination, total), nil

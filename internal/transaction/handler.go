@@ -3,7 +3,9 @@ package transaction
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"affluena-api/internal/httpx"
 	"affluena-api/internal/page"
@@ -149,15 +151,24 @@ func (h *Handler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// maxSearchLength caps the free-text `search` filter so an oversized query can
+// never reach the ILIKE scan.
+const maxSearchLength = 100
+
 func bindFilter(c *gin.Context) (TransactionFilter, bool) {
 	filter := TransactionFilter{
 		Type:       TransactionType(c.Query("type")),
 		WalletID:   c.Query("wallet_id"),
 		CategoryID: c.Query("category_id"),
 		TagID:      c.Query("tag_id"),
+		Search:     strings.TrimSpace(c.Query("search")),
 	}
 	if filter.Type != "" && !IsValidType(filter.Type) {
 		httpx.Error(c, http.StatusBadRequest, "invalid transaction type")
+		return TransactionFilter{}, false
+	}
+	if utf8.RuneCountInString(filter.Search) > maxSearchLength {
+		httpx.Error(c, http.StatusBadRequest, "search must be at most 100 characters")
 		return TransactionFilter{}, false
 	}
 	for _, candidate := range []struct {
