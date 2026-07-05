@@ -37,6 +37,10 @@ The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `
 - `migrations`: ordered SQL migrations.
 - `postman`: runnable API collection that should match the documented API surface.
 - `scripts/verify.sh`: full verification gate.
+- `scripts/backup-db.sh` / `scripts/verify-backup.sh` / `scripts/install-backup-cron.sh`:
+  automated DB backups — nightly dump + weekly restore-verify via cron, plus the fail-closed
+  pre-deploy snapshot the deploy workflow takes before startup migrations (see `docs/BACKUPS.md`).
+- `scripts/seed-prod.sh`: run the demo seeder against the VPS Postgres.
 - `Makefile`: `make verify` wrapper.
 
 The codebase is not a strict textbook Clean Architecture project, but it follows a layered style: handlers call use cases, use cases depend on repository ports, and repositories isolate SQL.

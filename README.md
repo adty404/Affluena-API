@@ -501,4 +501,10 @@ For frontend, QA, and Postman integration, refer to the official API contract do
 - [SEED_DATA.md](docs/SEED_DATA.md)
 - [INTEGRATION_PLAN.md](docs/INTEGRATION_PLAN.md)
 
+Operations:
+
+- [BACKUPS.md](docs/BACKUPS.md) — automated DB backups: nightly dump + weekly restore-verify (cron), fail-closed pre-deploy snapshot, retention, disaster-recovery steps
+- [DEPLOYMENT_VPS_STEP_BY_STEP.md](docs/DEPLOYMENT_VPS_STEP_BY_STEP.md)
+- [CI_CD_SETUP.md](docs/CI_CD_SETUP.md)
+
 These docs strictly align with the exact backend handler request/response shapes. Please use them as the primary reference.
