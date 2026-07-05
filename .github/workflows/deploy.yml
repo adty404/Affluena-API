@@ -121,9 +121,31 @@ jobs:
             DOCKER="sudo -n docker"
           fi
 
+          # Safety net: snapshot the DB (and deploy config) BEFORE the new
+          # image boots and auto-runs its forward-only migrations. Gated on the
+          # DATA VOLUME, not on a running container: whenever the volume exists
+          # a snapshot is MANDATORY, so a stopped/crashed Postgres fails the
+          # deploy instead of silently skipping the backup (fail-closed).
+          # Skipped only on a true first deploy (no data volume yet).
+          # Emergency bypass: run the compose commands manually over SSH.
+          if $DOCKER volume ls -q | grep -q 'affluena_api_postgres_data$'; then
+            DEPLOY_ROOT="$DEPLOY_ROOT" bash "$DEPLOY_ROOT/Affluena-API/scripts/backup-db.sh" pre-deploy
+          else
+            echo "no postgres data volume yet; skipping pre-deploy backup (first deploy)"
+          fi
+
           $DOCKER compose -f docker-compose.prod.yml up -d --build api
           $DOCKER compose -f docker-compose.prod.yml ps
           curl -fsS http://127.0.0.1:8080/healthz
+
+          # Keep the nightly-backup + weekly restore-verify cron entries in
+          # sync with the repo (idempotent; schedule changes ship via merge).
+          # Loud but NON-fatal: at this point the new API is already live and
+          # healthy, and failing the job here would report a shipped deploy as
+          # "gagal" and invite a pointless full re-deploy.
+          if ! DEPLOY_ROOT="$DEPLOY_ROOT" bash "$DEPLOY_ROOT/Affluena-API/scripts/install-backup-cron.sh"; then
+            echo "::warning::backup-cron refresh FAILED — the API deploy itself is live and healthy. Run scripts/install-backup-cron.sh on the VPS by hand."
+          fi
           REMOTE
 
   notify:

@@ -579,14 +579,19 @@ curl -I http://127.0.0.1
 
 Deploy API dulu, pastikan `/healthz` HTTP `200`, lalu deploy web.
 
-## 14. Backup dan Rollback Manual
+## 14. Backup dan Rollback
 
-Backup database sebelum deploy besar:
+**Backup sekarang OTOMATIS** — detail di `docs/BACKUPS.md`. Ringkasnya: dump
+nightly 02:30 WIB + verifikasi restore mingguan via cron (dipasang/di-refresh
+otomatis oleh workflow deploy), plus **snapshot pra-deploy sebelum migrasi**
+pada setiap deploy (backup gagal = deploy gagal, fail-closed). Semua tersimpan
+di `/opt/affluena/backups` (retensi: 14 hari daily, 10 pre-deploy terakhir).
+
+Backup manual tambahan kapan pun (label bebas), plus cek restor:
 
 ```bash
-cd /opt/affluena/deploy
-docker compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U affluena_api affluena_api > /opt/affluena/backup-$(date +%F-%H%M%S).sql
+bash /opt/affluena/Affluena-API/scripts/backup-db.sh manual
+bash /opt/affluena/Affluena-API/scripts/verify-backup.sh
 ```
 
 Rollback API ke commit sebelumnya:

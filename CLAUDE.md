@@ -27,6 +27,11 @@ Clean layering per domain: `handler → usecase → repository`, wired in `inter
 - **HTTP status is keyword-mapped from the error message** (`internal/httpx`): text containing
   `not found`→404, `already exists`/`conflict`→409, etc. Rewording an error can silently change
   the response status. Prefer `httpx.NewPublicError(msg, status)` for an explicit status.
+- **DB backups are automated** (`docs/BACKUPS.md`): every deploy takes a pre-migration
+  `pg_dump` snapshot (**a failed backup fails the deploy** — fail-closed) and refreshes the
+  nightly-backup + weekly restore-verify cron on the VPS (`scripts/backup-db.sh`,
+  `verify-backup.sh`, `install-backup-cron.sh`). Don't hand-edit the VPS crontab — schedule
+  changes ship via PR.
 
 ## Run / test (Docker, Go, and psql are all available in the cloud sandbox)
 
