@@ -9,7 +9,7 @@ For the complete beginner-friendly manual deploy and CI/CD guide, read [`DEPLOYM
 Two workflows share the same test gate (Postgres 17 service, gofmt, `go test ./...`, `go vet`, build, Postman JSON validation):
 
 - **`.github/workflows/ci.yml` (`API CI`)** — the pre-merge gate. Runs on every `pull_request` into `master` and on every push to a non-`master` branch. It runs only the test job (no deploy), so a red PR is blocked before it can be merged. Needs no secrets.
-- **`.github/workflows/deploy.yml` (`API CI/CD`)** — runs on push to `master` (a merged PR). Runs the same test job, then deploys to the VPS and sends the Telegram notification.
+- **`.github/workflows/deploy.yml` (`API CI/CD`)** — runs on push to `master` (a merged PR). Runs the same test job, then deploys to the VPS and sends the Telegram notification. The deploy step also (a) takes a **pre-deploy DB backup** before the new image boots and runs its startup migrations — a failed backup fails the deploy (fail-closed, gated on the data **volume** existing, so a stopped Postgres can't silently skip it; only a true first deploy is exempt) — and (b) idempotently refreshes the **nightly-backup + weekly restore-verify cron** entries (non-fatal: runs after the new API is already live). See `docs/BACKUPS.md`.
 
 Because merging to `master` deploys to production, the `ci.yml` gate exists so PRs are verified before merge instead of only failing after deploy.
 
