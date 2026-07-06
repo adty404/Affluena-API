@@ -297,6 +297,7 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
   }
   ```
 - *Note:* Previous-period comparison is provided via `change_percent`. If the user has no data, empty arrays `[]` are returned instead of null.
+- *Copy:* All display strings (`metric.label`, `metric.helper`, `row.category`, and the cashflow `row.name`/`row.wallet`) are **Bahasa Indonesia** — the web `/reports/*` pages and the mobile Laporan screen render them verbatim. Examples: `label` "Total Pemasukan" / "Total Pengeluaran" / "Arus Kas Bersih" / "Rasio Menabung" / "Total Utang" / "Total Piutang" / "Total Ditabung"; cashflow rows are named "Arus Kas Minggu N" with category "Ringkasan mingguan" and wallet "Semua dompet"; income/expense row categories are "Kategori pemasukan"/"Kategori pengeluaran"; debt row categories are "Utang"/"Piutang"; goal row category is "Target". Fallbacks for missing joins are also Indonesian: "Tanpa kategori", "Semua dompet", "Dompet tak dikenal", "Dompet target". The `id`, `tone`, and `status` fields stay stable machine values (`tone` ∈ {`positive`,`neutral`,`negative`}, `status` ∈ {`healthy`,`growth`,`watch`,`critical`}).
 
 ### Activity
 - `GET /api/v1/activities` - Pagination list of user activities.

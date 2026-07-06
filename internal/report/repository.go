@@ -24,9 +24,9 @@ type CategoryAggregation struct {
 func (r *Repository) GetIncomeExpenseAggregation(ctx context.Context, userID string, txType string, from, to time.Time) ([]CategoryAggregation, error) {
 	query := `
 		SELECT 
-			COALESCE(c.name, 'Uncategorized') as category_name,
+			COALESCE(c.name, 'Tanpa kategori') as category_name,
 			SUM(t.amount_minor) as amount_minor,
-			COALESCE(MAX(w.name), 'All wallets') as wallet_name
+			COALESCE(MAX(w.name), 'Semua dompet') as wallet_name
 		FROM transactions t
 		LEFT JOIN categories c ON t.category_id = c.id
 		LEFT JOIN wallets w ON t.wallet_id = w.id
@@ -141,7 +141,7 @@ func (r *Repository) GetDebts(ctx context.Context, userID string) ([]DebtAggrega
 			d.type,
 			d.principal_amount_minor,
 			d.paid_amount_minor,
-			COALESCE(w.name, 'Unknown wallet') as wallet_name,
+			COALESCE(w.name, 'Dompet tak dikenal') as wallet_name,
 			d.status
 		FROM debts d
 		LEFT JOIN wallets w ON d.wallet_id = w.id
@@ -192,7 +192,7 @@ func (r *Repository) GetGoals(ctx context.Context, userID string) ([]GoalAggrega
 			g.target_amount_minor,
 			COALESCE(SUM(w.balance_minor), 0) as balance_minor,
 			g.status,
-			COALESCE(MAX(w.name), 'Goal wallet') as wallet_name
+			COALESCE(MAX(w.name), 'Dompet target') as wallet_name
 		FROM goals g
 		LEFT JOIN goal_members gm ON g.id = gm.goal_id
 		LEFT JOIN wallets w ON w.goal_id = g.id
