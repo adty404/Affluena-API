@@ -89,7 +89,7 @@ func (uc *UseCase) IncomeReport(ctx context.Context, userID string, monthStr str
 		rows = append(rows, ReportRow{
 			ID:                  fmt.Sprintf("inc-%d", i),
 			Name:                c.CategoryName,
-			Category:            "Income category",
+			Category:            "Kategori pemasukan",
 			AmountMinor:         c.AmountMinor,
 			PreviousAmountMinor: prevAmount,
 			ChangePercent:       change,
@@ -105,10 +105,10 @@ func (uc *UseCase) IncomeReport(ctx context.Context, userID string, monthStr str
 	}
 
 	metrics := []ReportMetric{
-		{ID: "total_income", Label: "Total Income", ValueMinor: totalIncome, Helper: "For the month", Tone: "positive"},
-		{ID: "source_count", Label: "Income Sources", ValueMinor: int64(sourceCount), Helper: "Distinct categories", Tone: "neutral"},
-		{ID: "avg_per_source", Label: "Avg per Source", ValueMinor: avgPerSource, Helper: "Average income per category", Tone: "neutral"},
-		{ID: "top_source", Label: "Top Source", ValueMinor: 0, Helper: topSource, Tone: "positive"},
+		{ID: "total_income", Label: "Total Pemasukan", ValueMinor: totalIncome, Helper: "Bulan ini", Tone: "positive"},
+		{ID: "source_count", Label: "Sumber Pemasukan", ValueMinor: int64(sourceCount), Helper: "Kategori berbeda", Tone: "neutral"},
+		{ID: "avg_per_source", Label: "Rata-rata per Sumber", ValueMinor: avgPerSource, Helper: "Rata-rata pemasukan per kategori", Tone: "neutral"},
+		{ID: "top_source", Label: "Sumber Teratas", ValueMinor: 0, Helper: topSource, Tone: "positive"},
 	}
 
 	return ReportResponse{Metrics: metrics, Rows: rows}, nil
@@ -160,7 +160,7 @@ func (uc *UseCase) ExpenseReport(ctx context.Context, userID string, monthStr st
 		rows = append(rows, ReportRow{
 			ID:                  fmt.Sprintf("exp-%d", i),
 			Name:                c.CategoryName,
-			Category:            "Expense category",
+			Category:            "Kategori pengeluaran",
 			AmountMinor:         c.AmountMinor,
 			PreviousAmountMinor: prevAmount,
 			ChangePercent:       change,
@@ -176,10 +176,10 @@ func (uc *UseCase) ExpenseReport(ctx context.Context, userID string, monthStr st
 	}
 
 	metrics := []ReportMetric{
-		{ID: "total_expense", Label: "Total Expense", ValueMinor: totalExpense, Helper: "For the month", Tone: "negative"},
-		{ID: "cat_count", Label: "Expense Categories", ValueMinor: int64(catCount), Helper: "Distinct categories", Tone: "neutral"},
-		{ID: "avg_per_cat", Label: "Avg per Category", ValueMinor: avgPerCat, Helper: "Average expense per category", Tone: "neutral"},
-		{ID: "top_category", Label: "Top Category", ValueMinor: 0, Helper: topCategory, Tone: "negative"},
+		{ID: "total_expense", Label: "Total Pengeluaran", ValueMinor: totalExpense, Helper: "Bulan ini", Tone: "negative"},
+		{ID: "cat_count", Label: "Kategori Pengeluaran", ValueMinor: int64(catCount), Helper: "Kategori berbeda", Tone: "neutral"},
+		{ID: "avg_per_cat", Label: "Rata-rata per Kategori", ValueMinor: avgPerCat, Helper: "Rata-rata pengeluaran per kategori", Tone: "neutral"},
+		{ID: "top_category", Label: "Kategori Teratas", ValueMinor: 0, Helper: topCategory, Tone: "negative"},
 	}
 
 	return ReportResponse{Metrics: metrics, Rows: rows}, nil
@@ -238,12 +238,12 @@ func (uc *UseCase) CashflowReport(ctx context.Context, userID string, monthStr s
 
 		rows = append(rows, ReportRow{
 			ID:                  fmt.Sprintf("week-%d", i),
-			Name:                fmt.Sprintf("Week %d Cashflow", i),
-			Category:            "Weekly summary",
+			Name:                fmt.Sprintf("Arus Kas Minggu %d", i),
+			Category:            "Ringkasan mingguan",
 			AmountMinor:         net,
 			PreviousAmountMinor: prevNet,
 			ChangePercent:       change,
-			Wallet:              "All wallets",
+			Wallet:              "Semua dompet",
 			Status:              status,
 		})
 	}
@@ -255,10 +255,10 @@ func (uc *UseCase) CashflowReport(ctx context.Context, userID string, monthStr s
 	}
 
 	metrics := []ReportMetric{
-		{ID: "net_cashflow", Label: "Net Cashflow", ValueMinor: netCashflow, Helper: "Income - Expense", Tone: "positive"},
-		{ID: "total_income", Label: "Income Total", ValueMinor: totalIncome, Helper: "For the month", Tone: "positive"},
-		{ID: "total_expense", Label: "Expense Total", ValueMinor: totalExpense, Helper: "For the month", Tone: "negative"},
-		{ID: "saving_rate", Label: "Saving Rate", ValueMinor: savingRate, Helper: "% of income saved", Tone: "positive"},
+		{ID: "net_cashflow", Label: "Arus Kas Bersih", ValueMinor: netCashflow, Helper: "Pemasukan − Pengeluaran", Tone: "positive"},
+		{ID: "total_income", Label: "Total Pemasukan", ValueMinor: totalIncome, Helper: "Bulan ini", Tone: "positive"},
+		{ID: "total_expense", Label: "Total Pengeluaran", ValueMinor: totalExpense, Helper: "Bulan ini", Tone: "negative"},
+		{ID: "saving_rate", Label: "Rasio Menabung", ValueMinor: savingRate, Helper: "% pemasukan yang ditabung", Tone: "positive"},
 	}
 
 	return ReportResponse{Metrics: metrics, Rows: rows}, nil
@@ -299,9 +299,9 @@ func (uc *UseCase) DebtReport(ctx context.Context, userID string, monthStr strin
 			status = "watch"
 		}
 
-		cat := "Payable"
+		cat := "Utang"
 		if d.Type == "receivable" {
-			cat = "Receivable"
+			cat = "Piutang"
 		}
 
 		rows = append(rows, ReportRow{
@@ -317,10 +317,10 @@ func (uc *UseCase) DebtReport(ctx context.Context, userID string, monthStr strin
 	}
 
 	metrics := []ReportMetric{
-		{ID: "total_payable", Label: "Total Payable", ValueMinor: totalPayable, Helper: "Remaining to pay", Tone: "negative"},
-		{ID: "total_receivable", Label: "Total Receivable", ValueMinor: totalReceivable, Helper: "Remaining to receive", Tone: "positive"},
-		{ID: "open_count", Label: "Open Debts", ValueMinor: int64(openCount), Helper: "Active debts", Tone: "neutral"},
-		{ID: "overdue_count", Label: "Overdue", ValueMinor: int64(overdueCount), Helper: "Past due date", Tone: "negative"},
+		{ID: "total_payable", Label: "Total Utang", ValueMinor: totalPayable, Helper: "Sisa yang harus dibayar", Tone: "negative"},
+		{ID: "total_receivable", Label: "Total Piutang", ValueMinor: totalReceivable, Helper: "Sisa yang akan diterima", Tone: "positive"},
+		{ID: "open_count", Label: "Utang Aktif", ValueMinor: int64(openCount), Helper: "Utang berjalan", Tone: "neutral"},
+		{ID: "overdue_count", Label: "Terlambat", ValueMinor: int64(overdueCount), Helper: "Lewat jatuh tempo", Tone: "negative"},
 	}
 
 	return ReportResponse{Metrics: metrics, Rows: rows}, nil
@@ -356,7 +356,7 @@ func (uc *UseCase) GoalReport(ctx context.Context, userID string, monthStr strin
 		rows = append(rows, ReportRow{
 			ID:                  g.ID,
 			Name:                g.Name,
-			Category:            "Goal",
+			Category:            "Target",
 			AmountMinor:         g.BalanceMinor,
 			PreviousAmountMinor: 0,
 			ChangePercent:       change,
@@ -371,10 +371,10 @@ func (uc *UseCase) GoalReport(ctx context.Context, userID string, monthStr strin
 	}
 
 	metrics := []ReportMetric{
-		{ID: "total_saved", Label: "Total Saved", ValueMinor: totalSaved, Helper: "Across all goals", Tone: "positive"},
-		{ID: "total_target", Label: "Total Target", ValueMinor: totalTarget, Helper: "Sum of all targets", Tone: "neutral"},
-		{ID: "overall_progress", Label: "Overall Progress %", ValueMinor: progress, Helper: "Percentage reached", Tone: "positive"},
-		{ID: "active_count", Label: "Active Goals", ValueMinor: int64(activeCount), Helper: "Currently active", Tone: "neutral"},
+		{ID: "total_saved", Label: "Total Ditabung", ValueMinor: totalSaved, Helper: "Seluruh target", Tone: "positive"},
+		{ID: "total_target", Label: "Total Target", ValueMinor: totalTarget, Helper: "Jumlah semua target", Tone: "neutral"},
+		{ID: "overall_progress", Label: "Progres Keseluruhan %", ValueMinor: progress, Helper: "Persentase tercapai", Tone: "positive"},
+		{ID: "active_count", Label: "Target Aktif", ValueMinor: int64(activeCount), Helper: "Sedang berjalan", Tone: "neutral"},
 	}
 
 	return ReportResponse{Metrics: metrics, Rows: rows}, nil
