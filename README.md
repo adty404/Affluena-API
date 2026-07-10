@@ -97,6 +97,7 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 
 - **Auth**: JWT alg-pinned (HS256), bcrypt password hashing, `crypto/rand` refresh/reset tokens stored as SHA-256, automatic refresh-token rotation.
 - **Credential changes revoke all sessions** — `PUT /auth/password` returns a fresh token pair (clients persist it); reset-password forces re-login everywhere.
+- **Account deletion requires the password** — `DELETE /auth/account` re-verifies the password (bcrypt) so a stolen access token alone cannot destroy an account; the delete cascades to every user-owned row in one transaction, killing all sessions with it.
 - **Rate limiting** — per-IP on `/auth/*` (5 req/s, burst 10) and the whole authenticated API (100 req/s, burst 200) → `429`. `TRUSTED_PROXIES` restricts which hops may set `X-Forwarded-For`, so a client-forged header cannot spoof its source IP to bypass the per-IP limiter (the API only trusts the reverse proxy on the same host/network).
 - **Log retention** — `api_logs` stores full request/response payloads per call; a background job prunes rows older than `API_LOG_RETENTION_DAYS` (default 30) so the table stays bounded.
 - **Response headers** — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, plus HSTS in production. CORS rejects wildcard origins when credentials are enabled.
@@ -106,7 +107,7 @@ Hardening aligned with the OWASP Top 10 (see `affluena-api-lean-prd.md` §3.1 an
 
 ## Endpoints
 
-The current Gin router registers 102 routes including `GET /healthz`: 5 public auth routes and 96 protected API routes under `/api/v1`.
+The current Gin router registers 108 routes including `GET /healthz`: 5 public auth routes and 102 protected API routes under `/api/v1`.
 
 - `GET /healthz` (pings the database: `200 {"status":"ok"}` when healthy, `503 {"status":"degraded","db":"unreachable"}` when Postgres is unreachable)
 - `POST /api/v1/auth/register` (also seeds onboarding defaults atomically: 8 Bahasa Indonesia default categories + a "Dompet Utama" starter wallet — see `docs/API_CONTRACT.md`)
@@ -119,6 +120,7 @@ Protected with `Authorization: Bearer <access_token>`:
 
 - `GET /api/v1/auth/me`
 - `PUT /api/v1/auth/account`
+- `DELETE /api/v1/auth/account` (permanent account deletion: requires `{ "password" }` re-entry, wipes all user data, returns 204 — see `docs/API_CONTRACT.md`)
 - `PUT /api/v1/auth/password`
 - `GET /api/v1/auth/sessions`
 - `DELETE /api/v1/auth/sessions/:session_id`
