@@ -31,6 +31,18 @@ type InstallmentPayment struct {
 	Transaction transaction.Transaction `json:"transaction"`
 }
 
+// InstallmentPaymentRecord is one row of an installment's payment history
+// (installment_payments), written by Pay in the same transaction as the
+// expense transaction it links to.
+type InstallmentPaymentRecord struct {
+	ID            string    `json:"id"`
+	InstallmentID string    `json:"installment_id"`
+	AmountMinor   int64     `json:"amount_minor"`
+	PaidAt        time.Time `json:"paid_at"`
+	TransactionID string    `json:"transaction_id"`
+	Note          string    `json:"note"`
+}
+
 type Subscription struct {
 	ID            string             `json:"id"`
 	UserID        string             `json:"user_id"`
@@ -52,4 +64,16 @@ type Subscription struct {
 type SubscriptionPayment struct {
 	Subscription Subscription            `json:"subscription"`
 	Transaction  transaction.Transaction `json:"transaction"`
+}
+
+// SubscriptionPaymentRecord is one row of a subscription's payment history
+// (subscription_payments), written by Pay in the same transaction as the
+// expense transaction it links to.
+type SubscriptionPaymentRecord struct {
+	ID             string    `json:"id"`
+	SubscriptionID string    `json:"subscription_id"`
+	AmountMinor    int64     `json:"amount_minor"`
+	PaidAt         time.Time `json:"paid_at"`
+	TransactionID  string    `json:"transaction_id"`
+	Note           string    `json:"note"`
 }

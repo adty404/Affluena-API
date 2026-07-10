@@ -15,6 +15,7 @@ type InstallmentRepositoryPort interface {
 	Update(ctx context.Context, userID string, id string, installment Installment) (Installment, error)
 	Delete(ctx context.Context, userID string, id string) error
 	Pay(ctx context.Context, userID string, id string, paidAt time.Time, note string) (InstallmentPayment, error)
+	ListPayments(ctx context.Context, userID string, id string) ([]InstallmentPaymentRecord, error)
 }
 
 type SubscriptionRepositoryPort interface {
@@ -24,6 +25,7 @@ type SubscriptionRepositoryPort interface {
 	Update(ctx context.Context, userID string, id string, subscription Subscription) (Subscription, error)
 	Delete(ctx context.Context, userID string, id string) error
 	Pay(ctx context.Context, userID string, id string, paidAt time.Time, note string) (SubscriptionPayment, error)
+	ListPayments(ctx context.Context, userID string, id string) ([]SubscriptionPaymentRecord, error)
 }
 
 type UseCase struct {
@@ -76,6 +78,10 @@ func (u *UseCase) PayInstallment(ctx context.Context, userID string, id string, 
 	return pay, err
 }
 
+func (u *UseCase) ListInstallmentPayments(ctx context.Context, userID string, id string) ([]InstallmentPaymentRecord, error) {
+	return u.installments.ListPayments(ctx, userID, id)
+}
+
 func (u *UseCase) CreateSubscription(ctx context.Context, userID string, subscription Subscription) (Subscription, error) {
 	sub, err := u.subscriptions.Create(ctx, userID, subscription)
 	if err == nil && u.activityUC != nil {
@@ -114,4 +120,8 @@ func (u *UseCase) PaySubscription(ctx context.Context, userID string, id string,
 		u.activityUC.LogActivity(ctx, userID, "UPDATE", "SUBSCRIPTION_PAYMENT", &id, "Membayar tagihan langganan")
 	}
 	return pay, err
+}
+
+func (u *UseCase) ListSubscriptionPayments(ctx context.Context, userID string, id string) ([]SubscriptionPaymentRecord, error) {
+	return u.subscriptions.ListPayments(ctx, userID, id)
 }

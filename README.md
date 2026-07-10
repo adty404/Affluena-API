@@ -208,12 +208,14 @@ Protected with `Authorization: Bearer <access_token>`:
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
 - `POST /api/v1/installments/:id/pay`
+- `GET /api/v1/installments/:id/payments` (payment history, newest first, max 200 rows)
 - `POST /api/v1/subscriptions`
 - `GET /api/v1/subscriptions[?limit=100&offset=0&sort=next_due_date_asc]`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
 - `DELETE /api/v1/subscriptions/:id`
 - `POST /api/v1/subscriptions/:id/pay`
+- `GET /api/v1/subscriptions/:id/payments` (payment history, newest first, max 200 rows)
 - `POST /api/v1/recurring-transactions`
 - `GET /api/v1/recurring-transactions[?limit=100&offset=0&sort=next_run_at_asc]`
 - `GET /api/v1/recurring-transactions/:id`

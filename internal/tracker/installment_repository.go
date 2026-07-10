@@ -176,6 +176,13 @@ func (r *InstallmentRepository) Pay(ctx context.Context, userID string, id strin
 		return InstallmentPayment{}, err
 	}
 
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO installment_payments (user_id, installment_id, transaction_id, amount_minor, paid_at, note)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, userID, id, createdTx.ID, installment.MonthlyAmountMinor, paidAt.UTC(), note); err != nil {
+		return InstallmentPayment{}, err
+	}
+
 	updated, err := scanInstallment(tx.QueryRow(ctx, `
 		UPDATE installments
 		SET remaining_months = $3, status = $4, updated_at = now()
@@ -192,6 +199,44 @@ func (r *InstallmentRepository) Pay(ctx context.Context, userID string, id strin
 		return InstallmentPayment{}, err
 	}
 	return InstallmentPayment{Installment: updated, Transaction: createdTx}, nil
+}
+
+func (r *InstallmentRepository) ListPayments(ctx context.Context, userID string, id string) ([]InstallmentPaymentRecord, error) {
+	if _, err := r.get(ctx, r.pool, userID, id, false); err != nil {
+		return nil, err
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, installment_id::text, amount_minor, paid_at, transaction_id::text, note
+		FROM installment_payments
+		WHERE user_id = $1 AND installment_id = $2
+		ORDER BY paid_at DESC, created_at DESC
+		LIMIT $3
+	`, userID, id, trackerPaymentHistoryLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	payments := []InstallmentPaymentRecord{}
+	for rows.Next() {
+		var payment InstallmentPaymentRecord
+		if err := rows.Scan(
+			&payment.ID,
+			&payment.InstallmentID,
+			&payment.AmountMinor,
+			&payment.PaidAt,
+			&payment.TransactionID,
+			&payment.Note,
+		); err != nil {
+			return nil, err
+		}
+		payments = append(payments, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return payments, nil
 }
 
 func (r *InstallmentRepository) get(ctx context.Context, q interface {

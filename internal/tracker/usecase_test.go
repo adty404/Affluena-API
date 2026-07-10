@@ -20,6 +20,7 @@ type fakeInstallmentRepository struct {
 	got         Installment
 	updated     Installment
 	paid        InstallmentPayment
+	payments    []InstallmentPaymentRecord
 	err         error
 }
 
@@ -55,6 +56,10 @@ func (f *fakeInstallmentRepository) Pay(ctx context.Context, userID string, id s
 	return f.paid, f.err
 }
 
+func (f *fakeInstallmentRepository) ListPayments(ctx context.Context, userID string, id string) ([]InstallmentPaymentRecord, error) {
+	return f.payments, f.err
+}
+
 type fakeSubscriptionRepository struct {
 	createInput Subscription
 	updateInput Subscription
@@ -66,6 +71,7 @@ type fakeSubscriptionRepository struct {
 	got         Subscription
 	updated     Subscription
 	paid        SubscriptionPayment
+	payments    []SubscriptionPaymentRecord
 	err         error
 }
 
@@ -99,6 +105,10 @@ func (f *fakeSubscriptionRepository) Pay(ctx context.Context, userID string, id 
 	f.paidAt = paidAt
 	f.payNote = note
 	return f.paid, f.err
+}
+
+func (f *fakeSubscriptionRepository) ListPayments(ctx context.Context, userID string, id string) ([]SubscriptionPaymentRecord, error) {
+	return f.payments, f.err
 }
 
 func TestTrackerUseCaseDelegatesInstallments(t *testing.T) {

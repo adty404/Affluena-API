@@ -198,12 +198,29 @@ A share link (DB table `wallet_share_links`, columns `owner_id`/`viewer_id`/`sta
 - `PUT /api/v1/installments/:id`
 - `DELETE /api/v1/installments/:id`
 - `POST /api/v1/installments/:id/pay` - `{ paid_at, note }` (Amount is inferred from installment configuration.)
+- `GET /api/v1/installments/:id/payments` - Payment history for one installment, newest first (`paid_at DESC`, capped at 200 rows, no pagination). A foreign/unknown installment id returns `404`. Response:
+  ```json
+  {
+    "payments": [
+      {
+        "id": "...",
+        "installment_id": "...",
+        "amount_minor": 50000,
+        "paid_at": "2026-07-05T08:00:00Z",
+        "transaction_id": "...",
+        "note": ""
+      }
+    ]
+  }
+  ```
+  `transaction_id` links to the expense transaction the payment created; `note` is the raw note sent to the pay endpoint (default `""`). History rows exist for payments made after this endpoint shipped (migration `000033`); deleting the linked transaction also removes its history row.
 - `POST /api/v1/subscriptions` - `{ name, account_detail, wallet_id, category_id, amount_minor, billing_cycle: "weekly"|"monthly", next_due_date, status, note, color?, icon? }`
 - `GET /api/v1/subscriptions`
 - `GET /api/v1/subscriptions/:id`
 - `PUT /api/v1/subscriptions/:id`
 - `DELETE /api/v1/subscriptions/:id`
 - `POST /api/v1/subscriptions/:id/pay` - `{ paid_at, note }` (Amount is inferred from subscription configuration.)
+- `GET /api/v1/subscriptions/:id/payments` - Payment history for one subscription; same shape and rules as the installment endpoint but each row carries `subscription_id` instead of `installment_id`.
 - *UI metadata (`color`, `icon`):* all optional, default `""`, stored and returned as-is. `color` is a hex string (e.g. `"#3E72B8"`); `icon` is a client-defined semantic identifier (e.g. `"gym"`, `"streaming"`). The server does not validate these values — the icon catalog and color palette are owned by the clients (web + mobile) so both render the same tracker identically.
 
 ### Recurring
