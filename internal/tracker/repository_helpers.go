@@ -9,6 +9,10 @@ import (
 
 var errInactiveSubscription = errors.New("subscription is not active")
 
+// trackerPaymentHistoryLimit caps payment-history reads; tracker payment
+// counts are small (monthly/weekly cadence), so no pagination is exposed.
+const trackerPaymentHistoryLimit = 200
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }

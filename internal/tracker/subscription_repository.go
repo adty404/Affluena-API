@@ -155,6 +155,13 @@ func (r *SubscriptionRepository) Pay(ctx context.Context, userID string, id stri
 		return SubscriptionPayment{}, err
 	}
 
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO subscription_payments (user_id, subscription_id, transaction_id, amount_minor, paid_at, note)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, userID, id, createdTx.ID, subscription.AmountMinor, paidAt.UTC(), note); err != nil {
+		return SubscriptionPayment{}, err
+	}
+
 	updated, err := scanSubscription(tx.QueryRow(ctx, `
 		UPDATE subscriptions
 		SET next_due_date = $3, updated_at = now()
@@ -170,6 +177,44 @@ func (r *SubscriptionRepository) Pay(ctx context.Context, userID string, id stri
 		return SubscriptionPayment{}, err
 	}
 	return SubscriptionPayment{Subscription: updated, Transaction: createdTx}, nil
+}
+
+func (r *SubscriptionRepository) ListPayments(ctx context.Context, userID string, id string) ([]SubscriptionPaymentRecord, error) {
+	if _, err := r.get(ctx, r.pool, userID, id, false); err != nil {
+		return nil, err
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, subscription_id::text, amount_minor, paid_at, transaction_id::text, note
+		FROM subscription_payments
+		WHERE user_id = $1 AND subscription_id = $2
+		ORDER BY paid_at DESC, created_at DESC
+		LIMIT $3
+	`, userID, id, trackerPaymentHistoryLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	payments := []SubscriptionPaymentRecord{}
+	for rows.Next() {
+		var payment SubscriptionPaymentRecord
+		if err := rows.Scan(
+			&payment.ID,
+			&payment.SubscriptionID,
+			&payment.AmountMinor,
+			&payment.PaidAt,
+			&payment.TransactionID,
+			&payment.Note,
+		); err != nil {
+			return nil, err
+		}
+		payments = append(payments, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return payments, nil
 }
 
 func (r *SubscriptionRepository) get(ctx context.Context, q interface {

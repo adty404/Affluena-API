@@ -279,6 +279,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.PUT("/installments/:id", trackerHandler.UpdateInstallment)
 	protected.DELETE("/installments/:id", trackerHandler.DeleteInstallment)
 	protected.POST("/installments/:id/pay", trackerHandler.PayInstallment)
+	protected.GET("/installments/:id/payments", trackerHandler.ListInstallmentPayments)
 
 	protected.POST("/subscriptions", trackerHandler.CreateSubscription)
 	protected.GET("/subscriptions", trackerHandler.ListSubscriptions)
@@ -286,6 +287,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.PUT("/subscriptions/:id", trackerHandler.UpdateSubscription)
 	protected.DELETE("/subscriptions/:id", trackerHandler.DeleteSubscription)
 	protected.POST("/subscriptions/:id/pay", trackerHandler.PaySubscription)
+	protected.GET("/subscriptions/:id/payments", trackerHandler.ListSubscriptionPayments)
 
 	protected.POST("/recurring-transactions", recurringHandler.Create)
 	protected.GET("/recurring-transactions", recurringHandler.List)

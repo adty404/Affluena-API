@@ -23,12 +23,14 @@ type trackerUseCase interface {
 	UpdateInstallment(ctx context.Context, userID string, id string, installment Installment) (Installment, error)
 	DeleteInstallment(ctx context.Context, userID string, id string) error
 	PayInstallment(ctx context.Context, userID string, id string, paidAt time.Time, note string) (InstallmentPayment, error)
+	ListInstallmentPayments(ctx context.Context, userID string, id string) ([]InstallmentPaymentRecord, error)
 	CreateSubscription(ctx context.Context, userID string, subscription Subscription) (Subscription, error)
 	ListSubscriptions(ctx context.Context, userID string, pagination page.Params) (page.Result[Subscription], error)
 	GetSubscription(ctx context.Context, userID string, id string) (Subscription, error)
 	UpdateSubscription(ctx context.Context, userID string, id string, subscription Subscription) (Subscription, error)
 	DeleteSubscription(ctx context.Context, userID string, id string) error
 	PaySubscription(ctx context.Context, userID string, id string, paidAt time.Time, note string) (SubscriptionPayment, error)
+	ListSubscriptionPayments(ctx context.Context, userID string, id string) ([]SubscriptionPaymentRecord, error)
 }
 
 func NewHandler(usecase trackerUseCase) *Handler {
@@ -189,6 +191,23 @@ func (h *Handler) PayInstallment(c *gin.Context) {
 	httpx.JSON(c, http.StatusCreated, payment)
 }
 
+func (h *Handler) ListInstallmentPayments(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	payments, err := h.usecase.ListInstallmentPayments(c.Request.Context(), userID, id)
+	if err != nil {
+		writeTrackerError(c, err, "installment not found")
+		return
+	}
+	httpx.JSON(c, http.StatusOK, gin.H{"payments": payments})
+}
+
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	userID, ok := httpx.MustUserID(c)
 	if !ok {
@@ -305,6 +324,23 @@ func (h *Handler) PaySubscription(c *gin.Context) {
 		return
 	}
 	httpx.JSON(c, http.StatusCreated, payment)
+}
+
+func (h *Handler) ListSubscriptionPayments(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+	id, ok := httpx.GetUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	payments, err := h.usecase.ListSubscriptionPayments(c.Request.Context(), userID, id)
+	if err != nil {
+		writeTrackerError(c, err, "subscription not found")
+		return
+	}
+	httpx.JSON(c, http.StatusOK, gin.H{"payments": payments})
 }
 
 func bindInstallment(c *gin.Context) (Installment, bool) {
