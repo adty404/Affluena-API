@@ -381,7 +381,9 @@ rsync -a --delete dist/ /srv/affluena/web/
 sudo nano /etc/nginx/sites-available/affluena
 ```
 
-Untuk IP-only, isi `server_name _;`.
+Untuk IP-only, isi `server_name _;`. Saat domain sudah ada, JANGAN edit manual —
+jalankan `bash scripts/setup-tls.sh <domain>` (tutorial lengkap: `docs/TLS.md`;
+script itu yang mengisi `server_name` + menerbitkan sertifikat Let's Encrypt).
 
 ```nginx
 server {

@@ -41,6 +41,9 @@ The PRD is in `affluena-api-lean-prd.md`. The API overview and examples are in `
   automated DB backups — nightly dump + weekly restore-verify via cron, plus the fail-closed
   pre-deploy snapshot the deploy workflow takes before startup migrations (see `docs/BACKUPS.md`).
 - `scripts/seed-prod.sh`: run the demo seeder against the VPS Postgres.
+- `scripts/setup-tls.sh`: enable HTTPS on the VPS once a domain exists (Let's Encrypt via
+  certbot; keeps HTTP alive by default for the pre-HTTPS mobile builds — full tutorial +
+  the follow-up client/env flips in `docs/TLS.md`). Prepared but NOT yet executed.
 - `Makefile`: `make verify` wrapper.
 
 The codebase is not a strict textbook Clean Architecture project, but it follows a layered style: handlers call use cases, use cases depend on repository ports, and repositories isolate SQL.
