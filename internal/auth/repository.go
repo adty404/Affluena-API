@@ -93,6 +93,83 @@ func (r *Repository) ChangePassword(ctx context.Context, userID string, newPassw
 	return err
 }
 
+// DeleteUser permanently removes the account and everything it owns in ONE
+// transaction. Every user-owned table hangs off users(id) with ON DELETE
+// CASCADE (verified against migrations 000001-000032), so the final DELETE
+// FROM users wipes wallets, categories, transactions, budgets, debts,
+// trackers, recurring rules, goals, tags, notifications, export jobs,
+// password reset tokens, refresh tokens (sessions), wallet_shares and
+// wallet_share_links in both directions. The explicit statements before it
+// cover what that cascade cannot reach or would abort on:
+//
+//   - Other members' goal wallets: wallets.goal_id -> goals is ON DELETE
+//     CASCADE, so deleting this owner's goals would also delete ANOTHER
+//     user's goal wallet — and abort on that member's contribution
+//     transactions (transactions.*wallet_id are ON DELETE RESTRICT). Detach
+//     those wallets instead and convert them to plain cash wallets so the
+//     member keeps their money and can manage the wallet afterwards.
+//   - Other users' rows pointing at this user's wallets: the composite
+//     (user_id, wallet_id) FKs were dropped for shared wallets (migrations
+//     000012, 000016-000019), so joined members can hold transactions, quick
+//     entry templates, recurring rules, trackers and debts on this user's
+//     wallets. Those reference wallets(id) with ON DELETE RESTRICT and would
+//     abort the wallet cascade — delete them first (debts before
+//     transactions: debts/debt_payments RESTRICT-reference transactions).
+//   - sent_alerts has no users FK at all and api_logs is ON DELETE SET NULL;
+//     delete both explicitly so no account data outlives the account.
+func (r *Repository) DeleteUser(ctx context.Context, userID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	statements := []string{
+		`UPDATE wallets
+			SET goal_id = NULL, type = 'cash', updated_at = now()
+			WHERE user_id <> $1
+				AND goal_id IN (SELECT id FROM goals WHERE user_id = $1)`,
+		`DELETE FROM debts
+			WHERE user_id <> $1
+				AND wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)`,
+		`DELETE FROM installments
+			WHERE user_id <> $1
+				AND wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)`,
+		`DELETE FROM subscriptions
+			WHERE user_id <> $1
+				AND wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)`,
+		`DELETE FROM recurring_transaction_rules
+			WHERE user_id <> $1
+				AND (wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)
+					OR to_wallet_id IN (SELECT id FROM wallets WHERE user_id = $1))`,
+		`DELETE FROM quick_entry_templates
+			WHERE user_id <> $1
+				AND (wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)
+					OR to_wallet_id IN (SELECT id FROM wallets WHERE user_id = $1))`,
+		`DELETE FROM transactions
+			WHERE user_id <> $1
+				AND (wallet_id IN (SELECT id FROM wallets WHERE user_id = $1)
+					OR to_wallet_id IN (SELECT id FROM wallets WHERE user_id = $1))`,
+		`DELETE FROM sent_alerts WHERE user_id = $1`,
+		`DELETE FROM api_logs WHERE user_id = $1`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.Exec(ctx, statement, userID); err != nil {
+			return err
+		}
+	}
+
+	tag, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (r *Repository) RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE refresh_tokens

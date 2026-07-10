@@ -169,6 +169,7 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) http.Handler {
 	protected.Use(httpx.APILimiter.Middleware())
 	protected.GET("/auth/me", authHandler.Me)
 	protected.PUT("/auth/account", authHandler.UpdateAccount)
+	protected.DELETE("/auth/account", authHandler.DeleteAccount)
 	protected.PUT("/auth/password", authHandler.ChangePassword)
 	protected.GET("/auth/sessions", authHandler.ListSessions)
 	protected.DELETE("/auth/sessions/:session_id", authHandler.RevokeSession)

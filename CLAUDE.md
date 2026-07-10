@@ -70,7 +70,8 @@ update `docs/API_CONTRACT.md` + the Postman collection, then `make verify`.
 
 - **Money = integer minor units** (`*_minor`, bigint). Never floats on the wire.
 - **Auth**: HS256 access JWT (~15m) + rotating opaque refresh token. `PUT /auth/password` revokes
-  other sessions and returns a fresh pair (clients must re-persist).
+  other sessions and returns a fresh pair (clients must re-persist). `DELETE /auth/account`
+  (password re-entry required) permanently deletes the account + all owned data in one tx.
 - **User isolation**: every resource is scoped by `user_id` at the DB + app layer.
 - **Shared wallets**: `wallet_shares.role` = `member` (read+write) or `viewer` (read-only). Write
   paths must check access (canonical `wallet.AccessChecker`; some modules still inline the predicate).

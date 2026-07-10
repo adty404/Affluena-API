@@ -31,13 +31,14 @@ func TestNormalizeEmail(t *testing.T) {
 }
 
 type fakeAuthRepository struct {
-	createdUser User
-	err         error
-	storeErr    error
-	revokeErr   error
-	storedHash  string
-	revokedHash string
-	consumed    bool
+	createdUser   User
+	err           error
+	storeErr      error
+	revokeErr     error
+	storedHash    string
+	revokedHash   string
+	consumed      bool
+	deletedUserID string
 }
 
 func (f *fakeAuthRepository) CreateUser(ctx context.Context, email string, passwordHash string) (User, error) {
@@ -99,6 +100,14 @@ func (f *fakeAuthRepository) UpdateUserProfile(ctx context.Context, userID strin
 
 func (f *fakeAuthRepository) ChangePassword(ctx context.Context, userID string, newPasswordHash string) error {
 	return f.err
+}
+
+func (f *fakeAuthRepository) DeleteUser(ctx context.Context, userID string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.deletedUserID = userID
+	return nil
 }
 
 func (f *fakeAuthRepository) RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error {
@@ -218,6 +227,29 @@ func TestLoginRejectsMissingUserAndWrongPassword(t *testing.T) {
 	service = NewService(&fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com", PasswordHash: hash}}, NewTokenManager("secret", time.Minute, time.Hour), nil)
 	if _, _, err := service.Login(context.Background(), "user@example.com", "wrong-password"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials for wrong password, got %v", err)
+	}
+}
+
+func TestDeleteAccountVerifiesPasswordBeforeDeleting(t *testing.T) {
+	hash, err := HashPassword("correct-password")
+	if err != nil {
+		t.Fatalf("HashPassword returned error: %v", err)
+	}
+	repo := &fakeAuthRepository{createdUser: User{ID: "user-1", Email: "user@example.com", PasswordHash: hash}}
+	service := NewService(repo, NewTokenManager("secret", time.Minute, time.Hour), nil)
+
+	if err := service.DeleteAccount(context.Background(), "user-1", "wrong-password"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("expected invalid credentials for wrong password, got %v", err)
+	}
+	if repo.deletedUserID != "" {
+		t.Fatalf("expected no delete on wrong password, deleted %q", repo.deletedUserID)
+	}
+
+	if err := service.DeleteAccount(context.Background(), "user-1", "correct-password"); err != nil {
+		t.Fatalf("DeleteAccount returned error: %v", err)
+	}
+	if repo.deletedUserID != "user-1" {
+		t.Fatalf("expected user-1 deleted, got %q", repo.deletedUserID)
 	}
 }
 

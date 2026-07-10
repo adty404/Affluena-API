@@ -42,6 +42,7 @@ type RepositoryPort interface {
 	ConsumeRefreshToken(ctx context.Context, tokenHash string, now time.Time) (string, error)
 	UpdateUserProfile(ctx context.Context, userID string, name string, avatarURL string) (User, error)
 	ChangePassword(ctx context.Context, userID string, newPasswordHash string) error
+	DeleteUser(ctx context.Context, userID string) error
 	RevokeAllSessionsExcept(ctx context.Context, userID string, exceptTokenHash string) error
 	ListSessions(ctx context.Context, userID string) ([]Session, error)
 	RevokeSessionByID(ctx context.Context, userID string, sessionID string) error
@@ -172,6 +173,23 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, currentPass
 		s.activityUC.LogActivity(ctx, userID, "UPDATE", "AUTH", nil, "Mengubah password akun")
 	}
 	return user, pair, nil
+}
+
+// DeleteAccount permanently deletes the caller's account after re-verifying
+// their password (Google Play requires in-app account deletion). The repository
+// delete cascades to every user-owned row, so all sessions (refresh tokens) die
+// with the account. Deliberately no activity log: an activity row for the user
+// would either be cascade-deleted in the same transaction or violate the users
+// FK when written after it.
+func (s *Service) DeleteAccount(ctx context.Context, userID string, password string) error {
+	user, err := s.repo.UserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !CheckPassword(user.PasswordHash, password) {
+		return ErrInvalidCredentials
+	}
+	return s.repo.DeleteUser(ctx, userID)
 }
 
 func (s *Service) ListSessions(ctx context.Context, userID string) ([]Session, error) {

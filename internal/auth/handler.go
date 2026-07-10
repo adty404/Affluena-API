@@ -21,6 +21,7 @@ type authUseCase interface {
 	User(ctx context.Context, userID string) (User, error)
 	UpdateAccount(ctx context.Context, userID string, name string, avatarURL string) (User, error)
 	ChangePassword(ctx context.Context, userID string, currentPassword string, newPassword string) (User, TokenPair, error)
+	DeleteAccount(ctx context.Context, userID string, password string) error
 	ListSessions(ctx context.Context, userID string) ([]Session, error)
 	RevokeSession(ctx context.Context, userID string, sessionID string) error
 	RequestPasswordReset(ctx context.Context, email string) error
@@ -170,6 +171,38 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	// Changing the password revokes all other sessions; return a fresh token
 	// pair so the current device stays signed in with the new credentials.
 	httpx.JSON(c, http.StatusOK, authResponse{User: user, Tokens: tokens})
+}
+
+type deleteAccountRequest struct {
+	Password string `json:"password" binding:"required"`
+}
+
+// DeleteAccount permanently deletes the calling user's account and all of its
+// data (Google Play account-deletion requirement). The password must be
+// re-entered so a stolen access token alone cannot destroy an account.
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	userID, ok := httpx.MustUserID(c)
+	if !ok {
+		return
+	}
+
+	var req deleteAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.service.DeleteAccount(c.Request.Context(), userID, req.Password); err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			// Same explicit-401 convention as login / change password.
+			httpx.Error(c, http.StatusUnauthorized, "password is incorrect")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, "delete account failed")
+		return
+	}
+	// Everything (including all refresh tokens) is gone with the cascade.
+	c.Status(http.StatusNoContent)
 }
 
 func (h *Handler) ListSessions(c *gin.Context) {
