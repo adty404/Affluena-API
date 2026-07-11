@@ -33,7 +33,7 @@ This document maps the current Affluena-WEB routes/pages to the Affluena API end
 | `/transactions/new` | Create txn | `/api/v1/transactions` | POST | form data | `transaction` | disable btn | inline error | Validate `type` (income/expense) |
 | `/transactions/:id` | View txn | `/api/v1/transactions/:id` | GET | path param | `transaction` | skeleton | 404 page | - |
 | `/transactions/:id/edit`| Update txn | `/api/v1/transactions/:id` | PUT | form data | `transaction` | disable btn | inline error | - |
-| `/transactions/transfer`| Create transfer | `/api/v1/transactions` | POST | form data | `transaction` | disable btn | inline error | Needs `to_wallet_id` |
+| `/transactions/transfer`| Create transfer | `/api/v1/transactions` | POST | form data | `transaction` | disable btn | inline error | Needs `to_wallet_id`; optional `fee_minor` (bank admin fee, charged to source on top of amount) |
 | `/transactions/adjustment`| Create adjust | `/api/v1/transactions` | POST | form data | `transaction` | disable btn | inline error | Balance diffs calculated automatically |
 | `/transactions/filter`| Apply filters | `/api/v1/transactions` | GET | URL params | `resource array` | list skeleton | empty state | `?from=x&to=y&category_id=z` |
 | `/transactions/split` | Split bill | `/api/v1/transactions/split` | POST | form data | `transaction` | disable btn | inline error | Generates Debts automatically |

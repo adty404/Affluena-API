@@ -109,7 +109,7 @@ func (r *Repository) List(ctx context.Context, userID string, filter Transaction
 	orderBy := transactionOrderBy(pagination.Sort)
 	rows, err := r.pool.Query(ctx, `
 		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor,
+			COALESCE(category_id::text, ''), amount_minor, fee_minor,
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
@@ -276,7 +276,7 @@ func (r *Repository) get(ctx context.Context, q interface {
 }, userID string, id string, forUpdate bool) (Transaction, error) {
 	sql := `
 		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor,
+			COALESCE(category_id::text, ''), amount_minor, fee_minor,
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
@@ -293,7 +293,7 @@ func (r *Repository) get(ctx context.Context, q interface {
 func (r *Repository) getForUpdate(ctx context.Context, tx pgx.Tx, id string) (Transaction, error) {
 	sql := `
 		SELECT transactions.id::text, transactions.user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor,
+			COALESCE(category_id::text, ''), amount_minor, fee_minor,
 			ARRAY(SELECT tag_id::text FROM transaction_tags WHERE user_id = transactions.user_id AND transaction_id = transactions.id ORDER BY tag_id),
 			transaction_at, note, created_at, updated_at
 		FROM transactions
@@ -322,11 +322,11 @@ func (r *Repository) ensureRefs(ctx context.Context, tx pgx.Tx, userID string, i
 
 func insertTransaction(ctx context.Context, tx pgx.Tx, userID string, input TransactionInput) (Transaction, error) {
 	transaction, err := scanTransaction(tx.QueryRow(ctx, `
-		INSERT INTO transactions (user_id, type, wallet_id, to_wallet_id, category_id, amount_minor, transaction_at, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO transactions (user_id, type, wallet_id, to_wallet_id, category_id, amount_minor, fee_minor, transaction_at, note)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, '{}'::text[], transaction_at, note, created_at, updated_at
-	`, userID, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.TransactionUTC, input.Note))
+			COALESCE(category_id::text, ''), amount_minor, fee_minor, '{}'::text[], transaction_at, note, created_at, updated_at
+	`, userID, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.FeeMinor, input.TransactionUTC, input.Note))
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -337,12 +337,12 @@ func insertTransaction(ctx context.Context, tx pgx.Tx, userID string, input Tran
 func updateTransaction(ctx context.Context, tx pgx.Tx, userID string, id string, input TransactionInput) (Transaction, error) {
 	transaction, err := scanTransaction(tx.QueryRow(ctx, `
 		UPDATE transactions
-		SET type = $3, wallet_id = $4, to_wallet_id = $5, category_id = $6, amount_minor = $7,
-			transaction_at = $8, note = $9, updated_at = now()
+		SET type = $3, wallet_id = $4, to_wallet_id = $5, category_id = $6, amount_minor = $7, fee_minor = $8,
+			transaction_at = $9, note = $10, updated_at = now()
 		WHERE user_id = $1 AND id = $2
 		RETURNING id::text, user_id::text, type, wallet_id::text, COALESCE(to_wallet_id::text, ''),
-			COALESCE(category_id::text, ''), amount_minor, '{}'::text[], transaction_at, note, created_at, updated_at
-	`, userID, id, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.TransactionUTC, input.Note))
+			COALESCE(category_id::text, ''), amount_minor, fee_minor, '{}'::text[], transaction_at, note, created_at, updated_at
+	`, userID, id, input.Type, input.WalletID, nullableUUID(input.ToWalletID), nullableUUID(input.CategoryID), input.AmountMinor, input.FeeMinor, input.TransactionUTC, input.Note))
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -451,6 +451,7 @@ func scanTransaction(row rowScanner) (Transaction, error) {
 		&transaction.ToWalletID,
 		&transaction.CategoryID,
 		&transaction.AmountMinor,
+		&transaction.FeeMinor,
 		&transaction.TagIDs,
 		&transaction.TransactionAt,
 		&transaction.Note,

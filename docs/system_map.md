@@ -290,7 +290,7 @@ erDiagram
 | 3 | `wallets` | id, user_id (FK), name, type, currency_code, balance_minor, goal_id | UNIQUE(user_id, name), CHECK type ∈ {cash,bank,e_wallet,investment,goal} |
 | 4 | `wallet_shares` | wallet_id (FK), user_id (FK), status, role | PK(wallet_id, user_id), CHECK status ∈ {pending,joined,rejected}, CHECK role ∈ {member,viewer} (default member) |
 | 5 | `categories` | id, user_id (FK), name, type, parent_id (self-FK), icon, color, position | UNIQUE(user_id, name, type), CHECK type ∈ {income,expense}, max depth 3, index (user_id, position) |
-| 6 | `transactions` | id, user_id (FK), type, wallet_id (FK), to_wallet_id, category_id, amount_minor, transaction_at, note | CHECK type rules, CHECK amount ≠ 0 |
+| 6 | `transactions` | id, user_id (FK), type, wallet_id (FK), to_wallet_id, category_id, amount_minor, fee_minor, transaction_at, note | CHECK type rules, CHECK amount ≠ 0, CHECK fee_minor ≥ 0 (transfer admin fee, default 0) |
 | 7 | `transaction_tags` | user_id, transaction_id (FK), tag_id (FK) | PK(transaction_id, tag_id), composite FK ownership |
 | 8 | `tags` | id, user_id (FK), name | UNIQUE(user_id, name) |
 | 9 | `quick_entry_templates` | id, user_id, name, type, wallet_id, category_id, amount_minor | UNIQUE(user_id, name) |
@@ -538,10 +538,17 @@ erDiagram
 ├───────────┼──────────────────┼──────────────────────────┤
 │ income    │ +amount_minor    │ N/A                      │
 │ expense   │ -amount_minor    │ N/A                      │
-│ transfer  │ -amount_minor    │ +amount_minor            │
+│ transfer  │ -(amount+fee)    │ +amount_minor            │
 │ adjustment│ +amount_minor*   │ N/A  (*bisa negatif)     │
 └───────────┴──────────────────┴──────────────────────────┘
 ```
+
+`fee_minor` (optional, default 0, `>= 0`, transfer-only) is a bank admin fee
+charged to the source wallet on top of the amount. Sum of balances drops by
+exactly `fee` per transfer. Create/update/delete all route balance math through
+`BalanceDeltas` + `applyDeltas`/`reverseDeltas`, and `Transaction.Input()`
+carries the stored old fee, so the update reversal and delete refund the fee
+correctly with no extra code paths.
 
 Pada **Update**: old deltas di-reverse dulu, baru new deltas di-apply.  
 Pada **Delete**: old deltas di-reverse.  

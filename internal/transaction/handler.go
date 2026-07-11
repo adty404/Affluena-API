@@ -35,6 +35,7 @@ type transactionRequest struct {
 	ToWalletID    string          `json:"to_wallet_id"`
 	CategoryID    string          `json:"category_id"`
 	AmountMinor   int64           `json:"amount_minor" binding:"required"`
+	FeeMinor      int64           `json:"fee_minor"`
 	TagIDs        []string        `json:"tag_ids"`
 	TransactionAt string          `json:"transaction_at"`
 	Note          string          `json:"note"`
@@ -247,12 +248,26 @@ func bindInput(c *gin.Context) (TransactionInput, bool) {
 		}
 	}
 
+	// fee_minor is the optional bank admin fee. It must never be negative, and
+	// it is only meaningful for transfers: a non-zero fee on any other type is
+	// rejected outright (rather than silently dropped) to avoid confusing data.
+	// Explicit 400 status here instead of the keyword-mapped WriteError path.
+	if req.FeeMinor < 0 {
+		httpx.Error(c, http.StatusBadRequest, "fee_minor tidak boleh negatif")
+		return TransactionInput{}, false
+	}
+	if req.FeeMinor != 0 && req.Type != TransactionTypeTransfer {
+		httpx.Error(c, http.StatusBadRequest, "fee_minor hanya berlaku untuk transfer")
+		return TransactionInput{}, false
+	}
+
 	input := TransactionInput{
 		Type:           req.Type,
 		WalletID:       req.WalletID,
 		ToWalletID:     req.ToWalletID,
 		CategoryID:     req.CategoryID,
 		AmountMinor:    req.AmountMinor,
+		FeeMinor:       req.FeeMinor,
 		TagIDs:         req.TagIDs,
 		TransactionUTC: transactionAt,
 		Note:           req.Note,

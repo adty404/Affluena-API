@@ -67,6 +67,64 @@ func TestBalanceDeltasForTransferAndAdjustment(t *testing.T) {
 	}
 }
 
+func TestBalanceDeltasForTransferWithFee(t *testing.T) {
+	transfer, err := BalanceDeltas(TransactionInput{
+		Type:           TransactionTypeTransfer,
+		WalletID:       "source-wallet",
+		ToWalletID:     "destination-wallet",
+		AmountMinor:    100_000,
+		FeeMinor:       2_500,
+		TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("transfer BalanceDeltas returned error: %v", err)
+	}
+	if len(transfer) != 2 {
+		t.Fatalf("expected 2 transfer deltas, got %#v", transfer)
+	}
+	// Source loses amount + fee; destination gains only amount, so the sum of
+	// the deltas is -fee (the fee is a real loss to the bank).
+	if transfer[0].WalletID != "source-wallet" || transfer[0].AmountMinor != -102_500 {
+		t.Fatalf("unexpected source delta: %#v", transfer[0])
+	}
+	if transfer[1].WalletID != "destination-wallet" || transfer[1].AmountMinor != 100_000 {
+		t.Fatalf("unexpected destination delta: %#v", transfer[1])
+	}
+	if sum := transfer[0].AmountMinor + transfer[1].AmountMinor; sum != -2_500 {
+		t.Fatalf("expected net delta -2500 (fee lost), got %d", sum)
+	}
+}
+
+func TestBalanceDeltasTransferFeeZeroMatchesNoFee(t *testing.T) {
+	withZeroFee, err := BalanceDeltas(TransactionInput{
+		Type:           TransactionTypeTransfer,
+		WalletID:       "source-wallet",
+		ToWalletID:     "destination-wallet",
+		AmountMinor:    75_000,
+		FeeMinor:       0,
+		TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("transfer BalanceDeltas returned error: %v", err)
+	}
+	if withZeroFee[0].AmountMinor != -75_000 || withZeroFee[1].AmountMinor != 75_000 {
+		t.Fatalf("fee=0 transfer must behave as before: %#v", withZeroFee)
+	}
+}
+
+func TestBalanceDeltasRejectNegativeTransferFee(t *testing.T) {
+	if _, err := BalanceDeltas(TransactionInput{
+		Type:           TransactionTypeTransfer,
+		WalletID:       "source-wallet",
+		ToWalletID:     "destination-wallet",
+		AmountMinor:    75_000,
+		FeeMinor:       -1,
+		TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z"),
+	}); err == nil {
+		t.Fatal("expected error for negative fee_minor")
+	}
+}
+
 func TestBalanceDeltasRejectInvalidInputs(t *testing.T) {
 	cases := []TransactionInput{
 		{Type: TransactionTypeIncome, WalletID: "", AmountMinor: 1, CategoryID: "category-1", TransactionUTC: mustTestTime(t, "2026-06-12T10:00:00Z")},
