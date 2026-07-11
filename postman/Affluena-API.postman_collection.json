@@ -3844,7 +3844,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
+              "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"fee_minor\": 2500,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash (fee_minor is an optional transfer-only bank admin fee charged to the source wallet)\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/transactions",
@@ -3871,7 +3871,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
+                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"fee_minor\": 2500,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash (fee_minor is an optional transfer-only bank admin fee charged to the source wallet)\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/v1/transactions",
@@ -3909,7 +3909,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
+                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"fee_minor\": 2500,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash (fee_minor is an optional transfer-only bank admin fee charged to the source wallet)\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/v1/transactions",
@@ -3947,7 +3947,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash\"\n}"
+                  "raw": "{\n  \"type\": \"transfer\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"to_wallet_id\": \"{{to_wallet_id}}\",\n  \"amount_minor\": 100000,\n  \"fee_minor\": 2500,\n  \"transaction_at\": \"2026-06-13T10:00:00Z\",\n  \"note\": \"Move to cash (fee_minor is an optional transfer-only bank admin fee charged to the source wallet)\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/api/v1/transactions",

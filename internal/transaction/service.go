@@ -24,11 +24,15 @@ func IsValidType(transactionType TransactionType) bool {
 }
 
 type TransactionInput struct {
-	Type           TransactionType
-	WalletID       string
-	ToWalletID     string
-	CategoryID     string
-	AmountMinor    int64
+	Type        TransactionType
+	WalletID    string
+	ToWalletID  string
+	CategoryID  string
+	AmountMinor int64
+	// FeeMinor is an optional bank admin fee charged to the SOURCE wallet on
+	// top of AmountMinor. It is only meaningful for transfers; non-transfer
+	// types must leave it 0 (enforced at the handler). Must be >= 0.
+	FeeMinor       int64
 	TagIDs         []string
 	TransactionUTC time.Time
 	Note           string
@@ -71,14 +75,20 @@ func BalanceDeltas(input TransactionInput) ([]BalanceDelta, error) {
 		if input.AmountMinor < 0 {
 			return nil, errors.New("transfer amount_minor must be positive")
 		}
+		if input.FeeMinor < 0 {
+			return nil, errors.New("fee_minor must not be negative")
+		}
 		if input.ToWalletID == "" {
 			return nil, errors.New("to_wallet_id is required")
 		}
 		if input.WalletID == input.ToWalletID {
 			return nil, errors.New("wallet_id and to_wallet_id must differ")
 		}
+		// The admin fee is a real loss to the bank: the source loses
+		// amount+fee while the destination only gains amount, so the sum of
+		// all wallet balances drops by exactly fee (net-worth-correct).
 		return []BalanceDelta{
-			{WalletID: input.WalletID, AmountMinor: -input.AmountMinor},
+			{WalletID: input.WalletID, AmountMinor: -(input.AmountMinor + input.FeeMinor)},
 			{WalletID: input.ToWalletID, AmountMinor: input.AmountMinor},
 		}, nil
 	case TransactionTypeAdjustment:

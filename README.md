@@ -422,8 +422,10 @@ Amounts use `amount_minor` as integer minor units. For IDR, `50000` means Rp50,0
 
 - `income`: adds `amount_minor` to `wallet_id`
 - `expense`: subtracts `amount_minor` from `wallet_id`
-- `transfer`: subtracts from `wallet_id`, adds to `to_wallet_id`
+- `transfer`: subtracts `amount_minor + fee_minor` from `wallet_id`, adds `amount_minor` to `to_wallet_id`
 - `adjustment`: applies signed `amount_minor` directly to `wallet_id`
+
+`fee_minor` (optional, default `0`, `>= 0`) is a bank admin fee that only applies to `transfer`. The source wallet is charged `amount_minor + fee_minor` while the destination receives only `amount_minor`, so the sum of all wallet balances drops by exactly `fee_minor` — the fee is a real loss, keeping net worth correct. A non-zero `fee_minor` on a non-transfer type is rejected with `400`, and a negative `fee_minor` is rejected with `400`. Editing a transfer's fee, amount, or wallets, and deleting it, re-derive balances atomically (delete refunds `amount_minor + fee_minor` to the source, removes `amount_minor` from the destination). `fee_minor` is returned on every transaction response.
 
 Create, update, delete, quick entry execution, and split bill execution use database transactions so wallet balances and transaction rows change atomically.
 
