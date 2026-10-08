@@ -1,8 +1,9 @@
 # TLS.md — Tutorial mengaktifkan HTTPS (siap jalan begitu domain dibeli)
 
-> Status: **DISIAPKAN, belum dieksekusi** (menunggu pemilik membeli domain).
+> Status: **DIEKSEKUSI 2026-10-08** — `https://affluena.adityabuild.codes` sudah live
+> (Langkah 1–5 selesai: DNS, TLS, env API, GitHub Variables). Sisa: install release mobile
+> ber-HTTPS (1.6.0+9) lalu kunci `--redirect` (Langkah 6–7).
 > Prasyarat submit Google Play — lihat `Affluena-MOBILE/docs/PLAYSTORE.md` item 10.
-> Sampai tutorial ini dijalankan, semuanya tetap beroperasi normal lewat HTTP + IP.
 
 ## Gambaran
 
@@ -11,21 +12,20 @@ via certbot (sudah terinstal sejak deploy — `python3-certbot-nginx`). Seluruh 
 dibungkus `scripts/setup-tls.sh`; sisanya konfigurasi kecil di .env + GitHub Variables +
 satu release mobile.
 
-**Strategi transisi (penting):** APK 1.4.0 yang sudah terpasang memakai URL `http://…`
-yang di-bake saat build. Karena itu script default **membiarkan HTTP tetap hidup**
-(`--no-redirect`) sampai release 1.5.0 (ber-HTTPS) terpasang; setelah itu jalankan ulang
-dengan `--redirect` untuk memaksa HTTP→HTTPS.
+**Strategi transisi (penting):** APK lama (1.4.0 / 1.5.0+8) memakai URL `http://…` yang
+di-bake saat build, jadi server tetap melayani HTTP. Script default **membiarkan HTTP
+tetap hidup** (`--no-redirect`) sampai release ber-HTTPS terpasang; setelah itu jalankan
+ulang dengan `--redirect` untuk memaksa HTTP→HTTPS.
 
 ## Langkah pemilik (±15 menit + propagasi DNS)
 
-1. **Beli domain** (registrar mana pun; contoh di bawah memakai `affluena.example.com` —
-   ganti dengan domainmu).
-2. **Set DNS A record** → `43.133.147.101` (IP VPS). Cek propagasi:
-   `dig +short affluena.example.com` harus menjawab IP itu.
-3. **SSH ke VPS**, lalu:
+1. ✅ **Beli domain** — dipakai: `affluena.adityabuild.codes` (subdomain dari `adityabuild.codes`).
+2. ✅ **Set DNS A record** → `43.133.147.101` (IP VPS). (Tambahan server: vhost `affluena`
+   dijadikan `default_server` port 80 agar akses lewat IP tetap ke Affluena — APK lama.)
+3. ✅ **SSH ke VPS**, lalu jalankan script (sudah dijalankan dengan domain asli):
    ```bash
    cd /opt/affluena/Affluena-API && git pull --ff-only origin master
-   bash scripts/setup-tls.sh affluena.example.com
+   bash scripts/setup-tls.sh affluena.adityabuild.codes
    ```
    Script akan: cek DNS mengarah ke server ini → set `server_name` nginx → terbitkan
    sertifikat → verifikasi auto-renew (certbot.timer) → health-check
@@ -33,24 +33,27 @@ dengan `--redirect` untuk memaksa HTTP→HTTPS.
 
 ## Setelah script sukses (urut)
 
-4. **Update env API** (di VPS): edit `/opt/affluena/deploy/.env` →
-   `APP_BASE_URL=https://affluena.example.com` (link email reset) dan
-   `CORS_ALLOWED_ORIGINS=https://affluena.example.com`, lalu
-   `cd /opt/affluena/deploy && docker compose -f docker-compose.prod.yml up -d api`.
-5. **GitHub Variables** (dipakai saat BUILD, bukan runtime): di repo **Affluena-WEB**
-   dan **Affluena-Mobile** → Settings → Secrets and variables → Actions → Variables →
-   `AFFLUENA_API_BASE_URL = https://affluena.example.com/api/v1`. Deploy web berikutnya
-   otomatis memakai URL baru (trigger dengan merge apa pun / re-run workflow).
-6. **Mobile release 1.5.0** — minta Claude menjalankan "paket release 1.5.0" di
-   `Affluena-MOBILE/docs/PLAYSTORE.md`: base URL https default, hapus izin cleartext
-   VPS dari `network_security_config.xml`, buang `local_auth`/`USE_BIOMETRIC`,
-   keystore release, bump versi → workflow Shorebird `mode=release` → install APK baru.
-7. **Kunci HTTP** setelah 1.5.0 terpasang di perangkatmu:
+4. ✅ **Update env API** (di VPS): edit file yang muncul di `env_file:` compose —
+   `/opt/affluena/Affluena-API/.env.production` (BUKAN `deploy/.env`, itu hanya untuk
+   interpolasi `${POSTGRES_PASSWORD}`) → `APP_BASE_URL=https://affluena.adityabuild.codes`
+   (link email reset) dan `CORS_ALLOWED_ORIGINS=https://affluena.adityabuild.codes`, lalu:
    ```bash
-   bash scripts/setup-tls.sh affluena.example.com --redirect
+   cd /opt/affluena/deploy && docker compose -f docker-compose.prod.yml up -d --force-recreate api
+   ```
+5. **GitHub Variables** (dipakai saat BUILD, bukan runtime): repo **Affluena-WEB** →
+   `VITE_API_BASE_URL=https://affluena.adityabuild.codes` ✅ (web sudah di-rebuild);
+   repo **Affluena-Mobile** → `AFFLUENA_API_BASE_URL=https://affluena.adityabuild.codes/api/v1`
+   (dipakai build 1.6.0+9). Deploy berikutnya otomatis memakai URL baru.
+6. ⏳ **Mobile release 1.6.0+9** — paketnya sudah disiapkan di repo `Affluena-Mobile`
+   (lihat `docs/PLAYSTORE.md` → "Paket rilis 1.6.0+9"): base URL https default, izin
+   cleartext VPS dibuang, keystore + signing release, bump versi. Setelah PR merge →
+   workflow Shorebird `mode=release` → install APK baru.
+7. ⏳ **Kunci HTTP** setelah 1.6.0+9 terpasang di perangkat:
+   ```bash
+   bash scripts/setup-tls.sh affluena.adityabuild.codes --redirect
    ```
 8. **Update halaman legal**: URL kebijakan privasi di draft listing Play
-   (`PLAYSTORE.md`) menjadi `https://affluena.example.com/privacy`.
+   (`PLAYSTORE.md`) menjadi `https://affluena.adityabuild.codes/privacy`.
 
 ## Verifikasi akhir
 
